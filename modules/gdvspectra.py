@@ -13,8 +13,8 @@ import xarray as xr
 from sklearn.metrics import roc_curve, roc_auc_score
 from scipy.stats import kendalltau, theilslopes
 
-sys.path.append('./shared')
-import satfetcher, indices, tools
+sys.path.append('../../shared')
+import satfetcher, tools
 
 # meta, checks
 def get_wet_dry_months(ds, wet_month=None, dry_month=None):
