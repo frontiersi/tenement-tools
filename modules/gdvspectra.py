@@ -45,6 +45,36 @@ def get_wet_dry_months(ds, wet_month=None, dry_month=None):
     print('Got wet and dry seasons months successfully.')
     return ds_wet_dry
 
+
+# meta, checks
+def get_trend_months(ds, trend_month=None):
+    """
+    trend_month = single month or list of months
+    """
+    
+    # notify
+    print('Getting requested months for trend analysis.')
+    
+    # check type
+    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
+        raise TypeError('Must be a xarray DataArray or Dataset.')
+        
+    # check wet dry list, convert if not
+    trend_months = trend_month if isinstance(trend_month, list) else [trend_month]
+                        
+    # tell user and reduce dataset to months in wet (JFM) or dry (SON) seasons only
+    try:
+        print('Reducing dataset to months ({0}) for trend analysis.'.format(trend_months))
+        ds_months = ds.sel(time=ds['time.month'].isin(trend_months))
+    
+    except:
+        raise ValueError('Could not reduce dataset. Check requested months.')
+    
+    # notify and return
+    print('Got trend months successfully.')
+    return ds_months
+
+
 # meta
 def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
     """
@@ -105,6 +135,37 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
     
     # notify and return
     print('Resampled down to annual seasonal medians successfully.')
+    return ds
+
+
+# meta
+def resample_to_annual_medians(ds):
+    """
+    """
+    
+    # notify
+    print('Resampling dataset down to annual medians.')
+
+    # check data type
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Did not provide an xarray Dataset or DataArray.')
+
+    # check for time dim
+    if 'time' not in list(ds.dims):
+        raise ValueError('No time dimension detected.')
+
+    # check for x and y dims
+    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions detected.')
+
+    # create copy ds
+    ds = ds.copy(deep=True)
+
+    # resample wet, dry into annual wet, dry medians
+    ds = ds.resample(time='YS').median(keep_attrs=True)
+    
+    # notify and return
+    print('Resampled down to annual medians successfully.')
     return ds
 
 
@@ -452,8 +513,80 @@ def interpolate_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full')
     return ds   
 
 
+# meta, dont like the chunking stuff here
+def interpolate_empty(ds, method='full'):
+    """
+    """
+
+    # notify
+    print('Interpolating empty values in dataset.')
+
+    # check if da provided, attempt convert to ds, check for ds after that
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            ds = ds.to_dataset(dim='variable')
+            was_da = True
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+
+    # check for time dim
+    if 'time' not in list(ds.dims):
+        raise ValueError('No time dimension detected.')
+
+    # check for x and y dims
+    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions detected.')
+
+    # check if num years less than 3
+    if len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
+
+    # create copy ds
+    ds = ds.copy(deep=True)
+
+    if method == 'full':
+        print('Interpolating using full method. This can take awhile. Please wait.')
+        
+        # if dask, rechunk to avoid core dimension error
+        if bool(ds.chunks):
+            chunks = ds.chunks
+            ds = ds.chunk({'time': -1}) 
+ 
+        # interpolate all nan pixels linearly
+        ds = ds.interpolate_na(dim='time', method='linear')
+        
+        # chunk back to orginal size            
+        if bool(ds.chunks):
+            ds = ds.chunk(chunks)
+
+    elif method == 'half':
+        print('Interpolating using half method. Please wait.')
+
+        # get times where all nan, get diff with original ds, drop nan
+        nan_dates = ds.dropna(dim='time', how='all').time
+        nan_dates = np.setdiff1d(ds['time'], nan_dates)
+        ds = ds.dropna(dim='time', how='all')
+
+        # interpolate wet all nan pixels linearly
+        if len(nan_dates):
+            ds_interp = ds.interp(time=nan_dates, method='linear')
+            ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
+
+    # convert back to datarray
+    if was_da:
+        ds = ds.to_array()
+
+    # notify and return
+    print('Interpolated empty values successfully.')
+    return ds   
+
+
 # meta, does it need da to ds check?
-def standardise_to_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
+def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
     """
     standardises all times to dry season invariant targets
     q_upper is used to set percentile of greennest/moistest pixels
@@ -512,6 +645,94 @@ def standardise_to_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
 
     # calculate dry linear slope, mask to greenest/moistest
     ds_poly = abs((ds_dry * coeffs).sum('time') / ss * const)
+    ds_poly = ds_poly.where(ds_quants)
+
+    # get lowest stability areas in stable, most veg, moist
+    ds_targets = xr.where(ds_poly < ds_poly.quantile(q=q_lower, skipna=True), True, False)
+
+    # check if any targets exist
+    for var in ds_targets:
+        is_empty = ds_targets[var].where(ds_targets[var]).isnull().all()
+        if is_empty:
+            raise ValueError('No invariant targets created: increase lower quantile.')
+
+    # notify
+    print('Standardising to invariant targets and rescaling via increasing sigmoidal.')
+
+    # get low, high inflections via hardcoded percentile, do inc sigmoidal
+    li = ds.median('time').quantile(q=0.001, skipna=True)
+    hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
+    ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
+    
+    # drop quantile tag the method adds, if exists
+    ds = ds.drop('quantile', errors='ignore')
+    
+    # add attributes back on
+    ds.attrs.update(attrs)
+    
+    # convert back to datarray
+    if was_da:
+        ds = ds.to_array()
+
+    # notify and return
+    print('Standardised using invariant targets successfully.')
+    return ds
+
+
+# meta, does it need da to ds check?
+# this could be merged into standardise_to_dry_targets, mostly double up code
+# could just have this as the main func, for to_dry_targets just wrap this in there and 
+# grab dry before hand, feed it in
+def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
+    """
+    """
+
+    # notify
+    print('Standardising data using invariant targets.')
+    
+    # check if da provided, attempt convert to ds, check for ds after that
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            ds = ds.to_dataset(dim='variable')
+            was_da = True
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+
+    # check q_value 0-1
+    if q_upper < 0 or q_upper > 1:
+        raise ValueError('Upper quantile value must be between 0 and 1.')
+
+    # check q_value 0-1
+    if q_lower < 0 or q_lower > 1:
+        raise ValueError('Lower quantile value must be between 0 and 1.')
+
+    # create copy ds and take attrs
+    ds = ds.copy(deep=True)
+    attrs = ds.attrs
+
+    # get median all time
+    ds_med = ds.median('time', keep_attrs=True)
+
+    # notify
+    print('Generating invariant targets.')
+
+    # get upper n quantile (i.e., percentiles) of dry vege, moist
+    ds_quants = ds_med.quantile(q=q_upper, skipna=True)
+    ds_quants = xr.where(ds_med > ds_quants, True, False)
+
+    # get num times
+    num_times = len(ds['time'])
+
+    # get linear ortho poly coeffs, sum squares, constant, reshape 1d to 3d
+    coeffs, ss, const = tools.get_linear_orpol_contrasts(num_times)
+    coeffs = np.reshape(coeffs, (ds['time'].size, 1, 1)) # todo dynamic?
+
+    # calculate dry linear slope, mask to greenest/moistest
+    ds_poly = abs((ds * coeffs).sum('time') / ss * const)
     ds_poly = ds_poly.where(ds_quants)
 
     # get lowest stability areas in stable, most veg, moist
