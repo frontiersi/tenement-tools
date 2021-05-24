@@ -1,4 +1,3 @@
-# satfetcher
 """
 Functions to fetch satellite data.
 """
@@ -9,8 +8,8 @@ import pandas as pd
 import numpy as np
 import xarray as xr
 
-sys.path.append('./shared')
-import satfetcher, indices, tools
+sys.path.append('../../shared')
+import tools
 
 
 # todo - metadata, checks
@@ -21,7 +20,7 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
     # imports
     import datacube
 
-    sys.path.append('../Scripts')
+    sys.path.append('../../Scripts')
     from dea_datahandling import load_ard
     from dea_dask import create_local_dask_cluster
     from dea_plotting import display_map, rgb
