@@ -927,6 +927,7 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
                                              df=df, 
                                              res_factor=res_factor, 
                                              if_nodata=if_nodata)
+            
         except Exception as e:
             # notify and attempt thresholding via stdv
             print('Could not threshold via occurrence records. Trying standard dev.')
@@ -940,7 +941,7 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
     # convert back to datarray
     if was_da:
         ds = ds.to_array()
-
+        
     # notify
     print('Thresholded likelihood succuessfully.')
     return ds_thresh
