@@ -230,19 +230,19 @@ def read_shapefile(shp_path=None):
         num_feats = lyr.GetFeatureCount()
 
     except Exception:
-        raise TypeError('> Could not read shapefile records. Is the file corrupt?')
+        raise TypeError('Could not read shapefile records. Is the file corrupt?')
 
     # check if point/multi point type
     if lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
-        raise ValueError('> Shapefile is not a point/multi-point type.')
+        raise ValueError('Shapefile is not a point/multi-point type.')
 
     # check if shapefile is empty
     if num_feats == 0:
-        raise ValueError('> Shapefile has no features in it. Please check.')
+        raise ValueError('Shapefile has no features in it. Please check.')
 
     # check if shapefile is projected (i.e. in metres)
     if epsg != 3577:
-        raise ValueError('> Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
+        raise ValueError('Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
 
     # convert shapefile table to pandas df
     rows = []
@@ -724,3 +724,42 @@ def remove_nodata_records(df_records, nodata_value=np.nan):
     # notify user and return
     print('Removed {0} records containing NoData values successfully.'.format(num_removed))
     return df_records
+
+
+# meta
+def export_xr_as_nc(ds, filename):
+    """
+    """
+    
+    # notify
+    print('Exporting xarray as netcdf file.')
+    
+    # check if xr ds or da
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Only xarray dataset/data array supported.')
+        
+    # check if attrs exist
+    if not hasattr(ds, 'attrs'):
+        print('Warning: xarray is missing attributes.')
+    elif not hasattr(ds, 'geobox'):
+        print('Warning: xarray is missing geobox.')
+        
+    # check if filename valid
+    if not filename:
+        raise ValueError('Did not provide filename.')
+    
+    # check file extension given
+    name, ext = os.path.splitext(filename)
+    if ext != '.nc':
+        raise ValueError('Filename must include .nc extension.')
+        
+    try:
+        # write xr to netcdf
+        ds.to_netcdf(filename)
+        
+    except Exception as e:
+        print('Could not export')
+        raise ValueError('Could not export netcdf: {0}.'.format(e))
+        
+    # notify
+    print('Exported xarray as netcdf successfully.')
