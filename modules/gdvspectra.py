@@ -101,6 +101,13 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
 
     # create copy ds
     ds = ds.copy(deep=True)
+    
+    # if dask, must compute for resample median
+    was_dask = False
+    if bool(ds.chunks):
+        print('Dask detected, not supported here. Computing, please wait.')
+        was_dask = True
+        ds = ds.compute()
 
     # split into wet, dry
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
@@ -133,6 +140,10 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
     
+    # if was dask, make dask again
+    if was_dask:
+        ds = ds.chunk({'time': 1})
+    
     # notify and return
     print('Resampled down to annual seasonal medians successfully.')
     return ds
@@ -160,9 +171,20 @@ def resample_to_annual_medians(ds):
 
     # create copy ds
     ds = ds.copy(deep=True)
-
+    
+    # if dask, must compute for resample median
+    was_dask = False
+    if bool(ds.chunks):
+        was_dask = True
+        print('Dask detected, not supported here. Computing, please wait.')
+        ds = ds.compute()
+        
     # resample wet, dry into annual wet, dry medians
     ds = ds.resample(time='YS').median(keep_attrs=True)
+    
+    # if was dask, make dask again
+    if was_dask:
+        ds = ds.chunk({'time': 1})
     
     # notify and return
     print('Resampled down to annual medians successfully.')
