@@ -10,8 +10,6 @@ import os, sys
 import numpy as np
 import pandas as pd
 import xarray as xr
-from sklearn.metrics import roc_curve, roc_auc_score
-from scipy.stats import kendalltau, theilslopes
 
 sys.path.append('../../shared')
 import satfetcher, tools
@@ -905,6 +903,8 @@ def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
     ds sim holds similarity
     """
     
+
+    
     # notify
     print('Generating groundwater-dependent vegetation (GDV) model.')
 
@@ -1008,6 +1008,10 @@ def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
 def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     """
     """
+    
+        # imports
+    from sklearn.metrics import roc_curve, roc_auc_score
+
     
     # notify
     print('Thresholding dataset via occurrence records and AUC.')
@@ -1199,6 +1203,12 @@ def perform_mk_original(ds, pvalue, direction):
     direction = trend direction. (inc, dec or both)
     """
     
+    # imports check
+    try:
+        from scipy.stats import kendalltau
+    except:
+        raise ImportError('Could not import kendalltau, scipy not installed.')
+    
     # notify user
     print('Performing Mann-Kendall test (original).')
     
@@ -1288,6 +1298,11 @@ def perform_theilsen_slope(ds, alpha):
     ds : xarray dataset or array
     alpha = confidence
     """
+    #imports check
+    try:
+        from scipy.stats import theilslopes
+    except:
+        raise ImportError('Could not import theilslopes, scipy not installed.')
     
     # notify user
     print('Performing Theil-Sen slope (original).')
