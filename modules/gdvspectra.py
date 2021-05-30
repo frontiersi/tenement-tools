@@ -1,6 +1,26 @@
-# gdvspectra
-"""
-"""
+# nicher
+'''
+This script contains functions for calculating species distribution models
+(SDMs), also known as ecological niche models (ENMs) - hence, Nicher. This
+script is intended to accept a digital elevation model (DEM) geotiff and any
+pre-generated derivatives (e.g. slope, aspect, topographic wetness index, etc.) 
+that are generated from it. The methodology is based on the approach used by
+MaxEnt (https://biodiversityinformatics.amnh.org/open_source/maxent/), but replaces
+the Logistic Regression technique with ExtraTrees and RandomForest from Sklearn. 
+Various functions in Nicher are based on the excellent RSGISLib SDM library 
+(https://www.rsgislib.org/rsgislib_sdm.html), especially the creation of response
+curves and lek matrices. If you cite this library, please also cite RSGISLib.
+
+See associated Jupyter Notebook Nicher.ipynb for a basic tutorial on the
+main functions and order of execution.
+
+Links:
+MaxEnt: https://biodiversityinformatics.amnh.org/open_source/maxent
+RSGISLib: https://www.rsgislib.org/rsgislib_sdm
+
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
 
 # import required libraries
 import os, sys
