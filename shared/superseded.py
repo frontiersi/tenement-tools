@@ -476,3 +476,87 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
     # notify and return
     print('Standardised using invariant targets successfully.')
     return ds
+
+# old standardise targets func
+def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
+    """
+    """
+
+    # notify
+    print('Standardising data using invariant targets.')
+    
+    # check if da provided, attempt convert to ds, check for ds after that
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            ds = ds.to_dataset(dim='variable')
+            was_da = True
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+
+    # check q_value 0-1
+    if q_upper < 0 or q_upper > 1:
+        raise ValueError('Upper quantile value must be between 0 and 1.')
+
+    # check q_value 0-1
+    if q_lower < 0 or q_lower > 1:
+        raise ValueError('Lower quantile value must be between 0 and 1.')
+
+    # create copy ds and take attrs
+    ds = ds.copy(deep=True)
+    attrs = ds.attrs
+
+    # get median all time
+    ds_med = ds.median('time', keep_attrs=True)
+
+    # notify
+    print('Generating invariant targets.')
+
+    # get upper n quantile (i.e., percentiles) of dry vege, moist
+    ds_quants = ds_med.quantile(q=q_upper, skipna=True)
+    ds_quants = xr.where(ds_med > ds_quants, True, False)
+
+    # get num times
+    num_times = len(ds['time'])
+
+    # get linear ortho poly coeffs, sum squares, constant, reshape 1d to 3d
+    coeffs, ss, const = tools.get_linear_orpol_contrasts(num_times)
+    coeffs = np.reshape(coeffs, (ds['time'].size, 1, 1)) # todo dynamic?
+
+    # calculate dry linear slope, mask to greenest/moistest
+    ds_poly = abs((ds * coeffs).sum('time') / ss * const)
+    ds_poly = ds_poly.where(ds_quants)
+
+    # get lowest stability areas in stable, most veg, moist
+    ds_targets = xr.where(ds_poly < ds_poly.quantile(q=q_lower, skipna=True), True, False)
+
+    # check if any targets exist
+    for var in ds_targets:
+        is_empty = ds_targets[var].where(ds_targets[var]).isnull().all()
+        if is_empty:
+            raise ValueError('No invariant targets created: increase lower quantile.')
+
+    # notify
+    print('Standardising to invariant targets and rescaling via increasing sigmoidal.')
+
+    # get low, high inflections via hardcoded percentile, do inc sigmoidal
+    li = ds.median('time').quantile(q=0.001, skipna=True)
+    hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
+    ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
+    
+    # drop quantile tag the method adds, if exists
+    ds = ds.drop('quantile', errors='ignore')
+    
+    # add attributes back on
+    ds.attrs.update(attrs)
+    
+    # convert back to datarray
+    if was_da:
+        ds = ds.to_array()
+
+    # notify and return
+    print('Standardised using invariant targets successfully.')
+    return ds
