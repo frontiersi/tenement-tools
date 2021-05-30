@@ -7,10 +7,10 @@ camaldulenesis and Mel. argentea. It offers a SMCE approach to detecting
 this vegetation. GDV is detected using a time series of vegetation indices,
 moisture indices and seasonal stability in an AHP process, resulting in
 a GDV likelihood (probability) map. Thresholding can be implemented via
-standard deviation or groundtruthed point locations. Trends can be determined
-using Mann-Kendall trend analysis, Theil-sen slopes, or Change Vector Analysis
-(CVA) functions. Finally, significant breaks in vegetation can be detected
-using change point detection.
+standard deviation or groundtruthed point locations. GDV health
+trends can be determined using Mann-Kendall trend analysis, Theil-sen slopes, 
+or Change Vector Analysis (CVA) functions. Finally, significant breaks 
+in vegetation can be detected using change point detection.
 
 See associated Jupyter Notebook gdvspectra.ipynb for a basic tutorial on the
 main functions and order of execution.
@@ -28,98 +28,122 @@ import xarray as xr
 sys.path.append('../../shared')
 import tools
 
-# meta, checks
-def get_wet_dry_months(ds, wet_month=None, dry_month=None):
+def subset_months(ds, month=None, inplace=True):
     """
-    wet_month = single month or list of months
+    Takes a xarray dataset/array and a list of months in which to
+    subset the xr dataset down to. Used mostly when subsetting data
+    down to wet and dry season (e.g. list of 1, 2, 3 for wet and list
+    of 9, 10, 11 for dry months). Time dimension required, or error 
+    occurs.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    month : int or list
+        An int or a list representing the month(s) that represent
+        the months to subset data to. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # notify
-    print('Getting wet (JFM) and dry (SON) season months.')
+    print('Subsetting down to specified months.')
     
-    # check type
-    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
-        raise TypeError('Must be a xarray DataArray or Dataset.')
-        
-    # check wet dry list, convert if not
-    wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
-    dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
-                        
-    # tell user and reduce dataset to months in wet (JFM) or dry (SON) seasons only
-    try:
-        print('Reducing dataset into wet ({0}) and dry ({1}) months.'.format(wet_months, dry_months))
-        ds_wet_dry = ds.sel(time=ds['time.month'].isin(wet_months + dry_months))
-    
-    except:
-        raise ValueError('Could not reduce dataset into wet and dry months. Check requested months.')
-    
-    # notify and return
-    print('Got wet and dry seasons months successfully.')
-    return ds_wet_dry
-
-
-# meta, checks
-def get_trend_months(ds, trend_month=None):
-    """
-    trend_month = single month or list of months
-    """
-    
-    # notify
-    print('Getting requested months for trend analysis.')
-    
-    # check type
-    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
-        raise TypeError('Must be a xarray DataArray or Dataset.')
-        
-    # check wet dry list, convert if not
-    trend_months = trend_month if isinstance(trend_month, list) else [trend_month]
-                        
-    # tell user and reduce dataset to months in wet (JFM) or dry (SON) seasons only
-    try:
-        print('Reducing dataset to months ({0}) for trend analysis.'.format(trend_months))
-        ds_months = ds.sel(time=ds['time.month'].isin(trend_months))
-    
-    except:
-        raise ValueError('Could not reduce dataset. Check requested months.')
-    
-    # notify and return
-    print('Got trend months successfully.')
-    return ds_months
-
-
-# meta
-def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
-    """
-    """
-    
-    # notify
-    print('Resampling dataset down to annual, seasonal medians.')
-
-    # check data type
+    # check xr type, dims
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Did not provide an xarray Dataset or DataArray.')
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+                
+    # check wet, dry month if none given
+    if month is None:
+        raise ValueError('Must provide at least one month.')       
+                
+    # check wet dry list, convert if not
+    months = month if isinstance(month, list) else [month]
+    
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+                        
+    # reduce to wet, dry months
+    try:
+        print('Reducing dataset into months: {0}.'.format(months))
+        ds = ds.sel(time=ds['time.month'].isin(months))
+    
+    except:
+        raise ValueError('Could not subset to requested months.')
+    
+    # notify and return
+    print('Subset to requested months successfully.')
+    return ds
 
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
 
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
+def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None, inplace=True):
+    """
+    Takes a xarray dataset/array and a list of wet, dry months which 
+    to resample to. An annualised wet and dry season median image for 
+    given wet, dry months will be created. For example: one wet, one 
+    dry image for 2018, one wet, one dry image for 2019, etc. Time 
+    dimension required, or error occurs.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # notify
+    print('Resampling dataset to annual wet and dry medians.')
+    
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+                
+    # check wet, dry month if none given
+    if wet_month is None or dry_month is None:
+        raise ValueError('Must provide at least one wet and dry month.')    
 
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
 
-    # create copy ds
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
     
     # if dask, must compute for resample median
-    was_dask = False
-    if bool(ds.chunks):
-        print('Dask detected, not supported here. Computing, please wait.')
-        was_dask = True
-        ds = ds.compute()
+    # note, there seems to be a dask-resample bug where nan is returned
+    # randomly when dask resampled. leaving this here in case bug occurs 
+    #was_dask = False
+    #if bool(ds.chunks):
+        #print('Dask detected, not supported here. Computing, please wait.')
+        #was_dask = True
+        #ds = ds.compute()
 
     # split into wet, dry
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
@@ -153,16 +177,17 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
     
     # if was dask, make dask again
-    if was_dask:
-        ds = ds.chunk({'time': 1})
+    # related to above comment on dask-resample issue
+    #if was_dask:
+        #ds = ds.chunk({'time': 1})
     
     # notify and return
-    print('Resampled down to annual seasonal medians successfully.')
+    print('Resampled dataset to annual wet and dry medians successfully.')
     return ds
 
 
 # meta
-def resample_to_medians(ds, freq='YS'):
+def resample_to_freq_medians(ds, freq='YS'):
     """
     """
     
@@ -203,39 +228,59 @@ def resample_to_medians(ds, freq='YS'):
     return ds
 
 
-# meta, checks, do one solid once over
-def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01):
+def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01, inplace=True):
     """
-    takes a ds or da with >= 1 var, splits into wet dry, gets mean 
-    and std of whole image per date, puts into a zscore, creates a 
-    mask of dates outside of z_value, sets those dates to all nan in
-    full ds.
-    this method will have to load memory and thus take some time
+    Takes a xarray dataset/array and a list of wet, dry months which 
+    to check for outliers. Wet and dry is seperated and a z-score
+    test is done along time dimensions. Users can modify the 'strictness'
+    of the outlier removal via the p-value input. A p-value of 0.01 will 
+    only remove the most significant outliers, 0.05 less so, and 0.1 will
+    remove many. Value is not actually removed, just 'nulled' to np.nan.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    p_value : float
+        A float of 0.01, 0.05 or 0.1. Default is 0.01.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
-
-    # notify
-    print('Nullifying wet and dry season outliers usign z-score.')
-
-    # check data type
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Did not provide an xarray Dataset or DataArray.')
     
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-        
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-        
-    # check if num years less than 3
-    if len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years worth of data in dataset. Include more.')
-        
+    # notify
+    print('Nullifying wet, dry season outliers usign Z-Score test.')
+    
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+
+    # check wet, dry month if none given
+    if wet_month is None or dry_month is None:
+        raise ValueError('Must provide at least one wet and dry month.')    
+
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
-
+    
     # set z_value based on user significance (p_value)
     if p_value == 0.10:
         z_value = 1.65
@@ -246,10 +291,11 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01):
     else:
         print('P-value not supported. Setting to 0.01.')
         z_value = 2.58
-        
-    # create copy ds
-    ds = ds.copy(deep=True)
-    
+
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+            
     # split into wet, dry
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
@@ -285,35 +331,47 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01):
     ds = ds.where(~ds['time'].isin(da_times))
         
     # notify and return
-    print('Nullified wet and dry season outliers successfully.')
+    print('Nullified wet, dry season outliers successfully.')
     return ds
 
 
-# meta
-def drop_incomplete_wet_dry_years(ds):
+def drop_incomplete_wet_dry_years(ds, inplace=True):
     """
-    Takes an xarray dataset or dataarray, looks at number of months
-    per year, and drops any where not equal to two months per year (wet 
-    and dry seasons). If user resampled prior, only first and last years 
-    will be potentially missing a season or two.
+    Takes a xarray dataset/array and counts the number of
+    wet, dry images per year. As we are expecting exactly 2,
+    if this is not matched the year will be dropped. If a 
+    resample was performed beforehand, the only two possible
+    years that can be dropped is the first and last.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
+
     # notify
-    print('Dropping years where num seasons not equal to 2 (wet and dry).')
+    print('Dropping years where both wet, dry do not exist.')
     
-    # check data type
+    # check xr type, dims, num time
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Did not provide an xarray Dataset or DataArray.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
         
-    # create copy ds
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
     
     # get annual groups list, get first and last year info
     groups = list(ds.groupby('time.year').groups.items())
@@ -323,58 +381,71 @@ def drop_incomplete_wet_dry_years(ds):
     for group in groups:
         if len(group[1]) != 2:
             ds = ds.where(ds['time.year'] != group[0], drop=True)
-            print('Dropped year: {0}, not enough seasons.'.format(y[0]))
             removed_years.append(group[0])
             
     # notify
     if removed_years:
         removed_years = ', '.join(str(y) for y in removed_years)
-        print('Warning: years: {0} were dropped.'.format(removed_years))
+        print('Warning: years {0} were dropped.'.format(removed_years))
     else:
-        print('No incomplete years detected. No data was dropped.')
+        print('No uneven years detected, no data lost.')
 
     # return
     return ds
 
 
-# meta
-def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None):
+def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     """
+    Takes a xarray dataset/array and a list of wet, dry months as lists.
+    For wet and dry times, first and last time is checked if all nan. If
+    all nan, a forward or back fill is performed to fill these missing 
+    values in.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
 
     # notify
-    print('Filling empty wet and dry edges in dataset.')
+    print('Filling empty wet and dry edges in dataset.')        
 
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # check if num years less than 3
-    if len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
-
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check wet, dry month if none given
+    if wet_month is None or dry_month is None:
+        raise ValueError('Must provide at least one wet and dry month.')   
+        
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
-
-    # create copy ds
-    ds = ds.copy(deep=True)
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
 
     # split into wet, dry - we dont want to fill wet with dry, vice versa
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
@@ -394,25 +465,32 @@ def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None):
 
         # loop each da in ds
         for i, dt in enumerate(ds['time'].sortby('time', asc)):
+            
+            # get current datetime
             da = ds.sel(time=dt)
-
-            # is da is all nan or not
-            is_all_nan = da.isnull().all().to_array().any()
-
+            
+            # check if vars are all nan depending on xr type
+            if isinstance(da, xr.Dataset):
+                da_has_nans = da.to_array().isnull().all()
+            elif isinstance(da, xr.DataArray):
+                da_has_nans = da.isnull().all()
+                
             # if edge empty, get next time with vals, fill
-            if i == 0 and is_all_nan:
+            if i == 0 and da_has_nans:
                 print('{0} time is empty. Processing to fill.'.format(edge.title()))
 
-            elif i == 0 and not is_all_nan:
+            elif i == 0 and not da_has_nans:
                 print('{0} time has values. No need to fill.'.format(edge.title()))
                 break
 
-            elif i > 0 and not is_all_nan:
+            elif i > 0 and not da_has_nans:
                 print('Performing backfill.')
                 if edge == 'first':
-                    ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), ds.bfill('time'), ds)
+                    ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), 
+                                  ds.bfill('time'), ds)
                 elif edge == 'last':
-                    ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), ds.ffill('time'), ds)
+                    ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), 
+                                  ds.ffill('time'), ds)
                 break
 
         return ds
@@ -429,126 +507,170 @@ def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None):
 
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
-
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
     
     # notify and return
     print('Filled empty wet and dry edges successfully.')
     return ds
 
 
-# meta, dont like the chunking stuff here
-def interpolate_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full'):
+def perform_interp(ds, method='full'):
     """
-    method = full gives us interpolate_na. it can use dask, but can take awhile
-    to compute. method = half only interpolates times where all nan, and no
-    other pixels will be interpolated in other images. 
+    Takes a xarray dataset/array and performs linear interpolation across
+    time dimension. The method can be set to full or half. Full will use the 
+    built in xr interpolate_na method, which is robust and dask friendly 
+    but very slow. The quicker alternative is half, which only interpolates 
+    times that are all nan. Despite being slower, full method recommended.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
+    
+    # interpolate using full or half method
+    if method == 'full':
+
+        # if dask, rechunk into appropriate shape
+        if bool(ds.chunks):
+            chunks = ds.chunks
+            ds = ds.chunk({'time': -1}) 
+
+        # interpolate all nan pixels linearly
+        ds = ds.interpolate_na(dim='time', method='linear')
+
+        # chunk back to orginal size
+        if bool(ds.chunks):
+            ds = ds.chunk(chunks) 
+
+    elif method == 'half':
+        
+        # get times where all nan, find diff with original, drop if exist
+        nan_dates = ds.dropna(dim='time', how='all').time
+        nan_dates = np.setdiff1d(ds['time'], nan_dates)
+        ds = ds.dropna(dim='time', how='all')
+
+        # interpolate all nan pixels linearly
+        if len(nan_dates):
+            ds_interp = ds.interp(time=nan_dates, method='linear')
+            ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
+            
+    return ds
+
+
+def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inplace=True):
+    """
+    Takes a xarray dataset/array and performs linear interpolation across
+    wet, dry time dimension seperatly. A concatenated xr dataset is returned.
+    This is a wrapper for perform_interp function. The method can be set to full 
+    or half. Full will use the built in xr interpolate_na method, which is robust 
+    and dask friendly but very slow. The quicker alternative is half, which only
+    interpolates times that are all nan. Despite being slower, full method 
+    recommended.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
 
     # notify
     print('Interpolating empty values in dataset.')
 
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # check if num years less than 3
-    if len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
 
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
 
-    # create copy ds
-    ds = ds.copy(deep=True)
-
     # split into wet, dry - we dont want to fill wet with dry, vice versa
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
-
-    if method == 'full':
-        print('Interpolating using full method. This can take awhile. Please wait.')
-        
-        # if wet dask, rechunk to avoid core dimension error
-        if bool(ds_wet.chunks):
-            wet_chunks = ds_wet.chunks
-            ds_wet = ds_wet.chunk({'time': -1}) 
-            
-        # if dry dask, rechunk to avoid core dimension error
-        if bool(ds_dry.chunks):
-            dry_chunks = ds_dry.chunks
-            ds_dry = ds_dry.chunk({'time': -1}) 
- 
-        # interpolate all nan pixels linearly
-        ds_wet = ds_wet.interpolate_na(dim='time', method='linear')
-        ds_dry = ds_dry.interpolate_na(dim='time', method='linear')
-        
-        # chunk back to orginal size
-        if bool(ds_wet.chunks):
-            ds_wet = ds_wet.chunk(wet_chunks) 
-            
-        if bool(ds_dry.chunks):
-            ds_dry = ds_dry.chunk(dry_chunks)
-
-    elif method == 'half':
-        print('Interpolating using half method. Please wait.')
-
-        # get times where all nan
-        nan_dates_wet = ds_wet.dropna(dim='time', how='all').time
-        nan_dates_dry = ds_dry.dropna(dim='time', how='all').time
-
-        # get wet, dry time differences with original ds
-        nan_dates_wet = np.setdiff1d(ds_wet['time'], nan_dates_wet)
-        nan_dates_dry = np.setdiff1d(ds_dry['time'], nan_dates_dry)
-        
-        # drop all nan in ds wet, dry
-        ds_wet = ds_wet.dropna(dim='time', how='all')
-        ds_dry = ds_dry.dropna(dim='time', how='all')
-
-        # interpolate wet all nan pixels linearly
-        if len(nan_dates_wet):
-            ds_wet_interp = ds_wet.interp(time=nan_dates_wet, method='linear')
-            ds_wet = xr.concat([ds, ds_wet_interp], dim='time').sortby('time')
-
-        # interpolate wet all nan pixels linearly
-        if len(nan_dates_dry):
-            ds_dry_interp = ds_dry.interp(time=nan_dates_dry, method='linear')
-            ds_dry = xr.concat([ds, ds_dry_interp], dim='time').sortby('time')
+    
+    # interpolate for wet, then dry
+    ds_wet = perform_interp(ds=ds_wet, method=method)
+    ds_dry = perform_interp(ds=ds_dry, method=method)
 
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
 
-
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Interpolated empty values successfully.')
-    return ds   
+    return ds      
 
 
-# meta
-def interpolate_empty_months(ds, method='full'):
+
+# meta, dont like the chunking stuff here, see above
+def interp_empty_months(ds, method='full'):
     """
     interpolate along individual months
     """
@@ -636,8 +758,8 @@ def interpolate_empty_months(ds, method='full'):
     return ds
 
 
-# meta, dont like the chunking stuff here
-def interpolate_empty(ds, method='full'):
+# meta, dont like the chunking stuff here, see above
+def interp_empty(ds, method='full'):
     """
     """
 
@@ -708,29 +830,57 @@ def interpolate_empty(ds, method='full'):
     return ds   
 
 
-# meta, does it need da to ds check?
-def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
-    """
-    standardises all times to dry season invariant targets
-    q_upper is used to set percentile of greennest/moistest pixels
-    q_lower is used to set percentile of lowest stability pixels (most stable)
-    """
 
-    # notify
-    print('Standardising data using invariant targets.')
+def calc_ivts(ds, ds_med, q_upper=0.99, q_lower=0.05):
+    """
+    Takes a xarray dataset/array and an all-time median of same data and calculates
+    invariant targets. Invariant targets are pixels that are greenest/moistest
+    across all time + most stable across all time. Greenest and moistest values
+    use upper percentile to detect them, where as stable pixels generated via
+    orthogonal polynomial coefficients and quantile closest to 0, or lowest
+    percentile.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    ds_med : xarray dataset/array
+        The all-time median version of above dataset. Generate before
+        entering here.
+    q_upper : float
+        Set the upper percentile of vegetation/moisture values. We
+        need the highest values to standardise to, but don't want to
+        just take max. Default is 0.99 and typically produces optimal
+        results.
+    q_lower : float
+        Set the lowest percentile of stability values. We need to find
+        the most 'stable' pixels across time to ensure standardisation
+        works. Default is 0.05 and typically produces optimal results.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
     
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
+    # notify
+    print('Calculating invariant target sites.')
+    
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if all time median is valid
+    if not isinstance(ds_med, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds_med.dims) or 'y' not in list(ds_med.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+        
     # check q_value 0-1
     if q_upper < 0 or q_upper > 1:
         raise ValueError('Upper quantile value must be between 0 and 1.')
@@ -739,52 +889,128 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
     if q_lower < 0 or q_lower > 1:
         raise ValueError('Lower quantile value must be between 0 and 1.')
         
-    # check wet dry list, convert if not
-    dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
-
-    # create copy ds and take attrs
-    ds = ds.copy(deep=True)
-    attrs = ds.attrs
-
-    # split into wet, dry - we dont want to fill wet with dry, vice versa
-    ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
-
-    # get median all time for wet, dry
-    ds_dry_med = ds_dry.median('time', keep_attrs=True)
-
-    # notify
-    print('Getting Generating invariant targets.')
-
     # get upper n quantile (i.e., percentiles) of dry vege, moist
-    ds_quants = ds_dry_med.quantile(q=q_upper, skipna=True)
-    ds_quants = xr.where(ds_dry_med > ds_quants, True, False)
+    ds_quants = ds_med.quantile(q=q_upper, skipna=True)
+    ds_quants = xr.where(ds_med > ds_quants, True, False)
 
     # get num times
-    num_times = len(ds_dry['time'])
+    num_times = len(ds['time'])
 
     # get linear ortho poly coeffs, sum squares, constant, reshape 1d to 3d
     coeffs, ss, const = tools.get_linear_orpol_contrasts(num_times)
-    coeffs = np.reshape(coeffs, (ds_dry['time'].size, 1, 1)) # todo dynamic?
+    coeffs = np.reshape(coeffs, (ds['time'].size, 1, 1)) # todo dynamic?
 
     # calculate dry linear slope, mask to greenest/moistest
-    ds_poly = abs((ds_dry * coeffs).sum('time') / ss * const)
+    ds_poly = abs((ds * coeffs).sum('time') / ss * const)
     ds_poly = ds_poly.where(ds_quants)
 
     # get lowest stability areas in stable, most veg, moist
     ds_targets = xr.where(ds_poly < ds_poly.quantile(q=q_lower, skipna=True), True, False)
 
-    # check if any targets exist
-    for var in ds_targets:
-        is_empty = ds_targets[var].where(ds_targets[var]).isnull().all()
-        if is_empty:
-            raise ValueError('No invariant targets created: increase lower quantile.')
+    # determine if targets exist based on xr type
+    if isinstance(ds_targets, xr.Dataset):
+        da_all_nans = ds_targets.to_array().isnull().all()
+    elif isinstance(ds_targets, xr.DataArray):
+        da_all_nans = ds_targets.isnull().all()
+        
+    # check if targets exist
+    if da_all_nans:
+        raise ValueError('No invariant targets were created. Increase lower quantile.')
+            
+    # notify and return
+    print('Created invariant target sites successfully.')
+    return ds_targets
+
+
+def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, inplace=True):
+    """
+    Takes a xarray dataset/array and calculates invariant targets. Invariant 
+    targets are pixels that are greenest/moistest across all time + most stable 
+    across all time. Greenest and moistest values use upper percentile to detect 
+    them, where as stable pixels generated via orthogonal polynomial coefficients 
+    and quantile closest to 0, or lowest percentile. These sites are then used to
+    standardise all images to each other. Images are finally rescaled 0 to 1 via
+    a fuzzy increasing sigmoidal.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. Standardisation is done to dry season values.
+    q_upper : float
+        Set the upper percentile of vegetation/moisture values. We
+        need the highest values to standardise to, but don't want to
+        just take max. Default is 0.99 and typically produces optimal
+        results.
+    q_lower : float
+        Set the lowest percentile of stability values. We need to find
+        the most 'stable' pixels across time to ensure standardisation
+        works. Default is 0.05 and typically produces optimal results.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # notify
+    print('Standardising data using invariant targets.')
+    
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check q_value 0-1
+    if q_upper < 0 or q_upper > 1:
+        raise ValueError('Upper quantile value must be between 0 and 1.')
+
+    # check q_value 0-1
+    if q_lower < 0 or q_lower > 1:
+        raise ValueError('Lower quantile value must be between 0 and 1.')
+        
+    # check wet, dry month if none given
+    if dry_month is None:
+        raise ValueError('Must provide at least one dry month.')   
+        
+    # check wet dry list, convert if not
+    dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
+    # get attributes - we lose them 
+    attrs = ds.attrs
+        
+    # split into dry and get all time dry season median
+    ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
+    ds_dry_med = ds_dry.median('time')
+
+    # generate invariant target sites
+    ds_targets = calc_ivts(ds=ds_dry, 
+                           ds_med=ds_dry_med, 
+                           q_upper=q_upper, 
+                           q_lower=q_lower)
 
     # notify
-    print('Standardising to invariant targets and rescaling via increasing sigmoidal.')
+    print('Standardising to invariant targets, rescaling via fuzzy sigmoidal.')
 
-    # get low, high inflections via hardcoded percentile, do inc sigmoidal
+    # get low, high inflection point via hardcoded percentile
     li = ds.median('time').quantile(q=0.001, skipna=True)
     hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
+    
+    # do inc sigmoidal
     ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
     
     # drop quantile tag the method adds, if exists
@@ -793,13 +1019,11 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05):
     # add attributes back on
     ds.attrs.update(attrs)
     
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Standardised using invariant targets successfully.')
     return ds
+
+
 
 
 # meta, does it need da to ds check?
@@ -890,40 +1114,68 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
     return ds
 
 
-# meta
-def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9):
+
+def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9, inplace=True):
     """
+    Takes a xarray dataset/array and a list of wet, dry months which 
+    to generate similarity between wet, dry seasons per year. Lower
+    similarity values are more unchanging pixels between seasons. The 
+    q mask accepts a value between 0 to 1 in which to select only pixels
+    that are high greenness. The default is recommended.
+
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov. 
+    q_mask : float
+        A float between 0 to 1. Set the percentile in which to 
+        mask high vegetation from the rest. Optional - keep as None
+        to not mask similarity. Default recommended.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # notify
     print('Calculating seasonal similarity.')
 
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check q_mask 0-1
+    if q_mask < 0 or q_mask > 1:
+        raise ValueError('Mask quantile value must be between 0 and 1.')
 
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
+    # check wet, dry month if none given
+    if wet_month is None or dry_month is None:
+        raise ValueError('Must provide at least one wet and dry month.')    
 
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
 
     # take attrs
-    attrs = ds.attrs    
+    attrs = ds.attrs
     
     # generate similarity (i.e. diff between wet and dry, per year)
     similarity_list = []
@@ -990,55 +1242,72 @@ def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9):
     # add attributes back on
     ds_similarity.attrs.update(attrs)
     
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-    
     # notify and return
     print('Calculated seasonal similarity successfully.')
     return ds_similarity
 
 
-#meta, check ds sim
 def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
     """
-    ds holds veg and moist
-    ds sim holds similarity
-    """
-    
+    Takes a xarray dataset/array of veg, moisture and another xr of
+    similarity between wet, dry seasons. A list of wet, dry months also 
+    required. For each year, a GDV likelihood map is generated using
+    weights created from the AHP process.
 
-    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with veg and moisture vars.
+    ds_similarity : xarray dataset/array
+        A dataset with x, y and time dims with similarity var.
+    wet_month : int or list
+        An int or a list representing the month(s) that represent
+        the wet season months. Example [1, 2, 3] for Jan, Feb, 
+        Mar. 
+    dry_month : int or list
+        An int or a list representing the month(s) that represent
+        the dry season months. Example [9, 10, 11] for Sep, Oct, 
+        Nov.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+        
     # notify
     print('Generating groundwater-dependent vegetation (GDV) model.')
-
-    # check if da provided, attempt convert to ds, check for ds after that
+    
+    # we need a dataset, try and convert to array
     was_da = False
     if isinstance(ds, xr.DataArray):
         try:
-            ds = ds.to_dataset(dim='variable')
             was_da = True
+            ds = ds.to_dataset(dim='variable')
         except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
 
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # check vars are veg, mst idx exist
-    for var in ds:
-        if var not in ['veg_idx', 'mst_idx']:
-            raise ValueError('Vegetation and/or moisture variable missing.')
+    # check wet, dry month if none given
+    if wet_month is None or dry_month is None:
+        raise ValueError('Must provide at least one wet and dry month.')    
 
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
+    
+    # check if var names have veg and mst idx
+    for var in list(ds.data_vars):
+        if var not in ['veg_idx', 'mst_idx']:
+            raise ValueError('Vegetation and/or moisture index variable missing.')
 
     # take attrs
     attrs = ds.attrs    
@@ -1106,9 +1375,32 @@ def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
     return ds_likelihood
 
 
-# meta
 def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     """
+    Takes a xarray dataset/array of gdv likelihood values and thresholds them
+    according to a pandas dataframe (df) of field occurrence points. Scipy
+    roc curve and auc is generated to perform thresholding. Pandas dataframe
+    must include absences along with presences or the roc curve cannot be
+    performed.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    df : pandas dataframe
+        A dataframe of field occurrences with x, y values and 
+        presence, absence column.
+    res_factors : int
+        Controls the tolerance of occurence points intersection with
+        nearest pixels. In other words, number of pixels that a occurrence
+        point can be 'out'.
+    if_nodata : str
+        Whether to exclude a point from the auc threshold method if any
+        or all values are nan. Default is any.
+        
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # imports check
@@ -1117,30 +1409,23 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     except:
         raise ImportError('Could not import sklearn.')
 
-    
     # notify
     print('Thresholding dataset via occurrence records and AUC.')
     
-    # check if dataframe is pandas
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+
+    # check if pandas type, columns, actual field
     if not isinstance(df, pd.DataFrame):
         raise TypeError('Occurrence records is not a pandas type.')
-        
-    #  check if x, y, actual fields in df
-    if 'x' not in df or 'y' not in df:
+    elif 'x' not in df or 'y' not in df:
         raise ValueError('No x, y fields in occurrence records.')
     elif 'actual' not in df:
         raise ValueError('No actual field in occurrence records.')     
-    
-    # check if dataset is xarray
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset is not an xarray type.')    
-    
-    # check if x, y, like dims/vars in ds
-    if 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dims in dataset.')
-    elif 'like' not in list(ds.data_vars) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dims in dataset.')
-        
+            
     # check if nodatavals is in dataset
     if not hasattr(ds, 'nodatavals') or ds.nodatavals == 'unknown':
         raise AttributeError('Dataset does not have a nodatavalue attribute.')
@@ -1210,28 +1495,44 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     return ds_thresh
 
 
-# meta
-def threshold_xr_via_std(ds, num_stdevs=3):
+def threshold_xr_via_std(ds, num_stdevs=3, inplace=True):
     """
+    Takes a xarray dataset/array of gdv likelihood values and thresholds them
+    according to a automated standard deviation approach. Users can set number 
+    of standard devs to threshold by, with ~1 bringing more pixels back and ~3 
+    bring less. An all-time median of likelihood is recommended as the ds input. 
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    num_stdevs : int
+        The standard deviation factor in which to threshold likelihood
+        values. Lower values return more, higher values return less.
+    inplace : bool
+        Copy new xarray into memory or modify inplace.
+        
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # notify
     print('Thresholding dataset via standard deviation.')
     
-    # check if xr
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset is not an xarray type.')
-        
-    # check for x and y dims
-    if 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')  
     
     # check num_stdv > 0 and <= 5
     if num_stdevs <= 0 or num_stdevs > 5:
         raise ValueError('Number of standard devs must be > 0 and <= 5.')
         
-    # copy ds
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
           
     # calculate n stand devs and apply threshold
     ds_thresh = ds.mean(['x', 'y']) + (ds.std(['x', 'y']) * num_stdevs)
@@ -1242,29 +1543,63 @@ def threshold_xr_via_std(ds, num_stdevs=3):
     return ds
 
 
-
-# meta
 def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any'):
     """
+    Takes a xarray dataset/array of gdv likelihood values and thresholds them
+    according to either a pandas dataframe (df) of field occurrence points or
+    via a more automated standard deviation approach. Leave df as None to use
+    standard deviation. Users can set number of standard devs to threshold by,
+    with ~1 bringing more pixels back and ~3 bring less. An all-time median of
+    likelihood is recommended as the ds input. Calls two functions 
+    threshold_xr_via_std or threshold_xr_via_auc, depending.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    df : pandas dataframe
+        A dataframe of field occurrences with x, y values and 
+        presence, absence column.
+    num_stdevs : int
+        The standard deviation factor in which to threshold likelihood
+        values. Lower values return more, higher values return less.
+    res_factors : int
+        Controls the tolerance of occurence points intersection with
+        nearest pixels. In other words, number of pixels that a occurrence
+        point can be 'out'.
+    if_nodata : str
+        Whether to exclude a point from the auc threshold method if any
+        or all values are nan. Default is any.
+        
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
 
     # notify
     print('Thresholding groundwater-dependent vegeation likelihood.')
 
-    # check if array provided, if so, convert to dataset
-    was_da = False
+    # we need a dataset, try and convert to array
     if isinstance(ds, xr.DataArray):
         try:
             ds = ds.to_dataset(dim='variable')
-            was_da = True
         except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+            
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')  
         
     # check if nodatavals is in dataset
     if not hasattr(ds, 'nodatavals') or ds.nodatavals == 'unknown':
         raise AttributeError('Dataset does not have a nodatavalue attribute.')
+        
+    # check if var names have veg and mst idx
+    for var in list(ds.data_vars):
+        if var not in ['like']:
+            raise ValueError('Likelihood variable missing.')
 
     # check num_stdevs > 0 and <= 5
     if num_stdevs <= 0 or num_stdevs > 5:
@@ -1280,31 +1615,40 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
                                              if_nodata=if_nodata)
             
         except Exception as e:
-            # notify and attempt thresholding via stdv
             print('Could not threshold via occurrence records. Trying standard dev.')
-            print(e)
             ds_thresh = threshold_xr_via_std(ds, num_stdevs=num_stdevs)
 
     else:
         # attempt roc standard dev thresholding
         ds_thresh = threshold_xr_via_std(ds, num_stdevs=num_stdevs)
-
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-        
+                
     # notify
     print('Thresholded likelihood succuessfully.')
     return ds_thresh
 
 
-
-# meta
-def perform_mk_original(ds, pvalue, direction):
+def perform_mk_original(ds, pvalue=None, direction='both'):
     """
-    ds : xarray dataset or array
-    pvalue = set none for all
-    direction = trend direction. (inc, dec or both)
+    Takes a xarray dataset/array of gdv likelihood values (thresholded or not)
+    and performs a mann-kendall trend analysis on each pixel time series as 
+    1d vector. Users can control whether singificant trends only are returned
+    (pvalue) and whether the direction is inc or dec trend (direction). Leave
+    pvalue empty for any trend and/or set direction to both for any direction.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    pvalue : float
+        Significant of trend to return. Default is 0.05. Leave blank
+        for any trend, significant or not.
+    direction : str
+        Direction of trend to return. If inc, only upward trends. If
+        dec, only downward. Enter both for inc and dec returned.
+        
+    Returns
+    ----------
+    ds_mk : xarray dataset or array.
     """
     
     # imports check
@@ -1316,16 +1660,12 @@ def perform_mk_original(ds, pvalue, direction):
     # notify user
     print('Performing Mann-Kendall test (original).')
     
-    # check if xarray dataset type
+    # check xr type, dims
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Must provided an xarray dataset or array.')
-                
-    # check if time dim exists
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimensions in dataset.')
-        
-    # check if 3 or more times
-    if len(ds['time']) < 3:
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time']) < 3:
         raise ValueError('More than 2 years required for analysis.')
         
     # check if nodatavals is in dataset
@@ -1395,13 +1735,26 @@ def perform_mk_original(ds, pvalue, direction):
     return ds_mk
 
 
-
-# meta
 def perform_theilsen_slope(ds, alpha):
     """
-    ds : xarray dataset or array
-    alpha = confidence
+    Takes a xarray dataset/array of gdv likelihood values (thresholded or not)
+    and calculates theil-sen slopes on each pixel time series as 1d vector. 
+    Users can control whether singificant slopes only are returned
+    (alpha). Leave alpha empty for any slope.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    alpha : float
+        Significance of slope to return. Default is 0.95. Leave blank
+        for any trend, significant or not.
+        
+    Returns
+    ----------
+    ds_ts : xarray dataset or array.
     """
+    
     #imports check
     try:
         from scipy.stats import theilslopes
@@ -1411,13 +1764,13 @@ def perform_theilsen_slope(ds, alpha):
     # notify user
     print('Performing Theil-Sen slope (original).')
     
-    # check if xarray dataset type
+    # check xr type, dims
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Must provided an xarray dataset or array.')
-                
-    # check if time dim exists
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimensions in dataset.')
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time']) < 3:
+        raise ValueError('More than 2 years required for analysis.')
         
     # check if 3 or more times
     if len(ds['time']) < 3:
@@ -1452,7 +1805,6 @@ def perform_theilsen_slope(ds, alpha):
         
         # return
         return medslope
-
 
     # create ufunc to wrap mk in
     ds_ts = xr.apply_ufunc(
