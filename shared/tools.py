@@ -7,13 +7,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-# meta, checks
+# meta
 def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=False):
     """
     """
         
     # notify
-    print('Calculating indices.'.format(index))
+    print('Calculating indices: {0}.'.format(index))
     
     # attempt da convert to ds, check for ds
     was_da = False
@@ -26,11 +26,7 @@ def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=Fals
     
     elif not isinstance(ds, xr.Dataset):
         raise TypeError('Not an xarray dataset. Please provide Dataset.')
-        
-    # check if index is empty
-    #if not index:
-        #raise ValueError('Must request at least one index.')
-                        
+                                        
     # prepare index, custom names if empty
     index = index if index is not None else []
     custom_name = custom_name if custom_name is not None else []
@@ -38,7 +34,11 @@ def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=Fals
     # if not none but not list, prepare also
     indices = index if isinstance(index, list) else [index]
     custom_names = custom_name if isinstance(custom_name, list) else [custom_name]
-                    
+    
+    # check if custon names same length as index, if provided
+    if custom_names and len(indices) != len(custom_names):
+        raise ValueError('Custom names must be provided for all indexes.')
+                        
     # get pre-processing band names for drop later
     drop_bands = list(ds.data_vars)
     
