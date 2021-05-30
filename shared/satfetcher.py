@@ -17,14 +17,17 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
                  time_range=None, min_gooddata=0.90, use_dask=False):
     """
     """
-    # imports
-    import datacube
+    try:
+        # imports
+        import datacube
 
-    sys.path.append('../../Scripts')
-    from dea_datahandling import load_ard
-    from dea_dask import create_local_dask_cluster
-    from dea_plotting import display_map, rgb
-
+        sys.path.append('../../Scripts')
+        from dea_datahandling import load_ard
+        from dea_dask import create_local_dask_cluster
+        from dea_plotting import display_map, rgb
+        
+    except:
+        raise ImportError('Could not import DEA ODC.')
 
     # notify user
     print('Loading DEA ODC ARD satellite data.')
@@ -233,6 +236,13 @@ def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-99
     ds : xarray Dataset
     """
     
+    # import checks
+    try:
+        import dask
+    except:
+        print('Could not import dask.')
+        use_dask = False
+    
     # notify user
     print('Converting rasters to an xarray dataset.')
     
@@ -329,8 +339,92 @@ def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-99
     print('Rasters converted to dataset successfully.\n')
     return ds
     
-
-# todo all
-def load_local_nc(filepath=None):
-    print('todo')
     
+# meta
+def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
+    """
+    Read a netcdf file (e.g. nc) and convert into an xarray dataset.
+
+    Parameters
+    ----------
+    nc_path: str
+        A string with full path and filename of a netcdf.
+    use_dask : bool
+        Defer loading into memory if dask is set to True.
+    conform_nodata_to : numeric or numpy.nan
+        A value in which no data values will be changed to. We need
+        to conform various different datasets, so keeping this
+        the same throughout is vital. Use np.nan for smaller
+        datasets, and keep it an int (i.e. -9999) for larger ones.
+
+    Returns
+    ----------
+    ds : xarray Dataset
+    """
+    
+    # import checks
+    try:
+        import dask
+    except:
+        print('Could not import dask.')
+        use_dask = False
+    
+    # notify user
+    print('Converting netcdf to an xarray dataset.')
+    
+    # check if netcdf exists
+    if not nc_path:
+        raise ValueError('No netcdf path provided.')
+        
+    # ensure netcdf path in list exist and are strings
+    if not isinstance(nc_path, str):
+        raise ValueError('Netcdf path must be a string.')
+    elif not os.path.exists(nc_path):
+        raise OSError('Unable to read netcdf, file not found.')
+
+    # try open netcdf
+    try:
+        # if dask use it, else rasterio
+        if use_dask:
+            ds = xr.open_dataset(nc_path, chunks=-1)
+        else:
+            ds = xr.open_dataset(nc_path)
+
+        # check if no data val attributes exist, replace with nan
+        if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
+
+            # check if nodata values a iterable, if not force it
+            nds = ds.nodatavals
+            if not isinstance(nds, (list, tuple)):
+                nds = [nds]
+
+            # mask nan for nodata values
+            for nd in nds:
+                ds = ds.where(ds != nd, conform_nodata_to)
+
+            # update xr attributes to new nodata val
+            if hasattr(ds, 'attrs'):
+                ds.attrs.update({'nodatavals': conform_nodata_to})
+
+            # convert from float64 to float32 if nan is nodata
+            if conform_nodata_to is np.nan:
+                ds = ds.astype(np.float32)
+
+        else:
+            # mask via provided nodata
+            print('No NoData values found in raster: {0}.'.format(nc_path))
+            da.attrs.update({'nodatavals': 'unknown'})
+
+        # notify and append
+        print('Converted netcdf to xarray dataset: {0}'.format(nc_path))
+
+    except Exception:
+        raise IOError('Unable to read netcdf: {0}.'.format(nc_path))
+                
+    # check if dataset has crs epsg: 3577
+    if tools.get_xr_crs(ds) != 3577:
+        raise ValueError('Netcdf CRS not projected in EPSG:3577.')
+                              
+    # notify user and return
+    print('Netcdf converted to xarray dataset successfully.')
+    return ds
