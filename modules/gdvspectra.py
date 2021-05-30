@@ -2,9 +2,6 @@
 """
 """
 
-# todo
-# check which funcs need ds to da and back (was_da flag)
-
 # import required libraries
 import os, sys
 import numpy as np
@@ -12,7 +9,7 @@ import pandas as pd
 import xarray as xr
 
 sys.path.append('../../shared')
-import satfetcher, tools
+import tools
 
 # meta, checks
 def get_wet_dry_months(ds, wet_month=None, dry_month=None):
@@ -148,7 +145,7 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None):
 
 
 # meta
-def resample_to_annual_medians(ds):
+def resample_to_medians(ds, freq='YS'):
     """
     """
     
@@ -178,7 +175,7 @@ def resample_to_annual_medians(ds):
         ds = ds.compute()
         
     # resample wet, dry into annual wet, dry medians
-    ds = ds.resample(time='YS').median(keep_attrs=True)
+    ds = ds.resample(time=freq).median(keep_attrs=True)
     
     # if was dask, make dask again
     if was_dask:
@@ -533,6 +530,95 @@ def interpolate_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full')
     return ds   
 
 
+# meta
+def interpolate_empty_months(ds, method='full'):
+    """
+    interpolate along individual months
+    """
+
+    # notify
+    print('Interpolating empty values along months in dataset.')
+
+    # check if da provided, attempt convert to ds, check for ds after that
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            ds = ds.to_dataset(dim='variable')
+            was_da = True
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset. Please provide Dataset.')
+
+    # check for time dim
+    if 'time' not in list(ds.dims):
+        raise ValueError('No time dimension detected.')
+
+    # check for x and y dims
+    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions detected.')
+
+    # check if num years less than 3
+    if len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
+
+    # create copy ds
+    ds = ds.copy(deep=True)
+
+    # get list of months within dataset
+    months_list = list(ds.groupby('time.month').groups.keys())
+
+    # loop each month in months list
+    da_list = []
+    for month in months_list:
+
+        # notify
+        print('Interpolating along month: {0}'.format(month))
+
+        # get subset for month
+        da = ds.where(ds['time.month'] == month, drop=True)
+        da = da.copy(deep=True)
+        
+        # using slow interpolate_na
+        if method == 'full':
+            
+            # if dask, rechunk to avoid core dimension error
+            if bool(da.chunks):
+                chunks = da.chunks
+                da = da.chunk({'time': -1})
+
+            # interpolate all nan pixels linearly
+            da = da.interpolate_na(dim='time', method='linear')
+
+            # chunk back to orginal size            
+            if bool(da.chunks):
+                da = da.chunk(chunks)
+                
+        # using quicker method
+        elif method == 'half':
+        
+            # get times where all nan, get diff with original ds, drop nan
+            nan_dates = da.dropna(dim='time', how='all').time
+            nan_dates = np.setdiff1d(da['time'], nan_dates)
+            da = da.dropna(dim='time', how='all')
+
+            # interpolate all nan pixels linearly
+            if len(nan_dates):
+                da_interp = da.interp(time=nan_dates, method='linear')
+                da = xr.concat([da, da_interp], dim='time').sortby('time')
+            
+        # append to list
+        da_list.append(da)
+
+    # concat back together
+    ds = xr.concat(da_list, dim='time').sortby('time')
+    
+    # notify and return
+    print('Interpolating empty values along months successfully.')
+    return ds
+
+
 # meta, dont like the chunking stuff here
 def interpolate_empty(ds, method='full'):
     """
@@ -591,7 +677,7 @@ def interpolate_empty(ds, method='full'):
         nan_dates = np.setdiff1d(ds['time'], nan_dates)
         ds = ds.dropna(dim='time', how='all')
 
-        # interpolate wet all nan pixels linearly
+        # interpolate all nan pixels linearly
         if len(nan_dates):
             ds_interp = ds.interp(time=nan_dates, method='linear')
             ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
@@ -1009,8 +1095,11 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     """
     """
     
-        # imports
-    from sklearn.metrics import roc_curve, roc_auc_score
+    # imports check
+    try:
+        from sklearn.metrics import roc_curve, roc_auc_score
+    except:
+        raise ImportError('Could not import sklearn.')
 
     
     # notify
@@ -1207,7 +1296,7 @@ def perform_mk_original(ds, pvalue, direction):
     try:
         from scipy.stats import kendalltau
     except:
-        raise ImportError('Could not import kendalltau, scipy not installed.')
+        raise ImportError('Could not import scipy.')
     
     # notify user
     print('Performing Mann-Kendall test (original).')
@@ -1302,7 +1391,7 @@ def perform_theilsen_slope(ds, alpha):
     try:
         from scipy.stats import theilslopes
     except:
-        raise ImportError('Could not import theilslopes, scipy not installed.')
+        raise ImportError('Could not import scipy.')
     
     # notify user
     print('Performing Theil-Sen slope (original).')
@@ -1545,3 +1634,56 @@ def isolate_cva_change(ds, angle_min=90, angle_max=180):
     # notify and return
     print('Isolated CVA angles successfully.')
     return ds
+
+
+# meta
+def detect_breaks(values, times, pen=3, fill_nan=True, quick_plot=False):
+    """
+    pen : int 
+        strictness of pelt change point detection. 1 is loose, returns many
+        3 is moderate, returns moderate. 5 is very strict, returns big changes
+
+    """
+
+    # import check
+    try:
+        import ruptures as rpt
+    except:
+        raise ImportError('Could not import ruptures.')
+
+    # check if values, times numpy
+    if not isinstance(values, np.ndarray):
+        raise TypeError('Values must be numpy array.')
+    elif not isinstance (times, np.ndarray):
+        raise TypeError('Times must be numpy array.')
+
+    # check penalty
+    if pen <= 0:
+        raise ValueError('Penalty must be greater than 0.')
+        
+    # if fill nan, fill nan!
+    if fill_nan:
+        nans, f = np.isnan(values), lambda z: z.nonzero()[0]
+        values[nans]= np.interp(f(nans), f(~nans), values[~nans])
+
+    # detect breaks using pelt
+    try:
+        brk_idxs = rpt.Pelt(model='rbf').fit(values).predict(pen=3)
+    except:
+        brk_idxs = np.array([])
+        
+    # if quick polt, quick plot!
+    if quick_plot:
+        rpt.display(values, brk_idxs)
+
+    # rbt adds max index to array - remove
+    if len(times) in brk_idxs:
+        brk_idxs.remove(len(times))
+
+    # if breaks, get date(s)
+    brk_dates = np.array([])
+    if len(brk_idxs) > 0:
+        brk_dates = times[brk_idxs]
+
+    # return
+    return brk_dates
