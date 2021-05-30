@@ -6,7 +6,6 @@ import os, sys
 import numpy as np
 import pandas as pd
 import xarray as xr
-from osgeo import ogr
 
 # meta, checks
 def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=False):
@@ -206,6 +205,12 @@ def read_shapefile(shp_path=None):
         A pandas dataframe containing all columns and rows within
         a shapefile.
     """
+    
+    # imports check
+    try:
+        from osgeo import ogr
+    except:
+        raise ImportError('Could not import osgeo.')
 
     # notify user
     print('Reading records within shapefile.')
@@ -486,6 +491,7 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
 
 
 #!!!!!!!! I split this into read_shapefile and extract_occurence_data
+# todo: remove when sdm code updated
 def read_coordinates_shp(shp_path=None, p_a_column=None):
     """
     Read observation records from a projected ESRI Shapefile and extracts the x and y values
@@ -506,7 +512,13 @@ def read_coordinates_shp(shp_path=None, p_a_column=None):
     df_presence : pandas dataframe
         A pandas dataframe containing two columns (x and y) with coordinates.
     """
-
+    
+    # imports check
+    try:
+        from osgeo import ogr
+    except:
+        raise ImportError('Could not import osgeo.')
+    
     # notify user
     print('Reading species point locations from shapefile.')
 
