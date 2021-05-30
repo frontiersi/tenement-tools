@@ -1,22 +1,19 @@
-# nicher
+# gdvspectra
 '''
-This script contains functions for calculating species distribution models
-(SDMs), also known as ecological niche models (ENMs) - hence, Nicher. This
-script is intended to accept a digital elevation model (DEM) geotiff and any
-pre-generated derivatives (e.g. slope, aspect, topographic wetness index, etc.) 
-that are generated from it. The methodology is based on the approach used by
-MaxEnt (https://biodiversityinformatics.amnh.org/open_source/maxent/), but replaces
-the Logistic Regression technique with ExtraTrees and RandomForest from Sklearn. 
-Various functions in Nicher are based on the excellent RSGISLib SDM library 
-(https://www.rsgislib.org/rsgislib_sdm.html), especially the creation of response
-curves and lek matrices. If you cite this library, please also cite RSGISLib.
+This script contains functions for calculating groundwater-dependent 
+vegetation (GDV) from landsat or sentinel data. This model has been 
+validated for three key Pilbara, Western Australia species Euc. victrix, Euc. 
+camaldulenesis and Mel. argentea. It offers a SMCE approach to detecting
+this vegetation. GDV is detected using a time series of vegetation indices,
+moisture indices and seasonal stability in an AHP process, resulting in
+a GDV likelihood (probability) map. Thresholding can be implemented via
+standard deviation or groundtruthed point locations. Trends can be determined
+using Mann-Kendall trend analysis, Theil-sen slopes, or Change Vector Analysis
+(CVA) functions. Finally, significant breaks in vegetation can be detected
+using change point detection.
 
-See associated Jupyter Notebook Nicher.ipynb for a basic tutorial on the
+See associated Jupyter Notebook gdvspectra.ipynb for a basic tutorial on the
 main functions and order of execution.
-
-Links:
-MaxEnt: https://biodiversityinformatics.amnh.org/open_source/maxent
-RSGISLib: https://www.rsgislib.org/rsgislib_sdm
 
 Contacts: 
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
