@@ -186,42 +186,58 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None, inplace=True
     return ds
 
 
-# meta
-def resample_to_freq_medians(ds, freq='YS'):
+def resample_to_freq_medians(ds, freq='YS', inplace=True):
     """
+    Takes a xarray dataset/array and a frequency value in which to 
+    resample to. Based on pandas resample frequencies. This function
+    is basically just an xarray resample wrapped up with some error
+    handling.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    freq : str
+        A frequency value for resampler. Example: 1MS, YS.
+        Read pandas frequency docs for help.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # notify
     print('Resampling dataset down to annual medians.')
 
-    # check data type
+    # check xr type, dims
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Did not provide an xarray Dataset or DataArray.')
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
 
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # create copy ds
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
     
     # if dask, must compute for resample median
-    was_dask = False
-    if bool(ds.chunks):
-        was_dask = True
-        print('Dask detected, not supported here. Computing, please wait.')
-        ds = ds.compute()
+    # note, there seems to be a dask-resample bug where nan is returned
+    # randomly when dask resampled. leaving this here in case bug occurs 
+    #was_dask = False
+    #if bool(ds.chunks):
+        #print('Dask detected, not supported here. Computing, please wait.')
+        #was_dask = True
+        #ds = ds.compute()
         
     # resample wet, dry into annual wet, dry medians
     ds = ds.resample(time=freq).median(keep_attrs=True)
     
     # if was dask, make dask again
-    if was_dask:
-        ds = ds.chunk({'time': 1})
+    # related to above comment on dask-resample issue
+    #if was_dask:
+        #ds = ds.chunk({'time': 1})
     
     # notify and return
     print('Resampled down to annual medians successfully.')
@@ -525,14 +541,6 @@ def perform_interp(ds, method='full'):
     ----------
     ds: xarray dataset/array
         A dataset with x, y and time dims.
-    wet_month : int or list
-        An int or a list representing the month(s) that represent
-        the wet season months. Example [1, 2, 3] for Jan, Feb, 
-        Mar. 
-    dry_month : int or list
-        An int or a list representing the month(s) that represent
-        the dry season months. Example [9, 10, 11] for Sep, Oct, 
-        Nov. 
     method : str
         Set the interpolation method: full or half. Full will use 
         the built in interpolate_na method, which is robust and dask 
@@ -668,42 +676,110 @@ def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inpl
     return ds      
 
 
-
-# meta, dont like the chunking stuff here, see above
-def interp_empty_months(ds, method='full'):
+def interp_empty(ds, method='full', inplace=True):
     """
-    interpolate along individual months
+    Takes a xarray dataset/array and performs linear interpolation across
+    all times in dataset. This is a wrapper for perform_interp function. 
+    The method can be set to full or half. Full will use the built in xr 
+    interpolate_na method, which is robust and dask friendly but very slow. 
+    The quicker alternative is half, which only interpolates times that are 
+    all nan. Despite being slower, full method recommended.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+
+    # notify
+    print('Interpolating empty values in dataset.')
+
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+    
+    # interpolate for ds
+    ds = perform_interp(ds=ds, method=method)
+
+    # notify and return
+    print('Interpolated empty values successfully.')
+    return ds   
+
+
+def interp_empty_months(ds, method='full', inplace=True):
+    """
+    Takes a xarray dataset/array and performs linear interpolation across
+    each month seperatly. A concatenated xr dataset is returned. This is a 
+    wrapper for perform_interp function. The method can be set to full 
+    or half. Full will use the built in xr interpolate_na method, which is 
+    robust and dask friendly but very slow. The quicker alternative is half, 
+    which only interpolates times that are all nan. Despite being slower, 
+    full method recommended.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
 
     # notify
     print('Interpolating empty values along months in dataset.')
 
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
 
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # check if num years less than 3
-    if len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
-
-    # create copy ds
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
 
     # get list of months within dataset
     months_list = list(ds.groupby('time.month').groups.keys())
@@ -711,41 +787,14 @@ def interp_empty_months(ds, method='full'):
     # loop each month in months list
     da_list = []
     for month in months_list:
-
-        # notify
         print('Interpolating along month: {0}'.format(month))
 
         # get subset for month
         da = ds.where(ds['time.month'] == month, drop=True)
         da = da.copy(deep=True)
         
-        # using slow interpolate_na
-        if method == 'full':
-            
-            # if dask, rechunk to avoid core dimension error
-            if bool(da.chunks):
-                chunks = da.chunks
-                da = da.chunk({'time': -1})
-
-            # interpolate all nan pixels linearly
-            da = da.interpolate_na(dim='time', method='linear')
-
-            # chunk back to orginal size            
-            if bool(da.chunks):
-                da = da.chunk(chunks)
-                
-        # using quicker method
-        elif method == 'half':
-        
-            # get times where all nan, get diff with original ds, drop nan
-            nan_dates = da.dropna(dim='time', how='all').time
-            nan_dates = np.setdiff1d(da['time'], nan_dates)
-            da = da.dropna(dim='time', how='all')
-
-            # interpolate all nan pixels linearly
-            if len(nan_dates):
-                da_interp = da.interp(time=nan_dates, method='linear')
-                da = xr.concat([da, da_interp], dim='time').sortby('time')
+        # interpolate for current month time series
+        da = perform_interp(ds=da, method=method)
             
         # append to list
         da_list.append(da)
@@ -756,79 +805,6 @@ def interp_empty_months(ds, method='full'):
     # notify and return
     print('Interpolating empty values along months successfully.')
     return ds
-
-
-# meta, dont like the chunking stuff here, see above
-def interp_empty(ds, method='full'):
-    """
-    """
-
-    # notify
-    print('Interpolating empty values in dataset.')
-
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
-    # check for time dim
-    if 'time' not in list(ds.dims):
-        raise ValueError('No time dimension detected.')
-
-    # check for x and y dims
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions detected.')
-
-    # check if num years less than 3
-    if len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years worth of data in dataset. Add more.')
-
-    # create copy ds
-    ds = ds.copy(deep=True)
-
-    if method == 'full':
-        print('Interpolating using full method. This can take awhile. Please wait.')
-        
-        # if dask, rechunk to avoid core dimension error
-        if bool(ds.chunks):
-            chunks = ds.chunks
-            ds = ds.chunk({'time': -1}) 
- 
-        # interpolate all nan pixels linearly
-        ds = ds.interpolate_na(dim='time', method='linear')
-        
-        # chunk back to orginal size            
-        if bool(ds.chunks):
-            ds = ds.chunk(chunks)
-
-    elif method == 'half':
-        print('Interpolating using half method. Please wait.')
-
-        # get times where all nan, get diff with original ds, drop nan
-        nan_dates = ds.dropna(dim='time', how='all').time
-        nan_dates = np.setdiff1d(ds['time'], nan_dates)
-        ds = ds.dropna(dim='time', how='all')
-
-        # interpolate all nan pixels linearly
-        if len(nan_dates):
-            ds_interp = ds.interp(time=nan_dates, method='linear')
-            ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
-
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-
-    # notify and return
-    print('Interpolated empty values successfully.')
-    return ds   
-
 
 
 def calc_ivts(ds, ds_med, q_upper=0.99, q_lower=0.05):
@@ -1024,31 +1000,51 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
     return ds
 
 
-
-
-# meta, does it need da to ds check?
-# this could be merged into standardise_to_dry_targets, mostly double up code
-# could just have this as the main func, for to_dry_targets just wrap this in there and 
-# grab dry before hand, feed it in
-def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
+def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05, inplace=True):
     """
-    """
+    Takes a xarray dataset/array and calculates invariant targets. Invariant 
+    targets are pixels that are greenest/moistest across all time + most stable 
+    across all time. Greenest and moistest values use upper percentile to detect 
+    them, where as stable pixels generated via orthogonal polynomial coefficients 
+    and quantile closest to 0, or lowest percentile. These sites are then used to
+    standardise all images to each other. Images are finally rescaled 0 to 1 via
+    a fuzzy increasing sigmoidal.
 
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    q_upper : float
+        Set the upper percentile of vegetation/moisture values. We
+        need the highest values to standardise to, but don't want to
+        just take max. Default is 0.99 and typically produces optimal
+        results.
+    q_lower : float
+        Set the lowest percentile of stability values. We need to find
+        the most 'stable' pixels across time to ensure standardisation
+        works. Default is 0.05 and typically produces optimal results.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
     # notify
     print('Standardising data using invariant targets.')
     
-    # check if da provided, attempt convert to ds, check for ds after that
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            ds = ds.to_dataset(dim='variable')
-            was_da = True
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset. Provide a Dataset.')
-
-    elif not isinstance(ds, xr.Dataset):
-        raise TypeError('Not an xarray dataset. Please provide Dataset.')
-
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
     # check q_value 0-1
     if q_upper < 0 or q_upper > 1:
         raise ValueError('Upper quantile value must be between 0 and 1.')
@@ -1056,47 +1052,31 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
     # check q_value 0-1
     if q_lower < 0 or q_lower > 1:
         raise ValueError('Lower quantile value must be between 0 and 1.')
-
-    # create copy ds and take attrs
-    ds = ds.copy(deep=True)
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
+    # get attributes - we lose them 
     attrs = ds.attrs
+        
+    # get all time median
+    ds_med = ds.median('time')
 
-    # get median all time
-    ds_med = ds.median('time', keep_attrs=True)
-
-    # notify
-    print('Generating invariant targets.')
-
-    # get upper n quantile (i.e., percentiles) of dry vege, moist
-    ds_quants = ds_med.quantile(q=q_upper, skipna=True)
-    ds_quants = xr.where(ds_med > ds_quants, True, False)
-
-    # get num times
-    num_times = len(ds['time'])
-
-    # get linear ortho poly coeffs, sum squares, constant, reshape 1d to 3d
-    coeffs, ss, const = tools.get_linear_orpol_contrasts(num_times)
-    coeffs = np.reshape(coeffs, (ds['time'].size, 1, 1)) # todo dynamic?
-
-    # calculate dry linear slope, mask to greenest/moistest
-    ds_poly = abs((ds * coeffs).sum('time') / ss * const)
-    ds_poly = ds_poly.where(ds_quants)
-
-    # get lowest stability areas in stable, most veg, moist
-    ds_targets = xr.where(ds_poly < ds_poly.quantile(q=q_lower, skipna=True), True, False)
-
-    # check if any targets exist
-    for var in ds_targets:
-        is_empty = ds_targets[var].where(ds_targets[var]).isnull().all()
-        if is_empty:
-            raise ValueError('No invariant targets created: increase lower quantile.')
+    # generate invariant target sites
+    ds_targets = calc_ivts(ds=ds, 
+                           ds_med=ds_med, 
+                           q_upper=q_upper, 
+                           q_lower=q_lower)
 
     # notify
-    print('Standardising to invariant targets and rescaling via increasing sigmoidal.')
+    print('Standardising to invariant targets, rescaling via fuzzy sigmoidal.')
 
-    # get low, high inflections via hardcoded percentile, do inc sigmoidal
+    # get low, high inflection point via hardcoded percentile
     li = ds.median('time').quantile(q=0.001, skipna=True)
     hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
+    
+    # do inc sigmoidal
     ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
     
     # drop quantile tag the method adds, if exists
@@ -1105,14 +1085,9 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
     # add attributes back on
     ds.attrs.update(attrs)
     
-    # convert back to datarray
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Standardised using invariant targets successfully.')
     return ds
-
 
 
 def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9, inplace=True):
@@ -1827,10 +1802,46 @@ def perform_theilsen_slope(ds, alpha):
     return ds_ts
 
 
-# meta, might need to code a persist
 def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False, 
                 vege_var='tcg', soil_var='tcb', tmf=2):
     """
+    Takes a xarray dataset/array of tasselled cap greeness and brightness
+    values, as well as a a tuple of base years (e.g. 1990, 2010) that are
+    averaged together to form a base image, and a comparison year tuple 
+    (e.g. 2010, 2020). Each year in range comp_times is compared to the base_time
+    average and a change vector analysis is performed. This results in a dataset
+    of angles (change type) and magnitudes (intensity of change) for each 
+    comparison to that base. users must tell func which vars are veg and soil,
+    and provide a magnitude threshold factor (default 2) to remove noise.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    base_times : tuple
+        A tuple of years (e.g. from, to) that will form the baseline
+        vegetation/soil image. A range of years can be provided (e.g.
+        1990, 2000), or if a single specific year wanted, provide that
+        year twice e.g. (1990, 1990). A median is generated for these
+        years.
+    comp_times : tuple
+        As above, except these years form the range of dates compared 
+        to the baseline. For example, if (2010, 2020) was provided,
+        each year would be compared to the baseline seperatly (unless
+        reduce_comp set to True, in which a median is calculated). 
+    veg_var : str
+        Name of vegetation variable. Tasselled cap greeness is good.
+    soil_var : str
+        Name of soil variable. Tasselled cap brightness is good.
+    tmf : int, float
+        Threshold magnitude factor. Magnitude can be reduced to most 
+        intense magnitude of change by providing a higher tmf value.
+        Default is 2 in literature.
+    
+    Returns
+    ----------
+    ds_cva : xarray dataset or array.
+
     """
     
     # notify
@@ -1932,9 +1943,7 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
             ds_comp_list.append(ds_comp.sel(time=dt))
     else:
         ds_comp_list.append(ds_comp)
-        
-    # may need persist to prevent multiple computes # todo
-                
+                        
     # loop each ds in list and do cva
     ds_cva_list = []
     for i, da_comp in enumerate(ds_comp_list):
@@ -1961,9 +1970,25 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
     return ds_cva
 
 
-# meta, just do double check of output
-def isolate_cva_change(ds, angle_min=90, angle_max=180):
+def isolate_cva_change(ds, angle_min=90, angle_max=180, inplace=True):
     """
+    Takes a xarray dataset/array of cva angle/magnitude vars and 
+    isolates specific angles. Different angle ranges represent different
+    change types: 90 to 180 degrees represents soil increase, or veg
+    decline. On the other hand, 270 to 360 degrees represents veg increase.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    angle_min : float
+        A value representing lowest angle, or start of angle range.
+    angle_max : float
+        A value representing highest angle, or end of angle range.
+    
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
     
     # notify
@@ -1973,19 +1998,19 @@ def isolate_cva_change(ds, angle_min=90, angle_max=180):
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
         raise TypeError('Dataset not an xarray type.')
 
-    # get vars in ds
-    ds_vars = []
+    # get vars
     if isinstance(ds, xr.Dataset):
-        ds_vars = list(ds.data_vars)
+        data_vars = list(ds.data_vars)
     elif isinstance(ds, xr.DataArray):
-        ds_vars = list(ds['variable'])
+        data_vars = list(ds['variable'].values)
         
     # check if angle is a var
-    if 'angle' not in ds_vars:
+    if 'angle' not in data_vars:
         raise ValueError('No variable called angle provided.')
             
-    # create copy
-    ds = ds.copy(deep=True)
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
     
     # check if angles are supported
     if angle_min < 0 or angle_max < 0:
@@ -2003,13 +2028,37 @@ def isolate_cva_change(ds, angle_min=90, angle_max=180):
     return ds
 
 
-# meta
 def detect_breaks(values, times, pen=3, fill_nan=True, quick_plot=False):
     """
-    pen : int 
-        strictness of pelt change point detection. 1 is loose, returns many
-        3 is moderate, returns moderate. 5 is very strict, returns big changes
-
+    Takes a numpy of values and times and performs change point
+    detection across 1d array. Uses ruptures library. Users can
+    set penalty for pelt method. Lower penalty will return more
+    change breaks, higher will be more strict. The idea with this
+    function is to provide array of veg values and corresponding
+    times in order at a single pixel. To be used in ArcGIS graphing.
+    
+    Parameters
+    ----------
+    values : numpy ndarray
+        A numpy array 1d with time series values, i.e. veg.
+    times : numpy ndarray
+        A numpy array 1d with time series values, i.e. times.
+    pen : int
+        A value representing pelt change point method penalty.
+        A Lower penalty will return more change breaks, higher 
+        will be more strict. Default is 3.
+    fill_nan : bool
+        If true, any nan values will be filled for array. 
+        Recommended, as change points will detected at nan
+        values.
+    quick_plot : bool
+        If true, a quick plot will be shown to provide a
+        quick idea of the time series values and where
+        breaks are detected.
+    
+    Returns
+    ----------
+    brk_dates : numpy of times where break occured.
     """
 
     # import check
