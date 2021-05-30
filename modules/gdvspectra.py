@@ -1089,7 +1089,6 @@ def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
     return ds_likelihood
 
 
-
 # meta
 def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     """
@@ -1192,7 +1191,6 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     # notify and return
     print('Thresholded dataset successfully.')
     return ds_thresh
-
 
 
 # meta
