@@ -25,8 +25,11 @@ from sklearn.model_selection import train_test_split
 from dask_ml.wrappers import ParallelPostFit
 from sklearn.ensemble import RandomForestRegressor
 
-sys.path.append('../GDVTOOLS')
-import gdv_tools
+sys.path.append('../../shared')
+import tools
+
+#sys.path.append('../GDVTOOLS')
+#import gdv_tools
 
 # todo - metadata
 def get_dataset_classes(ds, nodata_value=-9999):
@@ -127,8 +130,8 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
         raise ValueError('> Resolution factor must be an integer.')
         
     # get cell resolution for both datasets    
-    res_raw = gdv_tools.get_dataset_resolution(ds_raw)
-    res_class = gdv_tools.get_dataset_resolution(ds_class)   
+    res_raw = tools.get_xr_resolution(ds_raw)
+    res_class = tools.get_xr_resolution(ds_class)
     
     # check if class res greater than raw - 
     if res_class >= res_raw:
@@ -142,7 +145,7 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
         raise AttributeError('> Raw dataset does not contain a variable dim.')
         
     # get extent of class raster
-    class_extent = gdv_tools.get_dataset_extent(ds=ds_class)
+    class_extent = tools.get_xr_extent(ds=ds_class)
         
     # 'clip' raw dataset to class image bounds incase it is small subsection
     raw_dummy = raw_dummy.sel(x=slice(class_extent.get('l'), class_extent.get('r')), 
@@ -166,7 +169,7 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
     print('> Randomising points within mask area.')
 
     # get bounds of final dummy
-    dummy_extent = gdv_tools.get_dataset_extent(ds=ds_class)
+    dummy_extent = tools.get_xr_extent(ds=ds_class)
         
     # create random points and fill a list with x and y
     counter = 0
@@ -236,8 +239,8 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
         #raise TypeError('> NoData value is not an int or float.')
 
     # get cell resolution of raw rasters
-    res_raw = gdv_tools.get_dataset_resolution(ds=ds_raw)
-    res_class = gdv_tools.get_dataset_resolution(ds=ds_class)
+    res_raw = tools.get_xr_resolution(ds=ds_raw)
+    res_class = tools.get_xr_resolution(ds=ds_class)
 
     # create a copy of extraction samples with only x and y cols, add empty col for win vals
     df_windows = df_records[['x', 'y']].copy()
