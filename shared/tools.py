@@ -3,9 +3,13 @@
 
 # import required libraries
 import os, sys
+import gdal
 import numpy as np
 import pandas as pd
 import xarray as xr
+
+
+
 
 # meta
 def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=False):
@@ -689,6 +693,50 @@ def get_xr_crs(ds):
     # notify user and return
     print('CRS extracted successfully from dataset.')
     return crs
+
+
+def get_xr_extent(ds):
+    """
+    Read dataset and get raster bounds using dataset method. If fails, do it the
+    long, less sophisticated way.
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A single xarray dataset with variables and x and y dims.
+    Returns
+    ----------
+    extent : dict
+        A dict containing the datasets l, b, r, t bounding box coordinates.
+    """
+    
+    # notify user
+    print('Extracting spatial extent from dataset.')
+
+    # check if xarray dataset type
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('> Must provide an xarray dataset/datarray.')
+
+    # check if x and y dims exist
+    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('> No x and/or y coordinate dimension in dataset.')
+        
+    try:
+        # get bounding box object and convert to dict
+        bb = ds.extent.boundingbox
+        extent = {'l': bb.left, 'b': bb.bottom, 'r': bb.right, 't': bb.top}
+        return extent
+        
+    except:
+        pass
+    
+    # get bounds the long, hacky, slightly less accurate way
+    l, r = float(ds['x'].min()), float(ds['x'].max())
+    b, t = float(ds['y'].min()), float(ds['y'].max())    
+    
+    # store in dict
+    extent = {'l': l, 'b': b, 'r': r, 't': t}
+    return extent
     
 
 def remove_nodata_records(df_records, nodata_value=np.nan):
@@ -775,3 +823,306 @@ def export_xr_as_nc(ds, filename):
         
     # notify
     print('Exported xarray as netcdf successfully.')
+    
+    
+    
+    
+# vegfrax, older
+# todo, long in tooth, move these into funcs when needed
+
+def extract_rast_info(rast_path):
+    """
+    Read a raster (e.g. tif) and extract geo-transformation, coordinate 
+    system, projection type, size of dimensions (x and y), nodata value.
+
+    Parameters
+    ----------
+    rast_path: string
+        A single string with full path and filename of a raster.
+
+    Returns
+    ----------
+    rast_meta_dict : dictionary with keys:
+        layer = name of layer
+        type = type of data, vector or raster.
+        geo_trans = raster geotransformation info.
+        epsg = the epsg code of spatial reference system.
+        is_projected = is projection system, true or false.
+        x_dim = number of raster cells along x axis.
+        y_dim = number of raster cells along y axis.
+        nodata_val = no data value embedded in raster.
+    """
+    
+    # check if string, if not bail
+    if not isinstance(rast_path, str):
+        raise ValueError('> Raster path must be a string. Please check the file path.')
+
+    # check if raster exists
+    if not os.path.exists(rast_path):
+        raise OSError('> Unable to read raster, file not found. Please check the file path.')    
+
+    # init dict
+    rast_info_dict = {
+        'layer': os.path.basename(rast_path),
+        'type': 'raster',
+        'geo_tranform': None,
+        'x_dim': None,
+        'y_dim': None,
+        'epsg': None,
+        'is_projected': 0,
+        'nodata_val': None
+    }
+        
+    try:
+        # open raster
+        rast = gdal.Open(rast_path, 0)
+
+        # add transform, dims
+        rast_info_dict['geo_tranform'] = rast.GetGeoTransform()
+        rast_info_dict['x_dim'] = rast.RasterXSize
+        rast_info_dict['y_dim'] = rast.RasterYSize
+        rast_info_dict['nodata_val'] = rast.GetRasterBand(1).GetNoDataValue()
+
+        # get spatial ref
+        srs = rast.GetSpatialRef()
+
+        # get epsg if exists
+        if srs and srs.GetAttrValue('AUTHORITY', 1):
+            rast_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
+
+        # get is projected if exists
+        if srs and srs.IsProjected():
+            rast_info_dict['is_projected'] = srs.IsProjected()
+
+        # get nodata value if exists
+        if srs and srs.IsProjected():
+            rast_info_dict['is_projected'] = srs.IsProjected()    
+
+        # drop
+        rast = None
+
+    except Exception:
+        raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
+
+    return rast_info_dict
+
+def validate_rasters(rast_path_list):
+    """
+    Compare all input rasters and ensure geo transformations, coordinate systems,
+    size of dimensions (x and y) number of features, and nodata values all match. 
+    Takes a list of paths to raster layers to be used in analysis.
+
+    Parameters
+    ----------
+    rast_path_list : string
+        A single list of strings with full path and filename of input rasters.
+    """
+
+    # notify user
+    print('Checking raster spatial information to check for inconsistencies.')
+
+    # check if shapefile and raster paths exists
+    if not rast_path_list:
+        raise ValueError('> No raster path list provided.')
+
+    # check if list types, if not bail
+    if not isinstance(rast_path_list, list):
+        raise ValueError('> Raster path list must be a list.')
+
+    # ensure raster paths in list exist and are strings
+    for path in rast_path_list:
+
+        # check if string, if not bail
+        if not isinstance(path, str):
+            raise ValueError('> Raster paths must be a string.')
+
+        # check if shapefile or raster exists
+        if not os.path.exists(path):
+            raise OSError('> Unable to read raster, file not found.')
+
+    # notify
+    print('> Extracting raster spatial information.')
+
+    # loop through each rast, extract info, store in list
+    rast_dict_list = []
+    for rast_path in rast_path_list:
+        rast_dict = extract_rast_info(rast_path)
+        rast_dict_list.append(rast_dict)
+
+    # check if anything in output lists
+    if not rast_dict_list:
+        raise ValueError('> No Raster spatial information in outputs.')
+
+    # epsg - get values and invalid layers
+    epsg_list, no_epsg_list = [], []
+    for info_dict in rast_dict_list:
+        epsg_list.append(info_dict.get('epsg'))
+        if not info_dict.get('epsg'):
+            no_epsg_list.append(info_dict.get('layer'))
+
+    # is_projected - get values and invalid layers
+    is_proj_list, no_proj_list = [], []
+    for info_dict in rast_dict_list:
+        is_proj_list.append(info_dict.get('is_projected'))
+        if not info_dict.get('is_projected'):
+            no_proj_list.append(info_dict.get('layer'))
+
+    # x_dim - get values and invalid layers
+    x_dim_list, no_x_dim = [], []
+    for info_dict in rast_dict_list:
+        x_dim_list.append(info_dict.get('x_dim'))
+        if not info_dict.get('x_dim') > 0:
+            no_x_dim.append(info_dict.get('layer'))        
+
+    # y_dim - get values and invalid layers
+    y_dim_list, no_y_dim = [], []
+    for info_dict in rast_dict_list:
+        y_dim_list.append(info_dict.get('y_dim'))
+        if not info_dict.get('y_dim') > 0:
+            no_y_dim.append(info_dict.get('layer'))
+
+    # nodata_val - get values and invalid layers
+    nodata_list = []
+    for info_dict in rast_dict_list:
+        nodata_list.append(info_dict.get('nodata_val'))
+
+    # notify - layers where epsg code missing 
+    if no_epsg_list:
+        print('> These layers have an unknown coordinate system: {0}.'.format(', '.join(no_epsg_list)))
+    if not all([e == epsg_list[0] for e in epsg_list]):
+        print('> Inconsistent coordinate systems between layers. Could cause errors.')
+
+    # notify - layers where not projected
+    if no_proj_list:
+        print('> These layers are not projected: {0}. Must be projected.'.format(', '.join(no_proj_list)))
+    if not all([e == is_proj_list[0] for e in is_proj_list]):
+        print('> Not all layers projected. All layers must have a projection system.')
+
+    # notify - layers where not x_dim
+    if no_x_dim:
+        print('> These layers have no x dimension: {0}. Must have.'.format(', '.join(no_x_dim)))
+    if not all([e == x_dim_list[0] for e in x_dim_list]):
+        print('> Inconsistent x dimensions between layers. Must be consistent.')    
+
+    # notify - layers where not y_dim
+    if no_y_dim:
+        print('> These layers have no y dimension: {0}. Must have.'.format(', '.join(no_y_dim)))
+    if not all([e == y_dim_list[0] for e in y_dim_list]):
+        print('> Inconsistent y dimensions between layers. Must be consistent.')      
+
+    # notify - layers where nodata
+    if not all([e == nodata_list[0] for e in nodata_list]):
+        print('> Inconsistent NoData values between layers. Could cause errors.'.format(', '.join(no_feat_count_list)))
+
+    # raise error if any vital errors detected
+    if no_epsg_list or no_proj_list or no_x_dim or no_y_dim:
+        raise ValueError('> Errors found in layers (read above). Please fix and re-run the tool.')
+        
+# 
+def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-9999):
+    """
+    Read a xarray dataset and convert them into a numpy records array. Based 
+    on RSGISLib code.
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A dataset with data variables.
+    coords : pandas dataframe
+        A pandas dataframe containing x and y columns with records.
+    keep_xy : bool
+        Keep the x and y coordinate value columns in output.
+    res_factor : int
+        A threshold multiplier used during pixel + point intersection. For example
+        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
+    nodata_value : int or float
+        A int or float indicating the no dat avalue expected. Default is -9999.
+
+    Returns
+    ----------
+    df_samples : pandas dataframe
+    """
+
+    # notify user
+    print('Extracting xarray dataset values to x and y coordinates.')
+
+    # check if coords is a pandas dataframe
+    if not isinstance(coords, pd.DataFrame):
+        raise TypeError('> Provided coords is not a numpy ndarray type. Please check input.')
+
+    # check if dataset type provided
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('> Provided dataset is not an xarray dataset type. Please check input.')
+        
+    # check if x and y dims exist
+    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('> No x and/or y coordinate dimension in dataset.') 
+
+    # check dimensionality of pandas dataframe. x and y only
+    if len(coords.columns) != 2:
+        raise ValueError('Num of columns in coords not equal to 2. Please ensure shapefile is valid.')
+
+    # check if res factor is int type
+    if not isinstance(res_factor, int):
+        raise TypeError('> Resolution factor must be an integer.')
+
+    # check dimensionality of numpy array. xy only
+    if not res_factor >= 1:
+        raise ValueError('Resolution factor must be value of 1 or greater.')
+
+    # get cell resolution from dataset
+    res = get_xr_resolution(ds)
+
+    # check res exists
+    if not res:
+        raise ValueError('> No resolution extracted from dataset.')
+
+    # multiply res by res factor
+    res = res * res_factor
+
+    # loop through data var and extract values at coords
+    values = []
+    for i, row in coords.iterrows():
+        try:            
+            # get values from vars at current pixel
+            pixel = ds.sel(x=row.get('x'), y=row.get('y'), method='nearest', tolerance=res * res_factor)
+            pixel = pixel.to_array().values
+            pixel = list(pixel)
+            
+        except:
+            # fill with list of nan equal to data var size
+            pixel = [nodata_value] * len(ds.data_vars)
+            
+        # add current point x and y columns if wanted
+        if keep_xy:
+            pixel = [row.get('x'), row.get('y')] + pixel
+
+        # append to list
+        values.append(pixel)
+
+    # get x, y dtypes
+    x_dtype, y_dtype = coords['x'].dtype, coords['y'].dtype
+    
+    # get original var dtypes as dict
+    col_dtypes_dict = {}
+    for var in ds.data_vars:
+        col_dtypes_dict[var] = np.dtype(ds[var].dtype)
+            
+    try:
+        # prepare whether to retain or discared coords x and y
+        if keep_xy:
+            col_names = ['x', 'y'] + list(ds.data_vars)
+            col_dtypes_dict.update({'x': x_dtype, 'y': y_dtype})
+        else:
+            col_names = list(ds.data_vars)
+
+        # convert values list into pandas dataframe, ensure types match dataset
+        df_samples = pd.DataFrame(values, columns=col_names)
+        df_samples = df_samples.astype(col_dtypes_dict)
+
+    except:
+        raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
+
+    # notify user and return
+    print('> Extracted xarray dataset values successfully.')
+    return df_samples 
