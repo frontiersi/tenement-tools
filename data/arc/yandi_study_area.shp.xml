@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20210601</CreaDate><CreaTime>16370000</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files\arcgis\pro\Resources\ArcToolbox\toolboxes\3D Analyst Tools.tbx\RasterDomain" Date="20210601" Time="163700">RasterDomain temp.tif C:\Users\Lewis\Documents\GitHub\tenement-tools\data\arc\yandi_study_area.shp Polygon</Process></lineage></DataProperties></Esri></metadata>
