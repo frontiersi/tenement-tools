@@ -1,43 +1,74 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ArcGIS defaultAssembly="TenementToolsApp.dll"
-        defaultNamespace="TenementToolsApp"
-        xmlns="http://schemas.esri.com/DADF/Registry"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
-
-  <AddInInfo id="{c1625709-cbca-47d5-8dad-180629878450}" version="1.0" desktopVersion="2.8.29751">
-    <Name>TenementToolsApp</Name>   
-    <Description>TenementToolsApp description</Description>
-    <Image>Images\AddinDesktop32.png</Image>
-    <Author>Lewis</Author>
-    <Company>Acme</Company>
-    <Date>6/2/2021 11:46:39 PM</Date>
-    <Subject>Framework</Subject>
-    <!-- Note subject can be one or more of these topics:
+﻿<ArcGIS defaultAssembly="TenementToolsApp.dll" defaultNamespace="TenementToolsApp" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
+	<AddInInfo id="{c1625709-cbca-47d5-8dad-180629878450}" version="1.0" desktopVersion="2.8.29751">
+		<Name>TenementToolsApp</Name>
+		<Description>TenementToolsApp description</Description>
+		<Image>Images\AddinDesktop32.png</Image>
+		<Author>Lewis</Author>
+		<Company>Acme</Company>
+		<Date>6/2/2021 11:46:39 PM</Date>
+		<Subject>Framework</Subject>
+		<!-- Note subject can be one or more of these topics:
                     Content, Framework, Editing, Geodatabase, Geometry, Geoprocessing, Layouts, Map Authoring, Map Exploration -->
-  </AddInInfo>
-
-  <modules>
-    <insertModule id="TenementToolsApp_Module" className="Module1" autoLoad="false" caption="Module1">
-      <!-- uncomment to have the control hosted on a separate tab-->
-      <tabs>
-        <!--<tab id="TenementToolsApp_Tab1" caption="New Tab">
-          <group refID="TenementToolsApp_Group1"/>
-        </tab>-->
-      </tabs>
-              
-      <groups>
-        <!-- comment this out if you have no controls on the Addin tab to avoid
-              an empty group-->
-        <group id="TenementToolsApp_Group1" caption="Group 1" appearsOnAddInTab="true">
-          <!-- host controls within groups -->
-        </group>
-      </groups>
-      
-      <controls>
-        <!-- add your controls here -->
-      </controls> 
-      
-    </insertModule>
-  </modules>
+	</AddInInfo>
+	<modules>
+		<insertModule id="TenementToolsApp_Module" className="Module1" autoLoad="false" caption="Module1">
+			<!-- uncomment to have the control hosted on a separate tab-->
+			<tabs>
+				<!--<tab id="TenementToolsApp_Tab1" caption="New Tab">
+					<group refID="TenementToolsApp_Group1"/>
+				</tab>-->
+			</tabs>
+			<groups>
+				<!-- comment this out if you have no controls on the Addin tab to avoid an empty group-->
+				<group id="TenementToolsApp_Group1" caption="Tenement Tools" appearsOnAddInTab="true">
+					<!-- host controls within groups -->
+					<splitButton refID="TenementToolsApp_gdvspectraSplitButton" />
+					<gallery refID="TenementToolsApp_gdvspectraGallery" inline="false" size="large" />
+				</group>
+			</groups>
+			<controls>
+				<!-- add your controls here -->
+				<!-- 
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button1" caption="GDVSpectra" className="gdvspectraSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
+					<content group="Run wizard function" />
+				</button>
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button2" caption="gdvspectraSplitButton 2" className="gdvspectraSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
+					<content group="Run wizard function" />
+				</button>
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button3" caption="gdvspectraSplitButton 3" className="gdvspectraSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
+					<content group="Run individual functions" />
+				</button>
+				-->
+			</controls>
+			<splitButtons>
+				<splitButton id="TenementToolsApp_gdvspectraSplitButton">
+					<!--
+					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button1" />
+					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button2" />
+					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button3" />
+					-->
+					<gallery refID="TenementToolsApp_gdvspectraGallery"/>
+					
+				</splitButton>
+			</splitButtons>
+			<galleries>
+				<gallery id="TenementToolsApp_gdvspectraGallery" 
+						 caption="GDVSpectra" 
+						 className="gdvspectraGallery" 
+						 showGroup="true"
+						 itemsInRow="1" 
+						 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" 
+						 templateID="gdvspectraGalleryItemTemplate" 
+						 resizable="true"
+						 itemWidth="300"
+						 showItemCaption="true"
+						 largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+					<tooltip heading="Tooltip Heading">Functions to generate GDV likelihood.<disabledText /></tooltip>
+				</gallery>
+			</galleries>
+		</insertModule>
+	</modules>
 </ArcGIS>
