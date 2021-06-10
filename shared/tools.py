@@ -160,6 +160,76 @@ def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=Fals
     return ds
 
 
+def perform_interp(ds, method='full'):
+    """
+    Takes a xarray dataset/array and performs linear interpolation across
+    time dimension. The method can be set to full or half. Full will use the 
+    built in xr interpolate_na method, which is robust and dask friendly 
+    but very slow. The quicker alternative is half, which only interpolates 
+    times that are all nan. Despite being slower, full method recommended.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif len(ds['time.year']) < 3:
+        raise ValueError('Less than 3 years in dataset.')
+        
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
+    
+    # interpolate using full or half method
+    if method == 'full':
+
+        # if dask, rechunk into appropriate shape
+        if bool(ds.chunks):
+            chunks = ds.chunks
+            ds = ds.chunk({'time': -1}) 
+
+        # interpolate all nan pixels linearly
+        ds = ds.interpolate_na(dim='time', method='linear')
+
+        # chunk back to orginal size
+        if bool(ds.chunks):
+            ds = ds.chunk(chunks) 
+
+    elif method == 'half':
+        
+        # get times where all nan, find diff with original, drop if exist
+        nan_dates = ds.dropna(dim='time', how='all').time
+        nan_dates = np.setdiff1d(ds['time'], nan_dates)
+        ds = ds.dropna(dim='time', how='all')
+
+        # interpolate all nan pixels linearly
+        if len(nan_dates):
+            ds_interp = ds.interp(time=nan_dates, method='linear')
+            ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
+            
+    return ds
+
+
 # meta
 def get_linear_orpol_contrasts(levels=3):
     """
@@ -189,6 +259,7 @@ def get_linear_orpol_contrasts(levels=3):
     print('Got sum of squares: {0} and constant {1}: '.format(ss, const))
 
     return coeffs, ss, const
+
 
 
 # meta
@@ -829,7 +900,6 @@ def export_xr_as_nc(ds, filename):
     
 # vegfrax, older
 # todo, long in tooth, move these into funcs when needed
-
 def extract_rast_info(rast_path):
     """
     Read a raster (e.g. tif) and extract geo-transformation, coordinate 
