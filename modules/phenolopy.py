@@ -23,161 +23,28 @@ Contacts:
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
-# import required libraries
+# import required libraries todo fix 
 import os, sys
-from collections import Counter
 import xarray as xr
 import numpy as np
 import pandas as pd
 import math
-import dask
-from datetime import datetime, timedelta
-from scipy.stats import zscore
-from scipy.signal import savgol_filter, find_peaks
-from scipy.ndimage import gaussian_filter
+from datetime import datetime
+
+
 from statsmodels.tsa.seasonal import STL as stl
-from datacube.utils.geometry import assign_crs
+#from datacube.utils.geometry import assign_crs
 
-# moved this to tenement-tool shared code - remove this 
-def conform_dea_band_names(ds):
-    """
-    Takes an xarray dataset containing spectral bands from various different
-    satellite digital earth australia (DEA) products and conforms band names.
-    Only use if you are using satellite data from DEA.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing spectral 
-        bands that will be renamed.
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with renamed 
-        spectral bands.
-    """
-    
-    # notify user
-    print('Conforming satellite bands')
-    
-    # check if dataset type
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
-    
-    # create band rename mapping dictionary
-    band_map_dict = {
-        'nbart_blue': 'blue',
-        'nbart_green': 'green',
-        'nbart_red': 'red',
-        'nbart_nir': 'nir',
-        'nbart_swir_1': 'swir1',
-        'nbart_swir_2': 'swir2',
-        'nbar_blue': 'blue',
-        'nbar_green': 'green',
-        'nbar_red': 'red',
-        'nbar_nir': 'nir',
-        'nbar_swir_1': 'swir1',
-        'nbar_swir_2': 'swir2',
-        'nbart_nir_1': 'nir',
-        'nbart_red_edge_1': 'red_edge_1', 
-        'nbart_red_edge_2': 'red_edge_2',    
-        'nbart_swir_2': 'swir1',
-        'nbart_swir_3': 'swir2',
-        'nbar_nir_1': 'nir',
-        'nbar_red_edge_1': 'red_edge_1',   
-        'nbar_red_edge_2': 'red_edge_2',   
-        'nbar_swir_2': 'swir1',
-        'nbar_swir_3': 'swir2'
-    }
- 
-    # rename bands in dataset to use conformed naming conventions
-    bands_to_rename = {
-        a: b for a, b in band_map_dict.items() if a in ds.variables
-    }
-    
-    # apply the rename
-    ds = ds.rename(bands_to_rename)
-    
-    # notify user
-    print('> Satellite band names conformed successfully.\n')
-    
-    return ds
+sys.path.append('../../shared')
+import tools
 
 
-def calc_vege_index(ds, index='ndvi', drop=True):
-    """
-    Takes an xarray dataset containing spectral bands, calculates one of
-    a set of remote sensing indices, and adds the resulting array as a 
-    new variable called 'veg_index' in the original dataset.  
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing the spectral 
-        bands required to calculate the index.
-    index: str
-        A string giving the name of the index to calculate:
-        ndvi: Normalised Difference Vegetation Index (Rouse 1973)
-        evi:  Enhanced Vegetation Index (Huete 2002)
-        mavi: Moisture-Adjusted Vegetation Index
-    drop: bool
-        Provides the option to drop the original input variables, thus saving 
-        space. If drop = True, returns only the index and its values.
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        new varible named 'veg_index' containing the remote sensing index 
-        as a DataArray. If drop = True, the new variable/s as DataArrays in 
-        the original Dataset. 
-    """
-    
-    # notify user
-    print('Generating vegetation index: {0}'.format(index))
-    
-    # check if dataset type
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')   
-        
-    # check for valid bands
-    valid_bands = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2', 'red_edge_1', 'red_edge_2']
-    if not set(ds.variables) & set(valid_bands):
-        raise ValueError('No valid spectral band names (e.g. red) exist in dataset. Aborting.')
-        
-    # get input band variables in order to drop these if drop=True
-    if drop:
-        bands_to_drop = list(ds.data_vars)
-        print('> Drop bands set to True. Dropping these bands: {0}'.format(bands_to_drop))
-        
-    # calculate vegetation index
-    if index is None:
-        raise ValueError('No remote sensing index provided. Please provide an index.')
-    elif index == 'ndvi':
-        ds['veg_index'] = (ds.nir - ds.red) / (ds.nir + ds.red)
-    elif index == 'evi':
-        ds['veg_index'] = (2.5 * (ds.nir - ds.red)) / (ds.nir + 6 * ds.red - 7.5 * ds.blue + 1)
-    elif index == 'mavi':
-        ds['veg_index'] = (ds.nir - ds.red) / (ds.nir + ds.red + ds.swir1)
-    else:
-        raise ValueError('Selected index is not a valid index.')
-        
-    # drop no-longer required bands
-    if drop:
-        ds = ds.drop(bands_to_drop)
-        
-    # notify user
-    print('> Vegetation index calculated successfully.\n')
-        
-    return ds
-
-
-def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
+def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=True):
     """
     Takes an xarray dataset containing vegetation index variable and removes outliers within 
     the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
-    with outliers set to nan. Can work on datasets with or without existing nan values.
+    with outliers set to nan. Can work on datasets with or without existing nan values. Note:
+    Zscore method will compute memory.
     
     Parameters
     ----------
@@ -199,6 +66,10 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
     z_pval: float
         The p-value for zscore method. A more significant p-value (i.e. 0.01) results in fewer
         outliers, a less significant p-value (i.e 0.1) results in more. Default is 0.05.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+        
     Returns
     -------
     ds : xarray Dataset
@@ -206,32 +77,39 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
         veg_index variable set to nan.
     """
     
+    # imports
+    from scipy.stats import zscore
+    
     # notify user
-    print('Outlier removal method: {0} with a user factor of: {1}'.format(method, user_factor))
-    
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
-        
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
-                        
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('Remove outliers does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
+    print('Removing outliers via method: {}'.format(method))
+            
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimension in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
         
     # check if user factor provided
     if user_factor <= 0:
-        raise TypeError('User factor is less than 0. Please provide a value of 0 or above.')
+        raise TypeError('User factor is less than 0, must be above 0.')
         
     # check if pval provided if method is zscore
-    if method == 'zscore' and z_pval not in [0.1, 0.05, 0.01]:
-        raise ValueError('Zscore selected but invalid pvalue provided. Ensure it is either 0.1, 0.05 or 0.01.')    
+    if method == 'zscore':
+        if p_value == 0.10:
+            z_value = 1.65
+        elif p_value == 0.05:
+            z_value = 1.96
+        elif p_value == 0.01:
+            z_value = 2.58
+        else:
+            print('P-value not supported. Setting to 0.01.')
+            z_value = 2.58
+            
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
         
     # remove outliers based on user selected method
     if method in ['median', 'zscore']:
@@ -251,12 +129,12 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
 
             if win_size < 3:
                 win_size = 3
-                print('> Generated roll window size less than 3, setting to default (3).')
+                print('Generated roll window size less than 3, setting to default (3).')
             elif win_size % 2 == 0:
                 win_size = win_size + 1
-                print('> Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
+                print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
             else:
-                print('> Generated roll window size is: {0}'.format(win_size))
+                print('Generated roll window size is: {0}'.format(win_size))
 
             # calc rolling median for whole dataset
             ds_med = ds.rolling(time=win_size, center=True).median()
@@ -291,7 +169,8 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
             outlier_mask = xr.where(abs(zscores) > crit_val, True, False)
 
         # shift values left and right one time index and combine, get mean and max for each window
-        lefts, rights = ds.shift(time=1).where(outlier_mask), ds.shift(time=-1).where(outlier_mask)
+        lefts = ds.shift(time=1).where(outlier_mask)
+        rights = ds.shift(time=-1).where(outlier_mask)
         nbr_means = (lefts + rights) / 2
         nbr_maxs = xr.ufuncs.fmax(lefts, rights)
 
@@ -305,150 +184,140 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05):
     else:
         raise ValueError('Provided method not supported. Please use median or zscore.')
         
-    # check if any nans exist in dataset after resample and tell user
-    if bool(ds.isnull().any()):
-        print('> Warning: dataset contains nan values. You may want to interpolate next.')
-
-    # notify user
-    print('> Outlier removal successful.\n')
-
+    # notify user and return
+    print('Outlier removal successful.')
     return ds
 
 
-def correct_last_datetime(ds, interval):
+def remove_overshoot_times(ds, max_times=3):
     """
-    Takes an xarray dataset containing datetime index (time) and corrects the
-    last datetime value to be December 31st (if the month is December). This is
-    done to ensure no dates are missed during resampling in December month.
+    Takes an xarray dataset containing datetime index (time) and removes any 
+    times that are the non-dominant year This function exists due to resampling 
+    often adding an datetime at the end of the dataset that often stretches into 
+    the next year.
     
     Parameters
     ----------
     ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_index').
-    interval: str
-        The new temporal interval which to resample the dataset to. Supported
-        intervals include 1W (weekly), 2W (bi-monthly). The 1M (monthly) interval
-        is skipped - no need to correct datetime.
+        A two-dimensional or multi-dimensional array.
+    max_times : int
+        The maximum number of times in an overshoot before the
+        function will abort. For example, if 3 times are in the
+        non-dominant year and the max_times is set to 2, no times
+        will be removed.
 
     Returns
     -------
     ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        newly corrected last datetime value.
+        The original xarray Dataset inputted into the function, with any 
+        times removed that occured in non-dominant year (if exists).
     """
+    
+    # imports
+    from collections import Counter
     
     # notify user
-    print('Correcting last datetime value to ensure adequate resampling output.')
+    print('Removing times that occur in overshoot years.')
 
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
-
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
-
-    # check interval exists
-    if not isinstance(interval, str):
-        raise TypeError('> Interval value is not a string.') 
-
-    # correct datetime if interval not 1M
-    if interval == ['1M']:
-        print('> No need to correct last datetime for monthly resampling.')
-        return ds
-
-    # get last datetime object
-    old_dt = ds['time'][-1]
-
-    # correct last date to be newday in december
-    d, m, y = int(old_dt['time.day']), int(old_dt['time.month']), int(old_dt['time.year'])
-    if m == 12 and d < 31:
-        # notify
-        print('> Changing day of last datetime value in dataset to the 31st.')
-
-        # convert to 31st
-        new_dt = '{0}-{1}-{2}'.format(y, m, 31)
-        new_dt = np.datetime64(new_dt, dtype='datetime64[ns]')
-
-        # update value in dataset
-        ds['time'] = ds['time'].where(ds['time'] != old_dt, new_dt)     
-
-    else:
-        # notify
-        print('> Could not change day value as month is not December or day already the 31st.')
-
-    # notify and return
-    print('> Corrected late datetime value successfully.')
-    return ds
-
-
-def remove_non_dominant_year(ds):
-    """
-    Takes an xarray dataset containing datetime index (time) and removes the 
-    non-dominant year if 2 years detected in dataset. This function exists
-    due to resampling often adding an datetime at the end of the dataset that
-    often stretches into the next year.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_index').
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        removed non-dominant year (if exists).
-    """
-    
-    # notify user
-    print('Checking and removing non-dominant year often introduced following resampling.')
-
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
-
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
 
     # get unique years in dataset as dict pairs
-    unique_years = Counter(list(ds['time.year'].values))
-    unique_year_values = np.array(list(unique_years.keys()))
-    unique_year_counts = np.array(list(unique_years.values()))
-
-    if len(unique_year_values) == 0 or len(unique_year_values) > 2:
-        raise ValueError('> No years or more than 2 years detected in dataset. Please check your group function. Aborting.')
-
-    elif len(unique_year_values) == 2:
-        print('> More than one year detected in dataset. Removal non-dominant years.')
-
-        # get max count index and associated year
-        max_count_idx = np.argmax(unique_year_counts)
-        dominant_year = unique_year_values[0]
-
-        # remove all times that are not dominant year
-        ds = ds.where(ds['time.year'] == dominant_year, drop=True)
+    counts = Counter(list(ds['time.year'].values))
+    unq_years = np.array(list(counts.keys()))
+    unq_counts = np.array(list(counts.values()))
+    
+    if len(unq_years) > 1:
+        print('Detected 2 or more years in dataset. Removing overshoot times.')
         
-        # sort to be safe
-        ds = ds.sortby('time')
-
-    elif len(unique_year_values) == 1:
-        print('> Only 1 year detected in dataset, no datetime removal needed. Returning original dataset.')
+        # get indexes of counts sorted lowest to highest
+        sort_count_idxs = unq_counts.argsort()
+        
+        # loop each and see if under max num times allowed
+        for idx in sort_count_idxs:
+            if unq_counts[idx] <= 3:
+                year, num = unq_years[idx], unq_counts[idx]
+                 
+                # notify
+                print('Dropped {} times for year {}.'.format(num, year))
+                
+                # remove all times that are not dominant year
+                ds = ds.where(ds['time.year'] != year, drop=True)
+                ds = ds.sortby('time')
+                
+    else:
+        print('Only 1 year detected. No data removed.')
 
     # notify and return
-    print('> Checked and removed non-dominant year (if needed) successfully.')
+    print('Removed times that occur in overshoot years successfully.')
     return ds
 
 
-def resample(ds, interval='1M', reducer='median'):
+def conform_edge_dates(ds):
+    """
+    Takes an xarray dataset or array and checks if first and last dates in
+    dataset are jan 1st and december 31st, respectively. If not, function 
+    will create dummy scenes with a correct dates. It is essentially a bfill 
+    and ffill with new dates.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional xr data type.
+
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with a 
+        dummy 1st jan and 31st dec times if needed.
+    """
+    
+    # notify user
+    print('Conforming edge dates.')
+    
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    
+    # get first, last datetime object
+    f_dt, l_dt = ds['time'].isel(time=0), ds['time'].isel(time=-1)
+
+    # convert to pandas timestamp
+    f_dt = pd.Timestamp(f_dt.values).to_pydatetime()
+    l_dt = pd.Timestamp(l_dt.values).to_pydatetime()
+
+    # copy and update first time if not 1st day
+    if f_dt.day != 1:
+        print('First date was not Jan 1st. Prepending dummy.')
+        f_da = ds.isel(time=0).copy(deep=True)
+        f_dt = f_dt.replace(month=1, day=1)
+        f_da['time'] = np.datetime64(f_dt)
+        ds = xr.concat([f_da, ds], dim='time')
+
+    # do the same for last time
+    if l_dt.day != 31:
+        print('Last date was not Dec 31st. Appending dummy.')
+        l_da = ds.isel(time=-1).copy(deep=True)
+        l_dt = l_dt.replace(month=12, day=31)
+        l_da['time'] = np.datetime64(l_dt)
+        ds = xr.concat([ds, l_da], dim='time')
+        
+    # notify and return
+    print('Conformed edge dates successfully.')
+    return ds
+
+
+def resample(ds, interval='1M', inplace=True):
     """
     Takes an xarray dataset containing vegetation index variable and resamples
     to a new temporal resolution. The available time intervals are 1W (weekly),
-    2W (bi-monthly) and 1M (monthly) resample intervals. The resulting dataset
-    contains the new resampled veg_index variable.
+    SM (bi-monthly) and 1M (monthly) resample intervals. The resulting dataset
+    contains the new resampled veg_idx variable.
     
     Parameters
     ----------
@@ -457,10 +326,9 @@ def resample(ds, interval='1M', reducer='median'):
         index variable (i.e. 'veg_index').
     interval: str
         The new temporal interval which to resample the dataset to. Available
-        intervals include 1W (weekly), 2W (bi-monthly) and 1M (monthly).
-    reducer: str
-        The reducer function to apply when downsampling. Can choose median or
-        mean as the reducer.
+        intervals include 1W (weekly), 1SM (bi-month) and 1M (monthly).
+    inplace : bool
+        Copy new xarray into memory or modify inplace.
 
     Returns
     -------
@@ -470,63 +338,63 @@ def resample(ds, interval='1M', reducer='median'):
     """
     
     # notify user
-    print('Resampling dataset interval: {0} via reducer: {1}'.format(interval, reducer))
+    print('Resampling dataset.')
     
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x, y dimension in dataset.')
         
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
+    # check if at least one year of data
+    if len(ds.groupby('time.year').groups) < 1:
+        raise ValueError('Need at least one year in dataset.')
+        
+    # get vars in ds
+    temp_vars = []
+    if isinstance(ds, xr.Dataset):
+        temp_vars = list(ds.data_vars)
+    elif isinstance(ds, xr.DataArray):
+        temp_vars = list(ds['variable'])
 
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('Resample does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
+    # check if vege var and soil var given
+    if 'veg_idx' not in temp_vars:
+        raise ValueError('Vege var name not in dataset.')
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
         
     # resample based on user selected interval and reducer
-    if interval in ['1W', '2W', '1M']:
-        if reducer == 'mean':
-            ds = ds.resample(time=interval).mean('time')
-        elif reducer == 'median':
-            ds = ds.resample(time=interval).median('time')
-        else:
-            raise ValueError('Provided reducer not supported. Please use mean or median.')
+    if interval in ['1W', '1SM', '1M']:
+        ds = ds.resample(time=interval).median('time')
     else:
-        raise ValueError('Provided resample interval not supported. Please use 1W, 2W or 1M.')
-                    
-    # check if any nans exist in dataset after resample and tell user
-    if bool(ds.isnull().any()):
-        print('> Warning: dataset contains nan values. You should interpolate nan values next.')
-        
-    # notify user
-    print('> Resample successful.\n')
-    
+        raise ValueError('Provided resample interval not supported.')
+                            
+    # notify user and return
+    print('Resampled dataset successful.\n')
     return ds
 
 
-def group(ds, group_by='month', reducer='median'):
+def group(ds, interval='month', inplace=True):
     """
     Takes an xarray dataset containing a vegetation index variable, groups and 
     reduces values based on a specified temporal group. The available group 
-    options are by month only. The resulting dataset contains the new grouped 
-    veg_index variable as a single year of weeks or months.
+    options are by month or week only. The resulting dataset contains the new 
+    grouped veg_index variable as a single year of weeks or months.
     
     Parameters
     ----------
     ds: xarray Dataset
         A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_index').
-    group_by: str
+        index variable (i.e. 'veg_idx').
+    interval: str
         The groups which to reduce the dataset to. Available intervals only
-        include month at this stage.
-    reducer: str
-        The reducer function to apply when downsampling. Can choose median or
-        mean as the reducer.
+        include month and week at this stage.
+    inplace : bool
+        Copy new xarray into memory or modify inplace.
 
     Returns
     -------
@@ -536,162 +404,124 @@ def group(ds, group_by='month', reducer='median'):
     """
     
     # notify user
-    print('Group dataset interval: {0} via reducer: {1}'.format(group_by, reducer))
+    print('Grouping dataset.')
     
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x, y dimension in dataset.')
         
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
+    # check if at least one year of data
+    if len(ds.groupby('time.year').groups) < 1:
+        raise ValueError('Need at least one year in dataset.')
+        
+    # get vars in ds
+    temp_vars = []
+    if isinstance(ds, xr.Dataset):
+        temp_vars = list(ds.data_vars)
+    elif isinstance(ds, xr.DataArray):
+        temp_vars = list(ds['variable'])
 
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('Resample does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
+    # check if vege var and soil var given
+    if 'veg_idx' not in temp_vars:
+        raise ValueError('Vege var name not in dataset.')
         
-    # get all years in dataset, choose middle year in array
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
+    # get all years in dataset, choose middle year in array for labels
     years = np.array([year for year in ds.groupby('time.year').groups])
     year = np.take(years, years.size // 2)
     
     # notify user
-    print('> Selecting year: {0} to re-label times after groupby.'.format(year))
+    print('Selecting year: {0} to re-label times after grouping.'.format(year))
           
     # group based on user selected interval and reducer
-    if group_by in ['week', 'month']:
-        if reducer == 'mean':
-            ds = ds.groupby('time' + '.' + group_by).mean('time')
-        elif reducer == 'median':
-            ds = ds.groupby('time' + '.' + group_by).median('time')
-        else:
-            raise ValueError('Provided reducer not supported. Please use mean or median.')
+    if interval in ['week', 'month']:
+        ds = ds.groupby('time' + '.' + interval).median('time')
+        ds = ds.rename({interval: 'time'})
     else:
-        raise ValueError('Provided group_by interval not supported. Please use month.')
+        raise ValueError('Provided interval not supported.')
         
     # correct time index following group by
-    if 'month' in list(ds.dims):
-        ds = ds.rename({'month': 'time'})
+    if interval == 'month':
         times = [datetime(year, int(dt), 1) for dt in ds['time']]
-        ds['time'] = [np.datetime64(dt) for dt in times]
-        
-    elif 'week' in list(ds.dims):
-        ds = ds.rename({'week': 'time'})
-        times = [datetime.strptime('{0} {1} {2}'.format(year, int(dt), 0), '%Y %W %w') for dt in ds['time']]
-        ds['time'] = [np.datetime64(dt) for dt in times]
-        
+    elif interval == 'week':
+        times = []
+        for dt in ds['time']:
+            dt_string = '{} {} {}'.format(year, int(dt), 1)
+            times.append(datetime.strptime(dt_string, '%Y %W %w'))
     else:
-        raise ValueError('Group_by was not found in dataset dimension. Aborting.')
-    
-    # check if any nans exist in dataset after resample and tell user
-    if bool(ds.isnull().any()):
-        print('> Warning: dataset contains nan values. You should interpolate nan values next.')
+        raise ValueError('Interval was not found in dataset dimension. Aborting.')
         
-    # notify user
-    print('> Group successful.\n')
-    
+    # check if someting was returned
+    if not times:
+        raise ValueError('No times returned.')
+        
+    # append array of dts to dataset
+    ds['time'] = [np.datetime64(dt) for dt in times]
+            
+    # notify user and return
+    print('Grouped dataset successful.')
     return ds
 
     
-def interpolate(ds, method='interpolate_na'):
+def interpolate(ds, method='full', inplace=True):
     """
-    Takes an xarray dataset containing vegetation index variable and interpolates
-    (linearly) all existing nan values within the timeseries using one of several
-    methods. The resulting dataset contains the timeseries minus nan values.
-    
+    Takes a xarray dataset/array and performs linear interpolation across
+    all times in dataset. This is a wrapper for perform_interp function. 
+    The method can be set to full or half. Full will use the built in xr 
+    interpolate_na method, which is robust and dask friendly but very slow. 
+    The quicker alternative is half, which only interpolates times that are 
+    all nan. Despite being slower, full method recommended.
+
     Parameters
     ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_index').
-    method: str
-        The interpolation method to apply to the dataset to fill in nan values.
-        Two methods are available. First is the built in xarray interpolate_na method, 
-        which is robust but slow. The second is a custom DEA method called fast_fill, 
-        which speeds up the process.
-        
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    method : str
+        Set the interpolation method: full or half. Full will use 
+        the built in interpolate_na method, which is robust and dask 
+        friendly but very slow. The quicker alternative is half, which 
+        only interpolates times that are all nan.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
     Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        newly interpolated 'veg_index' variable.
+    ----------
+    ds : xarray dataset or array.
     """
-    
-    # notify user
-    print('Interpolating dataset using method: {0}.'.format(method))
-    
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('Not a dataset. Please provide a xarray dataset.')
-        
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
-                        
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('Interpolate does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
-        
-    # resample based on user selected interval and reducer
-    if method in ['interpolate_na', 'fast_fill']:
-        
-        if method == 'interpolate_na':
-            
-            # use internal xarray linear interpolate method along time dim
-            ds = ds.interpolate_na(dim='time', method='linear')
-            
-        elif method == 'fast_fill':
-            
-            # grab x, y, time, etc. and reshape
-            x, y, time, attrs = ds['veg_index'].x, ds['veg_index'].y, ds['veg_index'].time, ds['veg_index'].attrs
-            da = ds['veg_index'].transpose("y", "x", "time").values
-            
-            # create nan mask and get indexes
-            mask = np.isnan(da)
-            idx = np.where(~mask, np.arange(mask.shape[-1]), 0)
-            #np.maximum.accumulate(idx, axis=-1, out=idx)
-            
-            # build new grid as template
-            i, j = np.meshgrid(np.arange(idx.shape[0]), np.arange(idx.shape[1]), indexing="ij")
-            dat = da[i[:, :, np.newaxis], j[:, :, np.newaxis], idx]
 
-            # if nan detected, fill it and add to template
-            if np.isnan(np.sum(dat[:, :, 0])):
-                fill = np.nanmean(dat, axis=-1)
-                for t in range(dat.shape[-1]):
-                    mask = np.isnan(dat[:, :, t])
-                    if mask.any():
-                        dat[mask, t] = fill[mask]
-                    else:
-                        break
+    # notify
+    print('Interpolating empty values in dataset.')
 
-            #stack back into da template
-            dat = xr.DataArray(dat, attrs=attrs, 
-                               coords={"x": x, "y": y, "time": time}, 
-                               dims=["y", "x", "time"]
-                              )
-
-            # convert back to dataset
-            ds = dat.to_dataset(name='veg_index')
-            
-    else:
-        raise ValueError('Provided method not supported. Please use interpolate_na or fast_fill')
+    # check xr type, dims, num time
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
         
-    # check if any nans exist in dataset after resample and tell user
-    if bool(ds.isnull().any()):
-        print('> Warning: dataset still contains nan values. The first and/or last time slices may be empty.')
+    # check if method is valid
+    if method not in ['full', 'half']:
+        raise ValueError('Method must be full or half.')
         
-    # notify user
-    print('> Interpolation successful.\n')
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
     
-    return ds
+    # interpolate for ds
+    ds = tools.perform_interp(ds=ds, method=method)
+
+    # notify and return
+    print('Interpolated empty values successfully.')
+    return ds   
 
 
 def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):  
@@ -708,9 +538,7 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
     method: str
         The smoothing algorithm to apply to the dataset. The savitsky method uses the robust
         savitsky-golay smooting technique, as per TIMESAT. Symmetrical gaussian applies a simple 
-        symmetrical gaussian. Asymmetrical gaussian applies an asymmetrical gaussian, resulting in
-        a flatter peak. Double logistic applies two seperate logistic functions to give a flatter 
-        peak based on TIMESAT. Default is savitsky.
+        symmetrical gaussian. Default is savitsky.
     window_length: int
         The length of the filter window (i.e., the number of coefficients). Value must 
         be a positive odd integer. The larger the window length, the smoother the dataset.
@@ -729,51 +557,42 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
         veg_index variable.
     """
     
+    # imports
+    from scipy.signal import savgol_filter
+    from scipy.ndimage import gaussian_filter
+    
     # notify user
-    print('Smoothing method: {0} with window length: {1} and polyorder: {2}.'.format(method, window_length, polyorder))
+    print('Smoothing data via method: {0}.'.format(method))
     
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('> Not a dataset. Please provide a xarray dataset.')
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x, y dimension in dataset.')
         
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('> Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('> Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
-                        
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('> Remove outliers does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
-        
-    # check if window length provided
-    if window_length <= 0 or not isinstance(window_length, int):
-        raise TypeError('> Window_length is <= 0 and/or not an integer. Please provide a value of 0 or above.')
-        
-    # check if user factor provided
-    if polyorder <= 0 or not isinstance(polyorder, int):
-        raise TypeError('> Polyorder is <= 0 and/or not an integer. Please provide a value of 0 or above.')
-        
-    # check if polyorder less than window_length
-    if polyorder > window_length:
-        raise TypeError('> Polyorder is > than window_length. Must be less than window_length.')
-        
-    # check if sigma is between 1 and 9
-    if sigma < 1 or sigma > 9:
-        raise TypeError('> Sigma is < 1 or > 9. Must be between 1 - 9.')
+    # check params
+    if window_length <= 0 :
+        raise ValueError('Window_length is <= 0. Must be greater than 0.')
+    elif polyorder <= 0:
+        raise ValueError('Polyorder is <= 0. Must be greater than 0.')
+    elif polyorder > window_length:
+        raise ValueError('Polyorder is > than window length. Must be smaller value.')
+    elif sigma < 1 or sigma > 9:
+        raise ValueError('Sigma is < 1 or > 9. Must be between 1 - 9.')
         
     # perform smoothing based on user selected method     
-    if method in ['savitsky', 'symm_gaussian', 'asymm_gaussian', 'double_logistic']:
+    if method in ['savitsky', 'symm_gaussian']:
         if method == 'savitsky':
             
             # create savitsky smoother func
             def smoother(da, window_length, polyorder):
-                return da.apply(savgol_filter, window_length=window_length, polyorder=polyorder, axis=0)
+                return da.apply(savgol_filter, window_length=window_length, polyorder=polyorder)
             
             # create kwargs dict
-            kwargs = {'window_length': window_length, 'polyorder': polyorder}
+            kwargs = {'window_length': window_length, 
+                      'polyorder': polyorder}
 
         elif method == 'symm_gaussian':
             
@@ -783,27 +602,16 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
             
             # create kwargs dict
             kwargs = {'sigma': sigma}
-
-        elif method == 'asymm_gaussian':
-            raise ValueError('> Asymmetrical gaussian not yet implemented.')
-            
-        elif method == 'double_logistic':
-            raise ValueError('> Double logistic not yet implemented.')
-                
-        # create template and map func to dask chunks
-        temp = xr.full_like(ds, fill_value=np.nan)
-        ds = xr.map_blocks(smoother, ds, template=temp, kwargs=kwargs)
+               
+        # map func to dask chunks
+        #temp = xr.full_like(ds, fill_value=np.nan)
+        ds = xr.map_blocks(smoother, ds, template=ds, kwargs=kwargs)
         
     else:
         raise ValueError('Provided method not supported. Please use savtisky.')
         
-    # check if any nans exist in dataset after resample and tell user
-    if bool(ds.isnull().any()):
-        print('> Warning: dataset contains nan values. You may want to interpolate next.')
-
-    # notify user
-    print('> Smoothing successful.\n')
-
+    # notify user and return
+    print('Smoothing successful.\n')
     return ds
 
 
@@ -811,7 +619,8 @@ def calc_num_seasons(ds):
     """
     Takes an xarray Dataset containing vege values and calculates the number of
     seasons for each timeseries pixel. The number of seasons provides a count of 
-    number of significant peaks in each pixel timeseries.
+    number of significant peaks in each pixel timeseries. Note: this function will
+    rechunk the dataset.
 
     Parameters
     ----------
@@ -822,66 +631,81 @@ def calc_num_seasons(ds):
     Returns
     -------
     da_num_seasons : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
+        An xarray DataSet type with an x and y dimension (no time). Each pixel is the 
         number of seasons value detected across the timeseries at each pixel.
     """
+    
+    # imports
+    from scipy.signal import find_peaks
     
     # notify user
     print('Beginning calculation of number of seasons.')
     
-    # check if type is xr dataset
-    if type(ds) != xr.Dataset:
-        raise TypeError('> Not a dataset. Please provide a xarray dataset.')
+    # check xr type, dims
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x, y dimension in dataset.')
+                
+    # get vars in ds
+    temp_vars = []
+    if isinstance(ds, xr.Dataset):
+        temp_vars = list(ds.data_vars)
+    elif isinstance(ds, xr.DataArray):
+        temp_vars = list(ds['variable'])
+
+    # check if vege var and soil var given
+    if 'veg_idx' not in temp_vars:
+        raise ValueError('Vege var name not in dataset.')
         
-    # check if time dimension is in dataset
-    if 'time' not in list(ds.dims):
-        raise ValueError('> Time dimension not in dataset. Please ensure dataset has a time dimension.')
-    
-    # check if dataset contains veg_index variable
-    if 'veg_index' not in list(ds.data_vars):
-        raise ValueError('> Vegetation index (veg_index) not in dataset. Please generate veg_index first.')
-                        
-    # check if dataset is 2D or above
-    if len(ds['veg_index'].shape) == 1:
-        raise Exception('> Remove outliers does not operate on 1D datasets. Ensure it has an x, y and time dimension.')
-        
-    # get height (val at 80% threshold) and dist between peals (4 seasons)
-    #da_height = (ds['veg_index'].max('time') - ds['veg_index'].min('time')) * 0.80
-    #distance = math.ceil(len(ds['time']) / 4)
+    # if dask, need to rechunk to -1
+    if bool(ds.chunks):
+        print('Warning: had to rechunk dataset.')
+        ds = ds.chunk({'time': -1})
 
     # set up calc peaks functions
-    def calc_peaks(vec_data):
-    
-        # get height (val at 75% threshold) and dist between peals (4 seasons)
-        height = np.nanquantile(vec_data, q=0.75)
-        distance = math.ceil(len(vec_data) / 4)
+    def calc_peaks(x, t):
 
         # calc num peaks
-        peaks = find_peaks(vec_data, height=height, distance=distance)
-
-        if peaks:
-            return len(peaks[0])
+        peaks, _ = find_peaks(x, prominence=t)
+        
+        # check and correct to 1 if nothing
+        if len(peaks) > 0:
+            num_peaks = len(peaks)
         else:
-            return 0
+            num_peaks = 1
+
+        # return
+        return num_peaks
+    
+    # prepare prominence threshold dataset
+    ds_thresh = (ds.max('time') - ds.min('time')) / 8
         
     # calculate nos using calc_funcs func
-    print('> Calculating number of seasons.')
-    da_nos = xr.apply_ufunc(calc_peaks, ds['veg_index'], 
-                            input_core_dims=[['time']],
+    print('Calculating number of seasons.')
+    ds_nos = xr.apply_ufunc(calc_peaks, 
+                            ds['veg_idx'], 
+                            ds_thresh['veg_idx'],
+                            input_core_dims=[['time'], []],
                             vectorize=True, 
                             dask='parallelized', 
-                            output_dtypes=[np.int16])
+                            output_dtypes=[np.int8])
     
     # convert type
-    da_nos = da_nos.astype('int16')
+    #da_nos = da_nos.astype('int16')
     
     # rename
-    da_nos = da_nos.rename('num_seasons')
+    ds_nos = ds_nos.rename('nos_values')
+    
+    # convert to dataset
+    ds_nos = ds_nos.to_dataset()
     
     # notify user
-    print('> Success!\n')
+    print('Success!')
         
-    return da_nos
+    return ds_nos
  
 
 def create_ds_template(da):
@@ -2378,7 +2202,7 @@ def calc_phenometrics(da, peak_metric='pos', base_metric='bse', method='first_of
     print('Initialising calculation of phenometrics.\n')
     
     # check if dask - not yet supported
-    if dask.is_dask_collection(da):
+    if bool(da.chunks):
         raise TypeError('Dask arrays not yet supported. Please compute first.')
     
     # check if dataset type
