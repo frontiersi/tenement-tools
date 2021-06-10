@@ -325,8 +325,8 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01, i
     z_dry = (ds_dry - ds_dry.mean()) / ds_dry.std()
 
     # get dates where outliers (zscore > zvalue) for wet, dry
-    z_wet = z_wet.where(z_wet > z_value, drop=True)
-    z_dry = z_dry.where(z_dry > z_value, drop=True)
+    z_wet = z_wet.where(abs(z_wet) > z_value, drop=True)
+    z_dry = z_dry.where(abs(z_dry) > z_value, drop=True)
     
     # combine wet, dry times of outliers and mask original ds
     da_times = xr.concat([z_wet['time'], z_dry['time']], dim='time')
@@ -529,76 +529,6 @@ def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     return ds
 
 
-def perform_interp(ds, method='full'):
-    """
-    Takes a xarray dataset/array and performs linear interpolation across
-    time dimension. The method can be set to full or half. Full will use the 
-    built in xr interpolate_na method, which is robust and dask friendly 
-    but very slow. The quicker alternative is half, which only interpolates 
-    times that are all nan. Despite being slower, full method recommended.
-
-    Parameters
-    ----------
-    ds: xarray dataset/array
-        A dataset with x, y and time dims.
-    method : str
-        Set the interpolation method: full or half. Full will use 
-        the built in interpolate_na method, which is robust and dask 
-        friendly but very slow. The quicker alternative is half, which 
-        only interpolates times that are all nan.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
-
-    Returns
-    ----------
-    ds : xarray dataset or array.
-    """
-    
-    # check xr type, dims, num time
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions in dataset.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif len(ds['time.year']) < 3:
-        raise ValueError('Less than 3 years in dataset.')
-        
-    # check if method is valid
-    if method not in ['full', 'half']:
-        raise ValueError('Method must be full or half.')
-    
-    # interpolate using full or half method
-    if method == 'full':
-
-        # if dask, rechunk into appropriate shape
-        if bool(ds.chunks):
-            chunks = ds.chunks
-            ds = ds.chunk({'time': -1}) 
-
-        # interpolate all nan pixels linearly
-        ds = ds.interpolate_na(dim='time', method='linear')
-
-        # chunk back to orginal size
-        if bool(ds.chunks):
-            ds = ds.chunk(chunks) 
-
-    elif method == 'half':
-        
-        # get times where all nan, find diff with original, drop if exist
-        nan_dates = ds.dropna(dim='time', how='all').time
-        nan_dates = np.setdiff1d(ds['time'], nan_dates)
-        ds = ds.dropna(dim='time', how='all')
-
-        # interpolate all nan pixels linearly
-        if len(nan_dates):
-            ds_interp = ds.interp(time=nan_dates, method='linear')
-            ds = xr.concat([ds, ds_interp], dim='time').sortby('time')
-            
-    return ds
-
-
 def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inplace=True):
     """
     Takes a xarray dataset/array and performs linear interpolation across
@@ -665,8 +595,8 @@ def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inpl
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
     
     # interpolate for wet, then dry
-    ds_wet = perform_interp(ds=ds_wet, method=method)
-    ds_dry = perform_interp(ds=ds_dry, method=method)
+    ds_wet = tools.perform_interp(ds=ds_wet, method=method)
+    ds_dry = tools.perform_interp(ds=ds_dry, method=method)
 
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
@@ -725,7 +655,7 @@ def interp_empty(ds, method='full', inplace=True):
         ds = ds.copy(deep=True)
     
     # interpolate for ds
-    ds = perform_interp(ds=ds, method=method)
+    ds = tools.perform_interp(ds=ds, method=method)
 
     # notify and return
     print('Interpolated empty values successfully.')
@@ -794,7 +724,7 @@ def interp_empty_months(ds, method='full', inplace=True):
         da = da.copy(deep=True)
         
         # interpolate for current month time series
-        da = perform_interp(ds=da, method=method)
+        da = tools.perform_interp(ds=da, method=method)
             
         # append to list
         da_list.append(da)
