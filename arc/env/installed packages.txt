@@ -1,4 +1,0 @@
-conda config --set channel_priority disabled
-
-conda install dask-core=2.30.0
-conda install -c conda-forge rasterio=1.1.6

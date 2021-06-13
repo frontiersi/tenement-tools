@@ -1,0 +1,192 @@
+{
+  "arch": "x86_64",
+  "build": "py37he774522_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0",
+    "vc >=14.1,<15.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\fastcache-1.1.0-py37he774522_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/fastcache-1.1.0.dist-info/INSTALLER",
+    "Lib/site-packages/fastcache-1.1.0.dist-info/LICENSE",
+    "Lib/site-packages/fastcache-1.1.0.dist-info/METADATA",
+    "Lib/site-packages/fastcache-1.1.0.dist-info/RECORD",
+    "Lib/site-packages/fastcache-1.1.0.dist-info/WHEEL",
+    "Lib/site-packages/fastcache-1.1.0.dist-info/top_level.txt",
+    "Lib/site-packages/fastcache/__init__.py",
+    "Lib/site-packages/fastcache/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/fastcache/__pycache__/benchmark.cpython-37.pyc",
+    "Lib/site-packages/fastcache/_lrucache.cp37-win_amd64.pyd",
+    "Lib/site-packages/fastcache/benchmark.py",
+    "Lib/site-packages/fastcache/tests/__init__.py",
+    "Lib/site-packages/fastcache/tests/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/fastcache/tests/__pycache__/test_clrucache.cpython-37.pyc",
+    "Lib/site-packages/fastcache/tests/__pycache__/test_functools.cpython-37.pyc",
+    "Lib/site-packages/fastcache/tests/__pycache__/test_thread.cpython-37.pyc",
+    "Lib/site-packages/fastcache/tests/test_clrucache.py",
+    "Lib/site-packages/fastcache/tests/test_functools.py",
+    "Lib/site-packages/fastcache/tests/test_thread.py",
+    ".nonadmin"
+  ],
+  "fn": "fastcache-1.1.0-py37he774522_0.conda",
+  "license": "MIT",
+  "license_family": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\fastcache-1.1.0-py37he774522_0",
+    "type": 1
+  },
+  "md5": "3e4ae02df6bd36559e8ffe728e3c93eb",
+  "name": "fastcache",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\fastcache-1.1.0-py37he774522_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508",
+        "sha256_in_prefix": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508",
+        "size_in_bytes": 4
+      },
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "023e92e0b6343c75e6912abd5076ea28b520ca27d1cd44497bcf363b9b8f559d",
+        "sha256_in_prefix": "023e92e0b6343c75e6912abd5076ea28b520ca27d1cd44497bcf363b9b8f559d",
+        "size_in_bytes": 1077
+      },
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "9687648a88508399a7609319f646b83f3cb05543f5c406b7228213b38923557e",
+        "sha256_in_prefix": "9687648a88508399a7609319f646b83f3cb05543f5c406b7228213b38923557e",
+        "size_in_bytes": 3662
+      },
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "601bf7ba945c47c68fc2bd7c9ae43b3e42c0a1f75a269d54e1674b188e24ab0e",
+        "sha256_in_prefix": "601bf7ba945c47c68fc2bd7c9ae43b3e42c0a1f75a269d54e1674b188e24ab0e",
+        "size_in_bytes": 1434
+      },
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "40e99bf95b90270b99ec0bff436f37f4f0afeaab27e9118722bb7a6347ac1438",
+        "sha256_in_prefix": "40e99bf95b90270b99ec0bff436f37f4f0afeaab27e9118722bb7a6347ac1438",
+        "size_in_bytes": 106
+      },
+      {
+        "_path": "Lib/site-packages/fastcache-1.1.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "f800d3bed6b7d8496d449687ba1a837e5e84dbe79dfcbe863a140bfbff6f2e72",
+        "sha256_in_prefix": "f800d3bed6b7d8496d449687ba1a837e5e84dbe79dfcbe863a140bfbff6f2e72",
+        "size_in_bytes": 10
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "8ff9bc8c53055957c78f6d25ae81f45845679e00480ad5047c22c2496eac4922",
+        "sha256_in_prefix": "8ff9bc8c53055957c78f6d25ae81f45845679e00480ad5047c22c2496eac4922",
+        "size_in_bytes": 2670
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "c86790e35a44fe856ef3e5ec7808edebd98b957b870b747edfc4b3f2d22bcc64",
+        "sha256_in_prefix": "c86790e35a44fe856ef3e5ec7808edebd98b957b870b747edfc4b3f2d22bcc64",
+        "size_in_bytes": 3033
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/__pycache__/benchmark.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "9381d6611bc58023d977118ae663592f7f7eb153a23bc242f25d2203b6bab261",
+        "sha256_in_prefix": "9381d6611bc58023d977118ae663592f7f7eb153a23bc242f25d2203b6bab261",
+        "size_in_bytes": 3595
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/_lrucache.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "60d2960f413439f4fdd4d03f737aeb0f3660a7d6611b2a1408baeb15cc7a0b26",
+        "sha256_in_prefix": "60d2960f413439f4fdd4d03f737aeb0f3660a7d6611b2a1408baeb15cc7a0b26",
+        "size_in_bytes": 22528
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/benchmark.py",
+        "path_type": "hardlink",
+        "sha256": "2db11963c81b5738c45135b8fc8ef64dde716cda6e84ec551a3e5658102fe858",
+        "sha256_in_prefix": "2db11963c81b5738c45135b8fc8ef64dde716cda6e84ec551a3e5658102fe858",
+        "size_in_bytes": 3746
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "99acd995e7043089d60a9d6433e8aa981ec5257633877a02b514339b2b6ba5bf",
+        "sha256_in_prefix": "99acd995e7043089d60a9d6433e8aa981ec5257633877a02b514339b2b6ba5bf",
+        "size_in_bytes": 132
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/__pycache__/test_clrucache.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "01be07ec0eeec8886cc724cdbd3affcb2e103e1b729dfa9bd8d3f10d3798d4ef",
+        "sha256_in_prefix": "01be07ec0eeec8886cc724cdbd3affcb2e103e1b729dfa9bd8d3f10d3798d4ef",
+        "size_in_bytes": 5953
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/__pycache__/test_functools.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "a8acbf69d1aff050301de103a791d6b3469f974fb02be80629583e285c3de7d6",
+        "sha256_in_prefix": "a8acbf69d1aff050301de103a791d6b3469f974fb02be80629583e285c3de7d6",
+        "size_in_bytes": 7596
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/__pycache__/test_thread.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "1feefe0d98578074f1c6fcd09e1d19da3aeb6d9ea11f707beafd79c9003c3146",
+        "sha256_in_prefix": "1feefe0d98578074f1c6fcd09e1d19da3aeb6d9ea11f707beafd79c9003c3146",
+        "size_in_bytes": 4552
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/test_clrucache.py",
+        "path_type": "hardlink",
+        "sha256": "cdda50abe06a1e89798cba59a14e31afbcd4520ce4c9961d8a04dee4fc741d7a",
+        "sha256_in_prefix": "cdda50abe06a1e89798cba59a14e31afbcd4520ce4c9961d8a04dee4fc741d7a",
+        "size_in_bytes": 4436
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/test_functools.py",
+        "path_type": "hardlink",
+        "sha256": "7b3994f470e945258eb40a0019926a4ef4a9959a5f99793307f4db472ecca61c",
+        "sha256_in_prefix": "7b3994f470e945258eb40a0019926a4ef4a9959a5f99793307f4db472ecca61c",
+        "size_in_bytes": 8022
+      },
+      {
+        "_path": "Lib/site-packages/fastcache/tests/test_thread.py",
+        "path_type": "hardlink",
+        "sha256": "9627dc9e626c9513818ee41da160e2ecfad814947d5f4af9b6aad6594716fd0c",
+        "sha256_in_prefix": "9627dc9e626c9513818ee41da160e2ecfad814947d5f4af9b6aad6594716fd0c",
+        "size_in_bytes": 3465
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "defaults/win-64::fastcache==1.1.0=py37he774522_0",
+  "sha256": "e4c32f74979605610c3eea357bbf90ff7897defc68205d302b190815e21dd51b",
+  "size": 32636,
+  "subdir": "win-64",
+  "timestamp": 1557507509413,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/fastcache-1.1.0-py37he774522_0.conda",
+  "version": "1.1.0"
+}

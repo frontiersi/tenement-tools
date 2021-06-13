@@ -1,0 +1,19 @@
+# clone new env in arcgis dir
+conda create --clone arcgispro-py3 --name arcgispro-py3-development
+
+# alternatively, clone to specifc folder
+conda create --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-development
+
+# activate env
+activate arcgispro-py3-development
+
+# check if dask can be installed
+conda install dask=2.30.0 --dry-run
+conda install dask=2.30.0
+
+# not working? try this
+#conda config --set channel_priority disabled
+
+# check if rasterio can be installed - try these. cannot install 1.1.6, so ignore ver num
+conda install -c conda-forge rasterio --dry-run
+conda install -c conda-forge rasterio --dry-run

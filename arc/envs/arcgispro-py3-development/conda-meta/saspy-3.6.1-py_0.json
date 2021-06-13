@@ -1,0 +1,508 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/noarch",
+  "constrains": [],
+  "depends": [
+    "ipython >=4",
+    "pandas",
+    "pygments",
+    "python"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\saspy-3.6.1-py_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/saspy-3.6.1.dist-info/INSTALLER",
+    "Lib/site-packages/saspy-3.6.1.dist-info/METADATA",
+    "Lib/site-packages/saspy-3.6.1.dist-info/RECORD",
+    "Lib/site-packages/saspy-3.6.1.dist-info/REQUESTED",
+    "Lib/site-packages/saspy-3.6.1.dist-info/WHEEL",
+    "Lib/site-packages/saspy-3.6.1.dist-info/direct_url.json",
+    "Lib/site-packages/saspy-3.6.1.dist-info/top_level.txt",
+    "Lib/site-packages/saspy/SASLogLexer.py",
+    "Lib/site-packages/saspy/__init__.py",
+    "Lib/site-packages/saspy/autocfg.py",
+    "Lib/site-packages/saspy/java/iomclient/log4j.jar",
+    "Lib/site-packages/saspy/java/iomclient/sas.core.jar",
+    "Lib/site-packages/saspy/java/iomclient/sas.security.sspi.jar",
+    "Lib/site-packages/saspy/java/iomclient/sas.svc.connection.jar",
+    "Lib/site-packages/saspy/java/pyiom/saspy2j.class",
+    "Lib/site-packages/saspy/java/pyiom/saspy2j.java",
+    "Lib/site-packages/saspy/java/saspyiom.jar",
+    "Lib/site-packages/saspy/java/thirdparty/NOTICE.md",
+    "Lib/site-packages/saspy/java/thirdparty/glassfish-corba-internal-api.jar",
+    "Lib/site-packages/saspy/java/thirdparty/glassfish-corba-omgapi.jar",
+    "Lib/site-packages/saspy/java/thirdparty/glassfish-corba-orb.jar",
+    "Lib/site-packages/saspy/java/thirdparty/pfl-basic.jar",
+    "Lib/site-packages/saspy/java/thirdparty/pfl-tf.jar",
+    "Lib/site-packages/saspy/libname_gen.sas",
+    "Lib/site-packages/saspy/sasViyaML.py",
+    "Lib/site-packages/saspy/sas_magic.py",
+    "Lib/site-packages/saspy/sasbase.py",
+    "Lib/site-packages/saspy/sascfg.py",
+    "Lib/site-packages/saspy/sasdata.py",
+    "Lib/site-packages/saspy/sasdecorator.py",
+    "Lib/site-packages/saspy/sasets.py",
+    "Lib/site-packages/saspy/sasexceptions.py",
+    "Lib/site-packages/saspy/sasiocom.py",
+    "Lib/site-packages/saspy/sasiohttp.py",
+    "Lib/site-packages/saspy/sasioiom.py",
+    "Lib/site-packages/saspy/sasiostdio.py",
+    "Lib/site-packages/saspy/sasml.py",
+    "Lib/site-packages/saspy/sasproccommons.py",
+    "Lib/site-packages/saspy/sasqc.py",
+    "Lib/site-packages/saspy/sasresults.py",
+    "Lib/site-packages/saspy/sasstat.py",
+    "Lib/site-packages/saspy/sastabulate.py",
+    "Lib/site-packages/saspy/sasutil.py",
+    "Lib/site-packages/saspy/version.py",
+    ".nonadmin",
+    "Lib/site-packages/saspy/__pycache__/SASLogLexer.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/autocfg.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasViyaML.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sas_magic.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasbase.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sascfg.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasdata.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasdecorator.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasets.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasexceptions.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasiocom.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasiohttp.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasioiom.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasiostdio.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasml.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasproccommons.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasqc.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasresults.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasstat.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sastabulate.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/sasutil.cpython-37.pyc",
+    "Lib/site-packages/saspy/__pycache__/version.cpython-37.pyc"
+  ],
+  "fn": "saspy-3.6.1-py_0.tar.bz2",
+  "license": "Apache 2.0",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\saspy-3.6.1-py_0",
+    "type": 1
+  },
+  "md5": "e8ada7cd9c183559e529c36f046fb871",
+  "name": "saspy",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\saspy-3.6.1-py_0.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "258848cdd0679c40edb5295e6b76317a636d106215bcc20c3ebd7a902fab0cae",
+        "sha256_in_prefix": "258848cdd0679c40edb5295e6b76317a636d106215bcc20c3ebd7a902fab0cae",
+        "size_in_bytes": 3745
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "0425ab22e22e43cca3e04127cf70010b324f136ec5916cd887055edc0803dfa4",
+        "sha256_in_prefix": "0425ab22e22e43cca3e04127cf70010b324f136ec5916cd887055edc0803dfa4",
+        "size_in_bytes": 4685
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "3aa464174798e461ecb0ca2b16395b4c8ab4ef6be91e917ad1f21003a952f710",
+        "sha256_in_prefix": "3aa464174798e461ecb0ca2b16395b4c8ab4ef6be91e917ad1f21003a952f710",
+        "size_in_bytes": 92
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "fb2cad0403d3f17e3878dbfedbfec8eaf98e8bb24596d36b2676245ff73eba04",
+        "sha256_in_prefix": "fb2cad0403d3f17e3878dbfedbfec8eaf98e8bb24596d36b2676245ff73eba04",
+        "size_in_bytes": 97
+      },
+      {
+        "_path": "site-packages/saspy-3.6.1.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "a1e54cbb1fee524dfc23b6447609e0bd682b1bef0663ca21f04e35593b5e1cca",
+        "sha256_in_prefix": "a1e54cbb1fee524dfc23b6447609e0bd682b1bef0663ca21f04e35593b5e1cca",
+        "size_in_bytes": 6
+      },
+      {
+        "_path": "site-packages/saspy/SASLogLexer.py",
+        "path_type": "hardlink",
+        "sha256": "7581f655bac56336c124535362338e6988bc226eb48a4583e1afa5b54ec1437f",
+        "sha256_in_prefix": "7581f655bac56336c124535362338e6988bc226eb48a4583e1afa5b54ec1437f",
+        "size_in_bytes": 1985
+      },
+      {
+        "_path": "site-packages/saspy/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "1a0a5e59c8dd72ed5ad3caa883c793fce60dd1e4b2f942a5b991bf0c3f5b99d7",
+        "sha256_in_prefix": "1a0a5e59c8dd72ed5ad3caa883c793fce60dd1e4b2f942a5b991bf0c3f5b99d7",
+        "size_in_bytes": 2114
+      },
+      {
+        "_path": "site-packages/saspy/autocfg.py",
+        "path_type": "hardlink",
+        "sha256": "80bfab80ea8029599ba40ea269aad36538c08a2de20faf24a7a4629135b89f27",
+        "sha256_in_prefix": "80bfab80ea8029599ba40ea269aad36538c08a2de20faf24a7a4629135b89f27",
+        "size_in_bytes": 5217
+      },
+      {
+        "_path": "site-packages/saspy/java/iomclient/log4j.jar",
+        "path_type": "hardlink",
+        "sha256": "9f5f5799707881451a39c1b2dd22b4e43b97a80698db7daf1c9697f545e24387",
+        "sha256_in_prefix": "9f5f5799707881451a39c1b2dd22b4e43b97a80698db7daf1c9697f545e24387",
+        "size_in_bytes": 391834
+      },
+      {
+        "_path": "site-packages/saspy/java/iomclient/sas.core.jar",
+        "path_type": "hardlink",
+        "sha256": "fbdc0d8e4154d3e11f8495e341d7a63e74bf3aff0d97f887500920a8a1043177",
+        "sha256_in_prefix": "fbdc0d8e4154d3e11f8495e341d7a63e74bf3aff0d97f887500920a8a1043177",
+        "size_in_bytes": 997855
+      },
+      {
+        "_path": "site-packages/saspy/java/iomclient/sas.security.sspi.jar",
+        "path_type": "hardlink",
+        "sha256": "0d30e462263d8fdcea687339cf74109ec428dd8c0a7760e738441154429dc7d6",
+        "sha256_in_prefix": "0d30e462263d8fdcea687339cf74109ec428dd8c0a7760e738441154429dc7d6",
+        "size_in_bytes": 6589
+      },
+      {
+        "_path": "site-packages/saspy/java/iomclient/sas.svc.connection.jar",
+        "path_type": "hardlink",
+        "sha256": "d5a57028ecdb208710ab9c09d58c4186d1c45300a0444625c177791b49feb11f",
+        "sha256_in_prefix": "d5a57028ecdb208710ab9c09d58c4186d1c45300a0444625c177791b49feb11f",
+        "size_in_bytes": 2289298
+      },
+      {
+        "_path": "site-packages/saspy/java/pyiom/saspy2j.class",
+        "path_type": "hardlink",
+        "sha256": "39272d19d2fb0ecae50b4acb4a39451e5eaabad142f2ecc2a0cdde088fb6eb25",
+        "sha256_in_prefix": "39272d19d2fb0ecae50b4acb4a39451e5eaabad142f2ecc2a0cdde088fb6eb25",
+        "size_in_bytes": 17477
+      },
+      {
+        "_path": "site-packages/saspy/java/pyiom/saspy2j.java",
+        "path_type": "hardlink",
+        "sha256": "30dfe539e430fc6f11c7dae44575b49a0fcaaa0b4aed23e208dab3b94c0a7986",
+        "sha256_in_prefix": "30dfe539e430fc6f11c7dae44575b49a0fcaaa0b4aed23e208dab3b94c0a7986",
+        "size_in_bytes": 32234
+      },
+      {
+        "_path": "site-packages/saspy/java/saspyiom.jar",
+        "path_type": "hardlink",
+        "sha256": "b111ee9aaf115a36ebf425ea3205b3e8d6449e9a3484908047e5ac8f93b097ca",
+        "sha256_in_prefix": "b111ee9aaf115a36ebf425ea3205b3e8d6449e9a3484908047e5ac8f93b097ca",
+        "size_in_bytes": 13616
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/NOTICE.md",
+        "path_type": "hardlink",
+        "sha256": "34f06c21d287c1a51ea292606e0d2e51fc36d2a4ec0750907cd209c19742a6ab",
+        "sha256_in_prefix": "34f06c21d287c1a51ea292606e0d2e51fc36d2a4ec0750907cd209c19742a6ab",
+        "size_in_bytes": 2155
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/glassfish-corba-internal-api.jar",
+        "path_type": "hardlink",
+        "sha256": "5fc0d6318fe84ca556a8bdcf6691b47854e1fdc04d9fdbb73bbde8ed19d32d2f",
+        "sha256_in_prefix": "5fc0d6318fe84ca556a8bdcf6691b47854e1fdc04d9fdbb73bbde8ed19d32d2f",
+        "size_in_bytes": 28157
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/glassfish-corba-omgapi.jar",
+        "path_type": "hardlink",
+        "sha256": "ac6ec1eb1e3dfda7eb146b43d218ea3d3669b2af0fd7e19b12866595cc7143fb",
+        "sha256_in_prefix": "ac6ec1eb1e3dfda7eb146b43d218ea3d3669b2af0fd7e19b12866595cc7143fb",
+        "size_in_bytes": 1376212
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/glassfish-corba-orb.jar",
+        "path_type": "hardlink",
+        "sha256": "14c60add53102116ec9f40d43579b979d76548c17d87b873d297c3224b096e90",
+        "sha256_in_prefix": "14c60add53102116ec9f40d43579b979d76548c17d87b873d297c3224b096e90",
+        "size_in_bytes": 1624797
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/pfl-basic.jar",
+        "path_type": "hardlink",
+        "sha256": "a099427abfe264937d30ff952a0208496f7b6b53f7b463cf9a0dc6643636fe6c",
+        "sha256_in_prefix": "a099427abfe264937d30ff952a0208496f7b6b53f7b463cf9a0dc6643636fe6c",
+        "size_in_bytes": 197485
+      },
+      {
+        "_path": "site-packages/saspy/java/thirdparty/pfl-tf.jar",
+        "path_type": "hardlink",
+        "sha256": "fa3d268ea02c2803d9d957305fdea9b354629c0055247f19ea3349e9e1967cd4",
+        "sha256_in_prefix": "fa3d268ea02c2803d9d957305fdea9b354629c0055247f19ea3349e9e1967cd4",
+        "size_in_bytes": 93886
+      },
+      {
+        "_path": "site-packages/saspy/libname_gen.sas",
+        "path_type": "hardlink",
+        "sha256": "63bfe2dc7946b0363d37256d9f5c78060aa641fba51297deb04f157d258bb5ca",
+        "sha256_in_prefix": "63bfe2dc7946b0363d37256d9f5c78060aa641fba51297deb04f157d258bb5ca",
+        "size_in_bytes": 3383
+      },
+      {
+        "_path": "site-packages/saspy/sasViyaML.py",
+        "path_type": "hardlink",
+        "sha256": "f10e4572aa28e4aea712f325c2ec52e206b8395f159844d65390ffb3bec4e26c",
+        "sha256_in_prefix": "f10e4572aa28e4aea712f325c2ec52e206b8395f159844d65390ffb3bec4e26c",
+        "size_in_bytes": 17836
+      },
+      {
+        "_path": "site-packages/saspy/sas_magic.py",
+        "path_type": "hardlink",
+        "sha256": "62aa0977196ff182b4878c9bd5f4031d56b584d96ca4272a17e2f8f9a2411063",
+        "sha256_in_prefix": "62aa0977196ff182b4878c9bd5f4031d56b584d96ca4272a17e2f8f9a2411063",
+        "size_in_bytes": 7181
+      },
+      {
+        "_path": "site-packages/saspy/sasbase.py",
+        "path_type": "hardlink",
+        "sha256": "d83e0cee31f84031db695ab4fe8c9a61a29c2ba654d9f27919a21eb9aaa6ad87",
+        "sha256_in_prefix": "d83e0cee31f84031db695ab4fe8c9a61a29c2ba654d9f27919a21eb9aaa6ad87",
+        "size_in_bytes": 113870
+      },
+      {
+        "_path": "site-packages/saspy/sascfg.py",
+        "path_type": "hardlink",
+        "sha256": "ab94a989b96fee369a3d018953911e31a95d02e7799f5144cbf7451dbec2f2f4",
+        "sha256_in_prefix": "ab94a989b96fee369a3d018953911e31a95d02e7799f5144cbf7451dbec2f2f4",
+        "size_in_bytes": 10402
+      },
+      {
+        "_path": "site-packages/saspy/sasdata.py",
+        "path_type": "hardlink",
+        "sha256": "9c39e1473982e50fca7ff839845a089abea23376bcdccd74d586001fd001fee9",
+        "sha256_in_prefix": "9c39e1473982e50fca7ff839845a089abea23376bcdccd74d586001fd001fee9",
+        "size_in_bytes": 68987
+      },
+      {
+        "_path": "site-packages/saspy/sasdecorator.py",
+        "path_type": "hardlink",
+        "sha256": "a8e1a3509253e1300955228d214eab9137e1a8b4a83920280751afe2aa44fe9b",
+        "sha256_in_prefix": "a8e1a3509253e1300955228d214eab9137e1a8b4a83920280751afe2aa44fe9b",
+        "size_in_bytes": 5076
+      },
+      {
+        "_path": "site-packages/saspy/sasets.py",
+        "path_type": "hardlink",
+        "sha256": "8e969f02ebeac67a626c864fb056ca0a3a03dd4c1112ee712cfe021f1d4c92f4",
+        "sha256_in_prefix": "8e969f02ebeac67a626c864fb056ca0a3a03dd4c1112ee712cfe021f1d4c92f4",
+        "size_in_bytes": 24935
+      },
+      {
+        "_path": "site-packages/saspy/sasexceptions.py",
+        "path_type": "hardlink",
+        "sha256": "bc1599f82af297db9c08bd790f43bd0e65bc4c4c0a70f1ac0f6723528a5984c5",
+        "sha256_in_prefix": "bc1599f82af297db9c08bd790f43bd0e65bc4c4c0a70f1ac0f6723528a5984c5",
+        "size_in_bytes": 2037
+      },
+      {
+        "_path": "site-packages/saspy/sasiocom.py",
+        "path_type": "hardlink",
+        "sha256": "4b6509352c21cfa4347b43b8a1869eecd2e2d48f8645648b91a2ffa2f1bbae70",
+        "sha256_in_prefix": "4b6509352c21cfa4347b43b8a1869eecd2e2d48f8645648b91a2ffa2f1bbae70",
+        "size_in_bytes": 36651
+      },
+      {
+        "_path": "site-packages/saspy/sasiohttp.py",
+        "path_type": "hardlink",
+        "sha256": "bfa456771cfe0abc9d6a66680cf4a2c2e72b0d2bc9351aeff6cb58aa18998189",
+        "sha256_in_prefix": "bfa456771cfe0abc9d6a66680cf4a2c2e72b0d2bc9351aeff6cb58aa18998189",
+        "size_in_bytes": 74370
+      },
+      {
+        "_path": "site-packages/saspy/sasioiom.py",
+        "path_type": "hardlink",
+        "sha256": "1288be043294f37c6e03d6c7cff75562879a7d111f2dbafbb2a87d5387f829a0",
+        "sha256_in_prefix": "1288be043294f37c6e03d6c7cff75562879a7d111f2dbafbb2a87d5387f829a0",
+        "size_in_bytes": 95141
+      },
+      {
+        "_path": "site-packages/saspy/sasiostdio.py",
+        "path_type": "hardlink",
+        "sha256": "ce7b1f3f984e698d7a3c0fa7f69181303e727b05abf1849e946ea8f532de545f",
+        "sha256_in_prefix": "ce7b1f3f984e698d7a3c0fa7f69181303e727b05abf1849e946ea8f532de545f",
+        "size_in_bytes": 106667
+      },
+      {
+        "_path": "site-packages/saspy/sasml.py",
+        "path_type": "hardlink",
+        "sha256": "8f9b3c78256acbc9c8aa5f089f3151960a29f4a7d46f8fa7aff7a51c1a51b0d0",
+        "sha256_in_prefix": "8f9b3c78256acbc9c8aa5f089f3151960a29f4a7d46f8fa7aff7a51c1a51b0d0",
+        "size_in_bytes": 14020
+      },
+      {
+        "_path": "site-packages/saspy/sasproccommons.py",
+        "path_type": "hardlink",
+        "sha256": "f1a7a0d777fb2b9f50646dd9244f0a3305587e755ce68457ca8d263f28159a49",
+        "sha256_in_prefix": "f1a7a0d777fb2b9f50646dd9244f0a3305587e755ce68457ca8d263f28159a49",
+        "size_in_bytes": 33625
+      },
+      {
+        "_path": "site-packages/saspy/sasqc.py",
+        "path_type": "hardlink",
+        "sha256": "08caca02e0ff72fde2628030ec196cbaa26d817c7dd97ff9c5234c691941e6c8",
+        "sha256_in_prefix": "08caca02e0ff72fde2628030ec196cbaa26d817c7dd97ff9c5234c691941e6c8",
+        "size_in_bytes": 10214
+      },
+      {
+        "_path": "site-packages/saspy/sasresults.py",
+        "path_type": "hardlink",
+        "sha256": "9267e71b09dd83d5f12529ee5acd5499c3d4bd61b344e2ac0fc23a40df90dc86",
+        "sha256_in_prefix": "9267e71b09dd83d5f12529ee5acd5499c3d4bd61b344e2ac0fc23a40df90dc86",
+        "size_in_bytes": 5022
+      },
+      {
+        "_path": "site-packages/saspy/sasstat.py",
+        "path_type": "hardlink",
+        "sha256": "b6485d9c55654766c3ce768aea3da280e7397be5d89d365aa4ca8167b37902a8",
+        "sha256_in_prefix": "b6485d9c55654766c3ce768aea3da280e7397be5d89d365aa4ca8167b37902a8",
+        "size_in_bytes": 27457
+      },
+      {
+        "_path": "site-packages/saspy/sastabulate.py",
+        "path_type": "hardlink",
+        "sha256": "52acf78247eb2cd7f92c4058d54e1338a610a2f00939cd683f5eabb5b441f95a",
+        "sha256_in_prefix": "52acf78247eb2cd7f92c4058d54e1338a610a2f00939cd683f5eabb5b441f95a",
+        "size_in_bytes": 11192
+      },
+      {
+        "_path": "site-packages/saspy/sasutil.py",
+        "path_type": "hardlink",
+        "sha256": "2baf9d25b2eb2e7f940fd45cad0fcbd327ff1721f8cf4345b1ccb5c4ed6379c3",
+        "sha256_in_prefix": "2baf9d25b2eb2e7f940fd45cad0fcbd327ff1721f8cf4345b1ccb5c4ed6379c3",
+        "size_in_bytes": 12493
+      },
+      {
+        "_path": "site-packages/saspy/version.py",
+        "path_type": "hardlink",
+        "sha256": "0f7faf88a7e821ed0a3a119ca3ef5cc4d83298c9f7b9d77c062b827aca3e2789",
+        "sha256_in_prefix": "0f7faf88a7e821ed0a3a119ca3ef5cc4d83298c9f7b9d77c062b827aca3e2789",
+        "size_in_bytes": 22
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/SASLogLexer.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/autocfg.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasViyaML.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sas_magic.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasbase.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sascfg.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasdata.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasdecorator.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasets.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasexceptions.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasiocom.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasiohttp.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasioiom.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasiostdio.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasml.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasproccommons.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasqc.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasresults.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasstat.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sastabulate.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/sasutil.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/saspy/__pycache__/version.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "esri/noarch::saspy==3.6.1=py_0",
+  "sha256": "783df6549990ac178bfaf7fe24a8bca93ff72b8f3306751e348de144180c2713",
+  "size": 6359160,
+  "subdir": "noarch",
+  "timestamp": 1612928369442,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/noarch/saspy-3.6.1-py_0.tar.bz2",
+  "version": "3.6.1"
+}

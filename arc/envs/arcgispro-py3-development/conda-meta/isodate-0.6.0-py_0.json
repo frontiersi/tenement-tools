@@ -1,0 +1,316 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/noarch",
+  "constrains": [],
+  "depends": [
+    "python",
+    "six"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\isodate-0.6.0-py_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/isodate-0.6.0.dist-info/INSTALLER",
+    "Lib/site-packages/isodate-0.6.0.dist-info/METADATA",
+    "Lib/site-packages/isodate-0.6.0.dist-info/RECORD",
+    "Lib/site-packages/isodate-0.6.0.dist-info/REQUESTED",
+    "Lib/site-packages/isodate-0.6.0.dist-info/WHEEL",
+    "Lib/site-packages/isodate-0.6.0.dist-info/direct_url.json",
+    "Lib/site-packages/isodate-0.6.0.dist-info/top_level.txt",
+    "Lib/site-packages/isodate/__init__.py",
+    "Lib/site-packages/isodate/duration.py",
+    "Lib/site-packages/isodate/isodates.py",
+    "Lib/site-packages/isodate/isodatetime.py",
+    "Lib/site-packages/isodate/isoduration.py",
+    "Lib/site-packages/isodate/isoerror.py",
+    "Lib/site-packages/isodate/isostrf.py",
+    "Lib/site-packages/isodate/isotime.py",
+    "Lib/site-packages/isodate/isotzinfo.py",
+    "Lib/site-packages/isodate/tests/__init__.py",
+    "Lib/site-packages/isodate/tests/test_date.py",
+    "Lib/site-packages/isodate/tests/test_datetime.py",
+    "Lib/site-packages/isodate/tests/test_duration.py",
+    "Lib/site-packages/isodate/tests/test_pickle.py",
+    "Lib/site-packages/isodate/tests/test_strf.py",
+    "Lib/site-packages/isodate/tests/test_time.py",
+    "Lib/site-packages/isodate/tzinfo.py",
+    ".nonadmin",
+    "Lib/site-packages/isodate/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/duration.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isodates.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isodatetime.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isoduration.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isoerror.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isostrf.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isotime.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/isotzinfo.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_date.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_datetime.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_duration.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_pickle.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_strf.cpython-37.pyc",
+    "Lib/site-packages/isodate/tests/__pycache__/test_time.cpython-37.pyc",
+    "Lib/site-packages/isodate/__pycache__/tzinfo.cpython-37.pyc"
+  ],
+  "fn": "isodate-0.6.0-py_0.tar.bz2",
+  "license": "BSD 3-Clause",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\isodate-0.6.0-py_0",
+    "type": 1
+  },
+  "md5": "b6bafc6d57cc70aa050c0efa2ee3857b",
+  "name": "isodate",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\isodate-0.6.0-py_0.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "e47a14fc6bd3932e3cf5e7c14cc950c5462574da1c47dc1dfc9eb8e978502f02",
+        "sha256_in_prefix": "e47a14fc6bd3932e3cf5e7c14cc950c5462574da1c47dc1dfc9eb8e978502f02",
+        "size_in_bytes": 9407
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "1fcb16581efe8877e2adb955802125c227c7dc3f241bb497a46661b2bf932e04",
+        "sha256_in_prefix": "1fcb16581efe8877e2adb955802125c227c7dc3f241bb497a46661b2bf932e04",
+        "size_in_bytes": 2806
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "sha256_in_prefix": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "d45046f6a910afe3426781d968b834501c6416b0830f72139369cf92e5bc5276",
+        "sha256_in_prefix": "d45046f6a910afe3426781d968b834501c6416b0830f72139369cf92e5bc5276",
+        "size_in_bytes": 99
+      },
+      {
+        "_path": "site-packages/isodate-0.6.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "26076a687070d15c7be0a9b4c59d7eea7a4e5077bfe9c287481084c7aa6955ef",
+        "sha256_in_prefix": "26076a687070d15c7be0a9b4c59d7eea7a4e5077bfe9c287481084c7aa6955ef",
+        "size_in_bytes": 8
+      },
+      {
+        "_path": "site-packages/isodate/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "8d1183a0968c89fdb5bf76d5ac883e9d315a4919db9c3797b4bfec5212b1ed9c",
+        "sha256_in_prefix": "8d1183a0968c89fdb5bf76d5ac883e9d315a4919db9c3797b4bfec5212b1ed9c",
+        "size_in_bytes": 4099
+      },
+      {
+        "_path": "site-packages/isodate/duration.py",
+        "path_type": "hardlink",
+        "sha256": "8da31eb18d6630d7439f50dbccab70ab45ab3efdc703e201251c2d0a41261901",
+        "sha256_in_prefix": "8da31eb18d6630d7439f50dbccab70ab45ab3efdc703e201251c2d0a41261901",
+        "size_in_bytes": 12442
+      },
+      {
+        "_path": "site-packages/isodate/isodates.py",
+        "path_type": "hardlink",
+        "sha256": "e68525e749267992cc0904b9e8ec2f66ccfeb84cb4d156e45eacd029836d38c8",
+        "sha256_in_prefix": "e68525e749267992cc0904b9e8ec2f66ccfeb84cb4d156e45eacd029836d38c8",
+        "size_in_bytes": 10620
+      },
+      {
+        "_path": "site-packages/isodate/isodatetime.py",
+        "path_type": "hardlink",
+        "sha256": "7079f64a812ac044e0f5eff3051b6337b791496283e8aa470dc5714a09d79a7c",
+        "sha256_in_prefix": "7079f64a812ac044e0f5eff3051b6337b791496283e8aa470dc5714a09d79a7c",
+        "size_in_bytes": 2955
+      },
+      {
+        "_path": "site-packages/isodate/isoduration.py",
+        "path_type": "hardlink",
+        "sha256": "531ccc2435b903975b153f12c62e2e487cac00e561f0e30f39a5c2ee6dd13141",
+        "sha256_in_prefix": "531ccc2435b903975b153f12c62e2e487cac00e561f0e30f39a5c2ee6dd13141",
+        "size_in_bytes": 6705
+      },
+      {
+        "_path": "site-packages/isodate/isoerror.py",
+        "path_type": "hardlink",
+        "sha256": "0de0faaf2b27d2caaaa9d4c3ff75f9479987855e540fbe6bee0d8acb240f37d9",
+        "sha256_in_prefix": "0de0faaf2b27d2caaaa9d4c3ff75f9479987855e540fbe6bee0d8acb240f37d9",
+        "size_in_bytes": 1714
+      },
+      {
+        "_path": "site-packages/isodate/isostrf.py",
+        "path_type": "hardlink",
+        "sha256": "a70210a87e4c2ef354b51dd6d241c26fcc23e2588a5a95a572f065a1b69dfbe7",
+        "sha256_in_prefix": "a70210a87e4c2ef354b51dd6d241c26fcc23e2588a5a95a572f065a1b69dfbe7",
+        "size_in_bytes": 9252
+      },
+      {
+        "_path": "site-packages/isodate/isotime.py",
+        "path_type": "hardlink",
+        "sha256": "902b974438b32a30732875df32d97cd9f2b97fba62495e775960ddd79463342b",
+        "sha256_in_prefix": "902b974438b32a30732875df32d97cd9f2b97fba62495e775960ddd79463342b",
+        "size_in_bytes": 7198
+      },
+      {
+        "_path": "site-packages/isodate/isotzinfo.py",
+        "path_type": "hardlink",
+        "sha256": "d174fe8dcdd6021d1e0a67d76c23643b3acb6b14ad1c2605f63516c8120b5a9e",
+        "sha256_in_prefix": "d174fe8dcdd6021d1e0a67d76c23643b3acb6b14ad1c2605f63516c8120b5a9e",
+        "size_in_bytes": 4217
+      },
+      {
+        "_path": "site-packages/isodate/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "9e74ca6850d8d3edc35816de321848b168cc21a80b7595b5604e4794b688f9f8",
+        "sha256_in_prefix": "9e74ca6850d8d3edc35816de321848b168cc21a80b7595b5604e4794b688f9f8",
+        "size_in_bytes": 2184
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_date.py",
+        "path_type": "hardlink",
+        "sha256": "2fb76162e60a27e2cc670e6a3a3bed4f4a8285722906a658d0cc745db1c42f6f",
+        "sha256_in_prefix": "2fb76162e60a27e2cc670e6a3a3bed4f4a8285722906a658d0cc745db1c42f6f",
+        "size_in_bytes": 6090
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_datetime.py",
+        "path_type": "hardlink",
+        "sha256": "97042cb915e516b31ea83091e6543c57abeb2c366bc4156048309144239773a4",
+        "sha256_in_prefix": "97042cb915e516b31ea83091e6543c57abeb2c366bc4156048309144239773a4",
+        "size_in_bytes": 7387
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_duration.py",
+        "path_type": "hardlink",
+        "sha256": "7d3b322ce3b1d3e92393e0fac3316eb6939e3eb220caede43b9f255b0c89b2e2",
+        "sha256_in_prefix": "7d3b322ce3b1d3e92393e0fac3316eb6939e3eb220caede43b9f255b0c89b2e2",
+        "size_in_bytes": 24096
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_pickle.py",
+        "path_type": "hardlink",
+        "sha256": "92eb91734d4e298439feca991af385e3514873780481e71164cd54f472437244",
+        "sha256_in_prefix": "92eb91734d4e298439feca991af385e3514873780481e71164cd54f472437244",
+        "size_in_bytes": 1845
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_strf.py",
+        "path_type": "hardlink",
+        "sha256": "36fe1909767350d1052fc0b182bf2a7b7583bf4d5653bfdeda4b5ca211c82f7b",
+        "sha256_in_prefix": "36fe1909767350d1052fc0b182bf2a7b7583bf4d5653bfdeda4b5ca211c82f7b",
+        "size_in_bytes": 5241
+      },
+      {
+        "_path": "site-packages/isodate/tests/test_time.py",
+        "path_type": "hardlink",
+        "sha256": "d4a3b138e57889327c50abb4d3974612606e990af7be890c2bc7d62baaa0a5ee",
+        "sha256_in_prefix": "d4a3b138e57889327c50abb4d3974612606e990af7be890c2bc7d62baaa0a5ee",
+        "size_in_bytes": 6715
+      },
+      {
+        "_path": "site-packages/isodate/tzinfo.py",
+        "path_type": "hardlink",
+        "sha256": "7735718f394c0e2b8589a2594fadfcb7d6faec685953c3c098ff7e260c5c0c85",
+        "sha256_in_prefix": "7735718f394c0e2b8589a2594fadfcb7d6faec685953c3c098ff7e260c5c0c85",
+        "size_in_bytes": 3692
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/duration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isodates.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isodatetime.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isoduration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isoerror.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isostrf.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isotime.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/isotzinfo.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_date.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_datetime.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_duration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_pickle.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_strf.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/tests/__pycache__/test_time.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/isodate/__pycache__/tzinfo.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "esri/noarch::isodate==0.6.0=py_0",
+  "sha256": "098507b2d9af1c1a08f810c122d80fd692f2ee591a112f39839f9d77c9804e28",
+  "size": 27362,
+  "subdir": "noarch",
+  "timestamp": 1615438158841,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/noarch/isodate-0.6.0-py_0.tar.bz2",
+  "version": "0.6.0"
+}

@@ -1,0 +1,214 @@
+{
+  "arch": "x86_64",
+  "build": "py37_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0",
+    "winpty"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pywinpty-0.5.7-py37_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/PKG-INFO",
+    "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/SOURCES.txt",
+    "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/dependency_links.txt",
+    "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/requires.txt",
+    "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/top_level.txt",
+    "Lib/site-packages/winpty/__init__.py",
+    "Lib/site-packages/winpty/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/winpty/__pycache__/ptyprocess.cpython-37.pyc",
+    "Lib/site-packages/winpty/__pycache__/winpty_wrapper.cpython-37.pyc",
+    "Lib/site-packages/winpty/_winpty/__init__.py",
+    "Lib/site-packages/winpty/_winpty/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/winpty/cywinpty.cp37-win_amd64.pyd",
+    "Lib/site-packages/winpty/ptyprocess.py",
+    "Lib/site-packages/winpty/tests/__init__.py",
+    "Lib/site-packages/winpty/tests/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/winpty/tests/__pycache__/test_cywinpty.cpython-37.pyc",
+    "Lib/site-packages/winpty/tests/__pycache__/test_ptyprocess.cpython-37.pyc",
+    "Lib/site-packages/winpty/tests/__pycache__/test_winpty_wrapper.cpython-37.pyc",
+    "Lib/site-packages/winpty/tests/test_cywinpty.py",
+    "Lib/site-packages/winpty/tests/test_ptyprocess.py",
+    "Lib/site-packages/winpty/tests/test_winpty_wrapper.py",
+    "Lib/site-packages/winpty/winpty_wrapper.py",
+    ".nonadmin"
+  ],
+  "fn": "pywinpty-0.5.7-py37_0.tar.bz2",
+  "license": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pywinpty-0.5.7-py37_0",
+    "type": 1
+  },
+  "md5": "5ae44433d9dd7b03c96b51da1374700e",
+  "name": "pywinpty",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pywinpty-0.5.7-py37_0.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "b87c691130630c00e1c013ccc4dc63e6ba6d9980c7be88aceda0ddb6cfdc73cf",
+        "sha256_in_prefix": "b87c691130630c00e1c013ccc4dc63e6ba6d9980c7be88aceda0ddb6cfdc73cf",
+        "size_in_bytes": 674
+      },
+      {
+        "_path": "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "4d23270e764263dd28eca607020a37f53d6f1468a8c90c778ba8eb8c33463d27",
+        "sha256_in_prefix": "4d23270e764263dd28eca607020a37f53d6f1468a8c90c778ba8eb8c33463d27",
+        "size_in_bytes": 526
+      },
+      {
+        "_path": "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/requires.txt",
+        "path_type": "hardlink",
+        "sha256": "cacdf7e5c527a0a2659b7060ed216952696dd22ccd389af746eac5ed4eddbf39",
+        "sha256_in_prefix": "cacdf7e5c527a0a2659b7060ed216952696dd22ccd389af746eac5ed4eddbf39",
+        "size_in_bytes": 50
+      },
+      {
+        "_path": "Lib/site-packages/pywinpty-0.5.7-py3.7.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "8ebef0fdb26f191753722dd5cd51683ad9b2d7685ef5c27f417a9e94774bdebb",
+        "sha256_in_prefix": "8ebef0fdb26f191753722dd5cd51683ad9b2d7685ef5c27f417a9e94774bdebb",
+        "size_in_bytes": 7
+      },
+      {
+        "_path": "Lib/site-packages/winpty/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "bd65970a1f9680b736a6fad4e63a7637cf1f206ae9aa5a6323f60f76a0a62806",
+        "sha256_in_prefix": "bd65970a1f9680b736a6fad4e63a7637cf1f206ae9aa5a6323f60f76a0a62806",
+        "size_in_bytes": 306
+      },
+      {
+        "_path": "Lib/site-packages/winpty/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f3243d16a04b8fbfcd7a5480837b5ac107bd6fdcf4412da1e5b8a20064972835",
+        "sha256_in_prefix": "f3243d16a04b8fbfcd7a5480837b5ac107bd6fdcf4412da1e5b8a20064972835",
+        "size_in_bytes": 411
+      },
+      {
+        "_path": "Lib/site-packages/winpty/__pycache__/ptyprocess.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "e66ee5e192271d15fa580586110cf28c549471863a763e4c277c75a8342d56b5",
+        "sha256_in_prefix": "e66ee5e192271d15fa580586110cf28c549471863a763e4c277c75a8342d56b5",
+        "size_in_bytes": 10364
+      },
+      {
+        "_path": "Lib/site-packages/winpty/__pycache__/winpty_wrapper.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "b4f8cda2d598b10ca14e2b3808d2fa4d7ce83a9f82d72754600478f3983fc95b",
+        "sha256_in_prefix": "b4f8cda2d598b10ca14e2b3808d2fa4d7ce83a9f82d72754600478f3983fc95b",
+        "size_in_bytes": 2782
+      },
+      {
+        "_path": "Lib/site-packages/winpty/_winpty/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "26c79e055a9839668ac157b05911b202490396638a77c48f4711bf98ed8e4d91",
+        "sha256_in_prefix": "26c79e055a9839668ac157b05911b202490396638a77c48f4711bf98ed8e4d91",
+        "size_in_bytes": 46
+      },
+      {
+        "_path": "Lib/site-packages/winpty/_winpty/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "4cd5011a7cc6f1f9405b6ed86a0f3487e194306d020da26e2c1907a19c0940c6",
+        "sha256_in_prefix": "4cd5011a7cc6f1f9405b6ed86a0f3487e194306d020da26e2c1907a19c0940c6",
+        "size_in_bytes": 158
+      },
+      {
+        "_path": "Lib/site-packages/winpty/cywinpty.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "6ec829f6a5852089e3a4c5f4e29238bccd24da435b30c4e340bcb5a620e47c97",
+        "sha256_in_prefix": "6ec829f6a5852089e3a4c5f4e29238bccd24da435b30c4e340bcb5a620e47c97",
+        "size_in_bytes": 49664
+      },
+      {
+        "_path": "Lib/site-packages/winpty/ptyprocess.py",
+        "path_type": "hardlink",
+        "sha256": "c29f0ac5ceeee37ffa796d306f2aa35735477c1b7a380479cfa3cd2d6388d86c",
+        "sha256_in_prefix": "c29f0ac5ceeee37ffa796d306f2aa35735477c1b7a380479cfa3cd2d6388d86c",
+        "size_in_bytes": 11319
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "81620409e268e07dce5bf7c253d77f207eca463101216e79a3e8fafa6cfd702c",
+        "sha256_in_prefix": "81620409e268e07dce5bf7c253d77f207eca463101216e79a3e8fafa6cfd702c",
+        "size_in_bytes": 51
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "e1e85999797e41b6b52878c36e0d3c6b309f5e5d83d7e5e22a8a5ba3b4779939",
+        "sha256_in_prefix": "e1e85999797e41b6b52878c36e0d3c6b309f5e5d83d7e5e22a8a5ba3b4779939",
+        "size_in_bytes": 161
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/__pycache__/test_cywinpty.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "cc4c08e5d0b00c1eed953f424ad5792512d2581c4d5292ffe4308e8282278e77",
+        "sha256_in_prefix": "cc4c08e5d0b00c1eed953f424ad5792512d2581c4d5292ffe4308e8282278e77",
+        "size_in_bytes": 1614
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/__pycache__/test_ptyprocess.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "d74869e08a0f2e432553e25e375369146d205cbd1d1405480e7d47dc06d82196",
+        "sha256_in_prefix": "d74869e08a0f2e432553e25e375369146d205cbd1d1405480e7d47dc06d82196",
+        "size_in_bytes": 3898
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/__pycache__/test_winpty_wrapper.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "89a639c56cc1be10afe617fb8dc1ceafd884d31daab52436718881e05e8677fd",
+        "sha256_in_prefix": "89a639c56cc1be10afe617fb8dc1ceafd884d31daab52436718881e05e8677fd",
+        "size_in_bytes": 1651
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/test_cywinpty.py",
+        "path_type": "hardlink",
+        "sha256": "83451c4b5cb9f16d0b088729b2521a85bcaafa3e5af0c7ac3c547c329e28f685",
+        "sha256_in_prefix": "83451c4b5cb9f16d0b088729b2521a85bcaafa3e5af0c7ac3c547c329e28f685",
+        "size_in_bytes": 1138
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/test_ptyprocess.py",
+        "path_type": "hardlink",
+        "sha256": "ccefeca9f1645c12c0c0ec34fd9cf8c10e6f178ea31f9f5dadbfa5b1c39b70cb",
+        "sha256_in_prefix": "ccefeca9f1645c12c0c0ec34fd9cf8c10e6f178ea31f9f5dadbfa5b1c39b70cb",
+        "size_in_bytes": 2954
+      },
+      {
+        "_path": "Lib/site-packages/winpty/tests/test_winpty_wrapper.py",
+        "path_type": "hardlink",
+        "sha256": "8db289a28c02070fcd5fc9be0ee9ccced749d984951db02c91a9cb3f69fa1ecc",
+        "sha256_in_prefix": "8db289a28c02070fcd5fc9be0ee9ccced749d984951db02c91a9cb3f69fa1ecc",
+        "size_in_bytes": 1379
+      },
+      {
+        "_path": "Lib/site-packages/winpty/winpty_wrapper.py",
+        "path_type": "hardlink",
+        "sha256": "b534139d1b5471980f7b6e4397e6c887d796056468c0e35e5d257ed5f26dbddb",
+        "sha256_in_prefix": "b534139d1b5471980f7b6e4397e6c887d796056468c0e35e5d257ed5f26dbddb",
+        "size_in_bytes": 3034
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::pywinpty==0.5.7=py37_0",
+  "size": 42016,
+  "subdir": "win-64",
+  "timestamp": 1585706260360,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/pywinpty-0.5.7-py37_0.tar.bz2",
+  "version": "0.5.7"
+}

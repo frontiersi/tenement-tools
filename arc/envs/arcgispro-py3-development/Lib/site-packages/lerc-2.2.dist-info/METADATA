@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: lerc
+Version: 2.2
+Summary: Limited Error Raster Compression
+Home-page: https://github.com/Esri/lerc
+Author: esri
+Author-email: python@esri.com
+License: Apache 2
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+
+UNKNOWN
+
+

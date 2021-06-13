@@ -1,0 +1,115 @@
+{
+  "arch": "x86_64",
+  "build": "py37h196d8e1_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/win-64",
+  "constrains": [],
+  "depends": [
+    "mkl >=2019.4,<2020.0a0",
+    "python >=3.7,<3.8.0a0",
+    "six",
+    "vc >=14.1,<15.0a0",
+    "vs2015_runtime >=14.16.27012,<15.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\mkl-service-2.3.0-py37h196d8e1_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/mkl/__init__.py",
+    "Lib/site-packages/mkl/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/mkl/_mklinit.cp37-win_amd64.pyd",
+    "Lib/site-packages/mkl/_py_mkl_service.cp37-win_amd64.pyd",
+    "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/PKG-INFO",
+    "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/SOURCES.txt",
+    "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/dependency_links.txt",
+    "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/requires.txt",
+    "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/top_level.txt",
+    ".nonadmin"
+  ],
+  "fn": "mkl-service-2.3.0-py37h196d8e1_0.conda",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\mkl-service-2.3.0-py37h196d8e1_0",
+    "type": 1
+  },
+  "md5": "8565b2894a0dc6a9be979ff4b00667e5",
+  "name": "mkl-service",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\mkl-service-2.3.0-py37h196d8e1_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/mkl/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "ffd4252e488f3ab5e0d77172d185dbd553c67f03e8b924900c211cc658dceb5e",
+        "sha256_in_prefix": "ffd4252e488f3ab5e0d77172d185dbd553c67f03e8b924900c211cc658dceb5e",
+        "size_in_bytes": 2325
+      },
+      {
+        "_path": "Lib/site-packages/mkl/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "5c7b2c9a5786ca23a36aa06e35f2694b055e165f49ec9dd3281f84411a2c020c",
+        "sha256_in_prefix": "5c7b2c9a5786ca23a36aa06e35f2694b055e165f49ec9dd3281f84411a2c020c",
+        "size_in_bytes": 995
+      },
+      {
+        "_path": "Lib/site-packages/mkl/_mklinit.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "b3ccf1e5ed22ec33244c7959dd8375df1d2d00e9adbfdfa9ad1e406d2fa8ea19",
+        "sha256_in_prefix": "b3ccf1e5ed22ec33244c7959dd8375df1d2d00e9adbfdfa9ad1e406d2fa8ea19",
+        "size_in_bytes": 10240
+      },
+      {
+        "_path": "Lib/site-packages/mkl/_py_mkl_service.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "e4e40b639d7760dcddf6ef7dc96a139672a0b3e10f4a44b0d831775b585ffd1c",
+        "sha256_in_prefix": "e4e40b639d7760dcddf6ef7dc96a139672a0b3e10f4a44b0d831775b585ffd1c",
+        "size_in_bytes": 104448
+      },
+      {
+        "_path": "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "485d595811ab113e29deee87cfc80c21fbb14fb7194927e22c309032cb0a991e",
+        "sha256_in_prefix": "485d595811ab113e29deee87cfc80c21fbb14fb7194927e22c309032cb0a991e",
+        "size_in_bytes": 1774
+      },
+      {
+        "_path": "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "a5623ba393d6e33b08f5c3f11e368c1a494e4d6abdbff39cbb33624b3186a1e6",
+        "sha256_in_prefix": "a5623ba393d6e33b08f5c3f11e368c1a494e4d6abdbff39cbb33624b3186a1e6",
+        "size_in_bytes": 248
+      },
+      {
+        "_path": "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/requires.txt",
+        "path_type": "hardlink",
+        "sha256": "fe2547fe2604b445e70fc9d819062960552f9145bdb043b51986e478a4806a2b",
+        "sha256_in_prefix": "fe2547fe2604b445e70fc9d819062960552f9145bdb043b51986e478a4806a2b",
+        "size_in_bytes": 4
+      },
+      {
+        "_path": "Lib/site-packages/mkl_service-2.3.0-py3.7.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "b1e92a43fd18113ecb2c73ba36c5d080a0cf18646198ab80356f68bc5b8cd931",
+        "sha256_in_prefix": "b1e92a43fd18113ecb2c73ba36c5d080a0cf18646198ab80356f68bc5b8cd931",
+        "size_in_bytes": 4
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "defaults/win-64::mkl-service==2.3.0=py37h196d8e1_0",
+  "sha256": "baeed732538d66773b7ef7fc0e6eccb43d41b0c1ea3aac50b0581d59d7a1231e",
+  "size": 46492,
+  "subdir": "win-64",
+  "timestamp": 1607032516541,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/mkl-service-2.3.0-py37h196d8e1_0.conda",
+  "version": "2.3.0"
+}

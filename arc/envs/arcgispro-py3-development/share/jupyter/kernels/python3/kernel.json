@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development\\python.exe",
+  "-m",
+  "ipykernel_launcher",
+  "-f",
+  "{connection_file}"
+ ],
+ "display_name": "Python 3",
+ "language": "python"
+}

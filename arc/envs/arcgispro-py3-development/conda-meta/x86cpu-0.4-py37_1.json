@@ -1,0 +1,166 @@
+{
+  "arch": "x86_64",
+  "build": "py37_1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0",
+    "setuptools"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\x86cpu-0.4-py37_1",
+  "features": "",
+  "files": [
+    "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/PKG-INFO",
+    "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/SOURCES.txt",
+    "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/dependency_links.txt",
+    "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/entry_points.txt",
+    "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/top_level.txt",
+    "Lib/site-packages/x86cpu/__init__.py",
+    "Lib/site-packages/x86cpu/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/x86cpu/__pycache__/_version.cpython-37.pyc",
+    "Lib/site-packages/x86cpu/_version.py",
+    "Lib/site-packages/x86cpu/cpuinfo.cp37-win_amd64.pyd",
+    "Lib/site-packages/x86cpu/tests/__pycache__/info_getters.cpython-37.pyc",
+    "Lib/site-packages/x86cpu/tests/__pycache__/test_cpuinfo.cpython-37.pyc",
+    "Lib/site-packages/x86cpu/tests/info_getters.py",
+    "Lib/site-packages/x86cpu/tests/test_cpuinfo.py",
+    "Scripts/x86report-script.py",
+    "Scripts/x86report.exe",
+    ".nonadmin"
+  ],
+  "fn": "x86cpu-0.4-py37_1.tar.bz2",
+  "license": "BSD 2-clause",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\x86cpu-0.4-py37_1",
+    "type": 1
+  },
+  "md5": "0a055695c1c104a065078ed7be0a52e2",
+  "name": "x86cpu",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\x86cpu-0.4-py37_1.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "6cbb68a1acfc816bdb3f90553fade3c2c400094abc2ae818ac3293e71d10c989",
+        "sha256_in_prefix": "6cbb68a1acfc816bdb3f90553fade3c2c400094abc2ae818ac3293e71d10c989",
+        "size_in_bytes": 3643
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "1cbe910c7109b837d9b34e99e36548fb7d86f0b4bf86cacf54afec7c952cc350",
+        "sha256_in_prefix": "1cbe910c7109b837d9b34e99e36548fb7d86f0b4bf86cacf54afec7c952cc350",
+        "size_in_bytes": 536
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/entry_points.txt",
+        "path_type": "hardlink",
+        "sha256": "7c0978e9e7f644b735e4ed79c4a6eea6bc7c213c3190cb680c44af4faf53e681",
+        "sha256_in_prefix": "7c0978e9e7f644b735e4ed79c4a6eea6bc7c213c3190cb680c44af4faf53e681",
+        "size_in_bytes": 59
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu-0.4-py3.7.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "165163c03dc8254c7a557f52c604ceb8acc64870660c89adcc550a7938be8249",
+        "sha256_in_prefix": "165163c03dc8254c7a557f52c604ceb8acc64870660c89adcc550a7938be8249",
+        "size_in_bytes": 7
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "935e3509ad35ffba3a4e6f810003b6c936e0ee1098f49e8d50ed054f6df07bf3",
+        "sha256_in_prefix": "935e3509ad35ffba3a4e6f810003b6c936e0ee1098f49e8d50ed054f6df07bf3",
+        "size_in_bytes": 163
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "990ff0415229a385b2e2f071831bbcd601938e35e024b97b3d5984ebf02eb9b6",
+        "sha256_in_prefix": "990ff0415229a385b2e2f071831bbcd601938e35e024b97b3d5984ebf02eb9b6",
+        "size_in_bytes": 313
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/__pycache__/_version.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "51f49806f693d2cb49c3aba3bfb9bb508401770f58c3ed4675e3a6eaa61d0588",
+        "sha256_in_prefix": "51f49806f693d2cb49c3aba3bfb9bb508401770f58c3ed4675e3a6eaa61d0588",
+        "size_in_bytes": 419
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/_version.py",
+        "path_type": "hardlink",
+        "sha256": "afa453042cf3047c160cd06b5d66219b897216bc13a2453114f14aab759858d9",
+        "sha256_in_prefix": "afa453042cf3047c160cd06b5d66219b897216bc13a2453114f14aab759858d9",
+        "size_in_bytes": 469
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/cpuinfo.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "5b80109f765f5d15aba0586a07c90cb5d9ff86a0bd5ba15887e430e8c013fbd6",
+        "sha256_in_prefix": "5b80109f765f5d15aba0586a07c90cb5d9ff86a0bd5ba15887e430e8c013fbd6",
+        "size_in_bytes": 42496
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/tests/__pycache__/info_getters.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "0547a9d3941a59a35dd999207eec82cd5d3e9b4acefa6b1182eb44d045b9074c",
+        "sha256_in_prefix": "0547a9d3941a59a35dd999207eec82cd5d3e9b4acefa6b1182eb44d045b9074c",
+        "size_in_bytes": 2972
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/tests/__pycache__/test_cpuinfo.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "27155473e70025501960723d19f153f1eecc544bf046448cbbac1b68bbd0c83f",
+        "sha256_in_prefix": "27155473e70025501960723d19f153f1eecc544bf046448cbbac1b68bbd0c83f",
+        "size_in_bytes": 2324
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/tests/info_getters.py",
+        "path_type": "hardlink",
+        "sha256": "8f334ebc9a77d68c6e2066655e87ddda559be4547ffcd55480d57640b8295983",
+        "sha256_in_prefix": "8f334ebc9a77d68c6e2066655e87ddda559be4547ffcd55480d57640b8295983",
+        "size_in_bytes": 3481
+      },
+      {
+        "_path": "Lib/site-packages/x86cpu/tests/test_cpuinfo.py",
+        "path_type": "hardlink",
+        "sha256": "b2cb7161fcbeacab8034e0eda8137d563bb4536a6742c7ec826cb2d92a8d4838",
+        "sha256_in_prefix": "b2cb7161fcbeacab8034e0eda8137d563bb4536a6742c7ec826cb2d92a8d4838",
+        "size_in_bytes": 2184
+      },
+      {
+        "_path": "Scripts/x86report-script.py",
+        "path_type": "hardlink",
+        "sha256": "79ce783479c778bcf002fe13acc25970578f4ab4cd99cb727643b5924fee8ae6",
+        "sha256_in_prefix": "79ce783479c778bcf002fe13acc25970578f4ab4cd99cb727643b5924fee8ae6",
+        "size_in_bytes": 224
+      },
+      {
+        "_path": "Scripts/x86report.exe",
+        "path_type": "hardlink",
+        "sha256": "993203a406e04936a07829b1f482fd27d739b640482e213f4c49ea1ee78a5fcf",
+        "sha256_in_prefix": "993203a406e04936a07829b1f482fd27d739b640482e213f4c49ea1ee78a5fcf",
+        "size_in_bytes": 40960
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::x86cpu==0.4=py37_1",
+  "size": 46456,
+  "subdir": "win-64",
+  "timestamp": 1554740189390,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/x86cpu-0.4-py37_1.tar.bz2",
+  "version": "0.4"
+}

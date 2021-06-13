@@ -1,0 +1,7 @@
+tornado>=4
+
+[:os_name != "nt"]
+ptyprocess
+
+[:os_name == "nt"]
+pywinpty>=0.5

@@ -1,0 +1,193 @@
+{
+  "arch": "x86_64",
+  "build": "py37_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [
+    "certifi",
+    "python >=3.7,<3.8.0a0",
+    "wincertstore",
+    "wrapt >=1.10.4"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\python-certifi-win32-1.2-py37_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/certifi_win32/__init__.py",
+    "Lib/site-packages/certifi_win32/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/certifi_win32/__pycache__/bootstrap.cpython-37.pyc",
+    "Lib/site-packages/certifi_win32/__pycache__/wincerts.cpython-37.pyc",
+    "Lib/site-packages/certifi_win32/__pycache__/wrapt_certifi.cpython-37.pyc",
+    "Lib/site-packages/certifi_win32/__pycache__/wrapt_pip.cpython-37.pyc",
+    "Lib/site-packages/certifi_win32/bootstrap.py",
+    "Lib/site-packages/certifi_win32/wincerts.py",
+    "Lib/site-packages/certifi_win32/wrapt_certifi.py",
+    "Lib/site-packages/certifi_win32/wrapt_pip.py",
+    "Lib/site-packages/python-certifi-win32-init.pth",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/INSTALLER",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/LICENSE",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/METADATA",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/RECORD",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/REQUESTED",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/WHEEL",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/direct_url.json",
+    "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/top_level.txt",
+    ".nonadmin"
+  ],
+  "fn": "python-certifi-win32-1.2-py37_0.tar.bz2",
+  "license": "BSD",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\python-certifi-win32-1.2-py37_0",
+    "type": 1
+  },
+  "md5": "51de087684ea1b005b3f249d3060a2c9",
+  "name": "python-certifi-win32",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\python-certifi-win32-1.2-py37_0.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/certifi_win32/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "b1bd64f00fe061dd65a93d83a38a6ec92f4d3df93c003290e7a633f2aedfbab8",
+        "sha256_in_prefix": "b1bd64f00fe061dd65a93d83a38a6ec92f4d3df93c003290e7a633f2aedfbab8",
+        "size_in_bytes": 239
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f2db3dc1dd3b172af4e241fb373722675abb41750d39a51d195b9445902a789a",
+        "sha256_in_prefix": "f2db3dc1dd3b172af4e241fb373722675abb41750d39a51d195b9445902a789a",
+        "size_in_bytes": 237
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/__pycache__/bootstrap.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "1c25d0430f629115200420f132308d550ad857fb5f6adf5b97ba78c2180864eb",
+        "sha256_in_prefix": "1c25d0430f629115200420f132308d550ad857fb5f6adf5b97ba78c2180864eb",
+        "size_in_bytes": 1280
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/__pycache__/wincerts.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "8bda849d4ba7ad5f1f38571767f40a22e2e8d049a896262a0a4a552cd07b30a6",
+        "sha256_in_prefix": "8bda849d4ba7ad5f1f38571767f40a22e2e8d049a896262a0a4a552cd07b30a6",
+        "size_in_bytes": 3005
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/__pycache__/wrapt_certifi.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "32feeeb378396db9846382452c6131ec55eb1d8a1d30eb936a4213978a513f42",
+        "sha256_in_prefix": "32feeeb378396db9846382452c6131ec55eb1d8a1d30eb936a4213978a513f42",
+        "size_in_bytes": 783
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/__pycache__/wrapt_pip.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "5a4773bed3a267c69d8b03c0a2e33f97720a816b0eb1c04afbf7550a1c648d9c",
+        "sha256_in_prefix": "5a4773bed3a267c69d8b03c0a2e33f97720a816b0eb1c04afbf7550a1c648d9c",
+        "size_in_bytes": 1598
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/bootstrap.py",
+        "path_type": "hardlink",
+        "sha256": "7516fe913a4f21cfb46079c80a4a9b44865e43cd48236ac8c99d468f33c81731",
+        "sha256_in_prefix": "7516fe913a4f21cfb46079c80a4a9b44865e43cd48236ac8c99d468f33c81731",
+        "size_in_bytes": 2513
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/wincerts.py",
+        "path_type": "hardlink",
+        "sha256": "93da446ce3db1475510876632f9bb8cb07cd553eccfb2a0038940f9299b8b3bd",
+        "sha256_in_prefix": "93da446ce3db1475510876632f9bb8cb07cd553eccfb2a0038940f9299b8b3bd",
+        "size_in_bytes": 4016
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/wrapt_certifi.py",
+        "path_type": "hardlink",
+        "sha256": "743c0205078f0af8a1ba54259583c3f0c4e1e72fe2529389e521488457c4f966",
+        "sha256_in_prefix": "743c0205078f0af8a1ba54259583c3f0c4e1e72fe2529389e521488457c4f966",
+        "size_in_bytes": 733
+      },
+      {
+        "_path": "Lib/site-packages/certifi_win32/wrapt_pip.py",
+        "path_type": "hardlink",
+        "sha256": "8ff24075a985305f63f514417ab21122d8da4749c2ee3bd9fd8ad48d31e89a3a",
+        "sha256_in_prefix": "8ff24075a985305f63f514417ab21122d8da4749c2ee3bd9fd8ad48d31e89a3a",
+        "size_in_bytes": 1394
+      },
+      {
+        "_path": "Lib/site-packages/python-certifi-win32-init.pth",
+        "path_type": "hardlink",
+        "sha256": "50318c6a180305eaaefa97551a9a940c9b8dc22613c2baad0fe5c8307cdd1c1b",
+        "sha256_in_prefix": "50318c6a180305eaaefa97551a9a940c9b8dc22613c2baad0fe5c8307cdd1c1b",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "9dfbded1f970b1329432cdb59cf102759ee61bb147a9ef1db1b487f58948819a",
+        "sha256_in_prefix": "9dfbded1f970b1329432cdb59cf102759ee61bb147a9ef1db1b487f58948819a",
+        "size_in_bytes": 1319
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "b4e4deef4d15be8437e9ca6f5faace218a5091a41be2bb7a6fd90a7f02dfe183",
+        "sha256_in_prefix": "b4e4deef4d15be8437e9ca6f5faace218a5091a41be2bb7a6fd90a7f02dfe183",
+        "size_in_bytes": 1154
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "bbadc0d4c4b72103e15383ee38063f9326694b296ddf1015fe01890819fbc8bd",
+        "sha256_in_prefix": "bbadc0d4c4b72103e15383ee38063f9326694b296ddf1015fe01890819fbc8bd",
+        "size_in_bytes": 1546
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "8313daa9ca8a3cb51769200ac267c73bbfe200e955be6a77dc37b09d496e041f",
+        "sha256_in_prefix": "8313daa9ca8a3cb51769200ac267c73bbfe200e955be6a77dc37b09d496e041f",
+        "size_in_bytes": 116
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "6d930d437c4fab26e7343654376ecb9904918a1bb4241b47430fe1722d39de53",
+        "sha256_in_prefix": "6d930d437c4fab26e7343654376ecb9904918a1bb4241b47430fe1722d39de53",
+        "size_in_bytes": 112
+      },
+      {
+        "_path": "Lib/site-packages/python_certifi_win32-0.0.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "456db257235390e47d89c530ef1abc91717a154695826db7617dc062854d7501",
+        "sha256_in_prefix": "456db257235390e47d89c530ef1abc91717a154695826db7617dc062854d7501",
+        "size_in_bytes": 14
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::python-certifi-win32==1.2=py37_0",
+  "size": 14207,
+  "subdir": "win-64",
+  "timestamp": 1601333440010,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/python-certifi-win32-1.2-py37_0.tar.bz2",
+  "version": "1.2"
+}

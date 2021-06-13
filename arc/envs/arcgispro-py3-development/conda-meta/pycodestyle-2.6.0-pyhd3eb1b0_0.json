@@ -1,0 +1,142 @@
+{
+  "build": "pyhd3eb1b0_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/noarch",
+  "constrains": [],
+  "depends": [
+    "python"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pycodestyle-2.6.0-pyhd3eb1b0_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/INSTALLER",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/LICENSE",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/METADATA",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/RECORD",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/REQUESTED",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/WHEEL",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/direct_url.json",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/entry_points.txt",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/namespace_packages.txt",
+    "Lib/site-packages/pycodestyle-2.6.0.dist-info/top_level.txt",
+    "Lib/site-packages/pycodestyle.py",
+    ".nonadmin",
+    "Lib/site-packages/__pycache__/pycodestyle.cpython-37.pyc",
+    "Scripts/pycodestyle-script.py",
+    "Scripts/pycodestyle.exe"
+  ],
+  "fn": "pycodestyle-2.6.0-pyhd3eb1b0_0.tar.bz2",
+  "license": "MIT",
+  "license_family": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pycodestyle-2.6.0-pyhd3eb1b0_0",
+    "type": 1
+  },
+  "md5": "8961906b08fe24e23a7c44fb6ff7b9d2",
+  "name": "pycodestyle",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pycodestyle-2.6.0-pyhd3eb1b0_0.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "f772295e81af3478d34e88e52d076200230ec7dd6a39e123bc5cb35aa66abdae",
+        "sha256_in_prefix": "f772295e81af3478d34e88e52d076200230ec7dd6a39e123bc5cb35aa66abdae",
+        "size_in_bytes": 1254
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "588e3e6cc9d1eba913ecc2862d5156ef1aa6ba8b4f18fd2e2c93eba2fee7843e",
+        "sha256_in_prefix": "588e3e6cc9d1eba913ecc2862d5156ef1aa6ba8b4f18fd2e2c93eba2fee7843e",
+        "size_in_bytes": 30287
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "78ebb6c5363a88662bf36d5d9d96619c2fe8b60c643d0a840f3e83423deb7700",
+        "sha256_in_prefix": "78ebb6c5363a88662bf36d5d9d96619c2fe8b60c643d0a840f3e83423deb7700",
+        "size_in_bytes": 1098
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "sha256_in_prefix": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "0b5642bf9f2c2a55e194eb484c1e7a0c2c3d616b0dd6a1f47802905a50b58fad",
+        "sha256_in_prefix": "0b5642bf9f2c2a55e194eb484c1e7a0c2c3d616b0dd6a1f47802905a50b58fad",
+        "size_in_bytes": 87
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/entry_points.txt",
+        "path_type": "hardlink",
+        "sha256": "e8953fed2029a42f773014908b5fd0c43c04414ca0e9c80aef569bf6afc7c5ca",
+        "sha256_in_prefix": "e8953fed2029a42f773014908b5fd0c43c04414ca0e9c80aef569bf6afc7c5ca",
+        "size_in_bytes": 51
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/namespace_packages.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "site-packages/pycodestyle-2.6.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "ac76c81225e6bec274d7a98570b55c17f77e74a80fdd575f381e8259b8af66e8",
+        "sha256_in_prefix": "ac76c81225e6bec274d7a98570b55c17f77e74a80fdd575f381e8259b8af66e8",
+        "size_in_bytes": 12
+      },
+      {
+        "_path": "site-packages/pycodestyle.py",
+        "path_type": "hardlink",
+        "sha256": "c5870090d48c1cc025cfa7267647e1c0aed00b946c4702b6a5f1b6fee3c8db13",
+        "sha256_in_prefix": "c5870090d48c1cc025cfa7267647e1c0aed00b946c4702b6a5f1b6fee3c8db13",
+        "size_in_bytes": 103376
+      },
+      {
+        "_path": "Lib/site-packages/__pycache__/pycodestyle.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Scripts/pycodestyle-script.py",
+        "path_type": "windows_python_entry_point_script"
+      },
+      {
+        "_path": "Scripts/pycodestyle.exe",
+        "path_type": "windows_python_entry_point_exe"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "defaults/noarch::pycodestyle==2.6.0=pyhd3eb1b0_0",
+  "sha256": "4cfa1a42ef5f6d6b13463f921e0eedbfc47cff794f841bbf4a118c80da4552fd",
+  "size": 39394,
+  "subdir": "noarch",
+  "timestamp": 1612807610109,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/noarch/pycodestyle-2.6.0-pyhd3eb1b0_0.tar.bz2",
+  "version": "2.6.0"
+}

@@ -1,0 +1,14 @@
+lerc-2.2.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+lerc-2.2.dist-info/METADATA,sha256=dugVOzd3OSypnphBfH_V8k4ytHsg5ZhIWYbO4Y8F7Is,399
+lerc-2.2.dist-info/RECORD,,
+lerc-2.2.dist-info/WHEEL,sha256=g4nMs7d-Xl9-xC9XovUrsDHGXt-FT0E17Yqo92DEfvY,92
+lerc-2.2.dist-info/direct_url.json,sha256=t7RXN3RBYF5S1kN_bz4xI80E1ITqXDoqgxPjLhpw7aM,106
+lerc-2.2.dist-info/top_level.txt,sha256=xh0su8v3G30qu_x4qCYsBidV2B4WBXeBWRmrUfZruw8,5
+lerc/Lerc.dll,sha256=ZBei_i6MuS23dgKIV-O8gilIOmvXJ972hE-th0DSy4s,382856
+lerc/Lerc.dylib,sha256=G9gKis_qKnz3bzsKaY3EPXkh27aX0dwDN8n_cs2zyK8,385856
+lerc/Lerc.lib,sha256=_0feI0kJhGG5ah1MwoJMevF2kPjUo953UZqU3jSAZPg,3062
+lerc/Lerc.so,sha256=Ky57Ok8fmS6VS7ebkoEWE1Ud_a7Xxy0C8Q3UClQPMK0,430400
+lerc/__init__.py,sha256=11mhhRK_daGmQO4TjO0mK_N2TJBJjbr6jSVNb2JLW7Y,20
+lerc/__pycache__/__init__.cpython-36.pyc,,
+lerc/__pycache__/_lerc.cpython-36.pyc,,
+lerc/_lerc.py,sha256=GVRL4WmJcxAd0MNVj2cuYG1PsCvTmgjGX2WUuG0HJC4,14956

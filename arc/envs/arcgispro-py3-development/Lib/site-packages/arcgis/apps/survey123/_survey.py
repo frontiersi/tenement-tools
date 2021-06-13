@@ -1,0 +1,354 @@
+import os
+import json
+import time
+import uuid
+import tempfile
+from urllib.parse import urlparse
+from typing import List
+from arcgis.gis import GIS, Item
+########################################################################
+class SurveyManager():
+    """
+    Survey Manager allows users and administrators of Survey 123 Surveys to
+    analysis, report on , and access the data for various surveys.
+
+    """
+    _baseurl = None
+    _gis = None
+    _portal = None
+    _url = None
+    _properties = None
+    #----------------------------------------------------------------------
+    def __init__(self, gis, baseurl=None):
+        """Constructor"""
+        if baseurl is None:
+            baseurl = "survey123.arcgis.com"
+        self._baseurl = baseurl
+        self._gis = gis
+    #----------------------------------------------------------------------
+    def __str__(self):
+        return "<SurveyManager @ {iid}>".format(iid=self._gis._url)
+    #----------------------------------------------------------------------
+    def __repr__(self):
+        return self.__str__()
+    #----------------------------------------------------------------------
+    @property
+    def surveys(self) -> List:
+        """returns a list of existing Survey """
+        query= ('type:"Form" AND NOT tags:"noxlsform"'
+                'AND NOT tags:"draft" AND NOT typekeyw'
+                'ords:draft AND owner:{owner}').format(
+                    owner=self._gis.users.me.username)
+        content = self._gis.content
+        items = content.search(query=query, item_type=None,
+                               sort_field='avgRating', sort_order='desc',
+                               max_items=10000, outside_org=False,
+                               categories=None,
+                               category_filters=None)
+        return [Survey(item=i, sm=self) for i in items]
+    #----------------------------------------------------------------------
+    def get(self, survey_id):
+        """returns a single `Survey` object from and Item ID or Item"""
+        if isinstance(survey_id, Item):
+            survey_id = survey_id.id
+        item = self._gis.content.get(survey_id)
+        return Survey(item=item, sm=self)
+    #----------------------------------------------------------------------
+    def _xform2webform(self, xform):
+        """
+        converts the xform xml to JSON for the item
+
+        ============   ================================================
+        *Inputs*       *Description*
+        ------------   ------------------------------------------------
+        xform          Required String. xform xml string
+        ============   ================================================
+
+        :returns: dict
+
+        """
+        url = "https://{base}/api/xform2webform".format(base=self._baseurl)
+        params = {'xform' : xform}
+        return self._gis._con.post(
+            path=url,
+            postdata=params,
+            files=None,
+            verify_cert=False)
+    #----------------------------------------------------------------------
+    def _xls2xform(self, file_path):
+        """
+        Converts a XLSForm spreadsheet to XForm XML. The spreadsheet must be in Excel XLS(X) format
+
+        ============   ================================================
+        *Inputs*       *Description*
+        ------------   ------------------------------------------------
+        file_path      Required String. Path to the XLS(X) file.
+        ============   ================================================
+
+        :returns: dict
+
+        """
+
+        url = "https://{base}/api/xls2xform".format(base=self._baseurl)
+        params = {'f': 'json'}
+        file = {'xlsform' : file_path}
+        isinstance(self._gis, GIS)
+        return self._gis._con.post(
+            path=url,
+            postdata=params,
+            files=file,
+            verify_cert=False)
+    #----------------------------------------------------------------------
+    def _create(self, project_name: str, survey_item: Item,
+                summary: str=None, tags: str=None,) -> bool:
+        """TODO: implement create survery from xls"""
+        # XLS Item or File Path
+        #https://survey123.arcgis.com/api/xls2xform
+        ##Content-Disposition: form-data; name="xlsform"; filename="Form_2.xlsx"
+        ##Content-Type: application/octet-stream
+        #Create Folder
+        # Create Feature Service
+        # Update Feature layer and tables
+        # Enable editor tracking
+        # Update capabilities
+        # Create web form
+        # Create form item
+        # Refresh ?
+        return
+########################################################################
+class Survey():
+    """
+    A `Survey` is a single instance of a survey project. This class contains
+    the `Item` information and properties to access the underlying dataset
+    that was generated by the `Survey` form.
+
+    Data can be exported to `Pandas DataFrames`, `shapefiles`, `CSV`, and
+    `File Geodatabases`.
+
+    In addition to exporting data to various formats, a `Survey's` data can
+    be exported as reports.
+
+    """
+    _gis = None
+    _sm = None
+    _si = None
+    _ssi = None
+    _baseurl = None
+    #----------------------------------------------------------------------
+    def __init__(self, item, sm, baseurl=None):
+        """Constructor"""
+        if baseurl is None:
+            baseurl = "survey123.arcgis.com"
+        self._si = item
+        self._gis = item._gis
+        self._sm = sm
+        related = self._si.related_items('Survey2Service', direction='forward')
+        self._baseurl = baseurl
+        if len(related) > 0:
+            self._ssi = related[0]
+    #----------------------------------------------------------------------
+    @property
+    def properties(self):
+        """returns the properties of the survey"""
+        return dict(self._si)
+    #----------------------------------------------------------------------
+    def __str__(self):
+        return "<Survey @ {iid}>".format(iid=self._si.title)
+    #----------------------------------------------------------------------
+    def __repr__(self):
+        return self.__str__()
+    #----------------------------------------------------------------------
+    def download(self, export_format: str, save_folder: str=None) -> str:
+        """
+        Exports the Survey's data to other format
+
+        ================  ===============================================================
+        **Argument**      **Description**
+        ----------------  ---------------------------------------------------------------
+        export_format     Required String. This is the acceptable export format that a
+                          user can export the survey data to. The following formats are
+                          acceptable: File Geodatabase, Shapefile, CSV, and DF.
+        ----------------  ---------------------------------------------------------------
+        save_folder       Optional String. The full save path.  This is optional.
+        ================  ===============================================================
+
+        :Returns: string or pd.DataFrame
+        """
+
+        title = "a%s" % uuid.uuid4().hex
+        if export_format.lower() == 'df':
+            return self._ssi.layers[0].query().sdf
+        if save_folder is None:
+            save_folder = tempfile.gettempdir()
+        isinstance(self._ssi, Item)
+        eitem = self._ssi.export(title=title, export_format=export_format, )
+        save_file = eitem.download(save_path=save_folder)
+        eitem.delete(force=True)
+        return save_file
+    #----------------------------------------------------------------------
+    def generate_report(self, report_template:Item, where:str="1=1", utc_offset:str="+00:00",
+                        report_title:str=None, folder_id:str=None) -> str:
+        """
+        Creates a MS Word Report.  The `generate_report` method allows users to either save the
+        report to the enterprise or export it directly to disk.
+
+        To save to disk, do not specify a `report_title`. This is the default behavior.
+
+        ================  ===============================================================
+        **Argument**      **Description**
+        ----------------  ---------------------------------------------------------------
+        report_template   Required Item.  The report template Item.
+        ----------------  ---------------------------------------------------------------
+        where             Optional String. This is the select statement used to export
+                          part or whole of the dataset.  If the record count is > 1, then
+                          the item must be saved to your organization.
+        ----------------  ---------------------------------------------------------------
+        utc_offset        Optional String.  This is the time offset from UTC to match the
+                          users timezone. Example: EST - "+04:00"
+        ----------------  ---------------------------------------------------------------
+        report_title      Optional String. If provided, the report will persist on
+                          enterprise with the title of this name.
+        ----------------  ---------------------------------------------------------------
+        folder_id         Optional String. The folder ID of the user's content.
+        ================  ===============================================================
+
+        :Returns: Item or string
+
+        """
+        if isinstance(where, str):
+            where = {"where" : where}
+
+        url = "https://{base}/api/featureReport/createReport/submitJob".format(base=self._baseurl)
+        params = {
+            "outputFormat" : "docx",
+            "queryParameters" : where,
+            "portalUrl" : self._si._gis._url,
+            "templateItemId" : report_template.id,
+            "outputFileName" : "%s_report_%s" % (self._si.title.replace(" ", "_"), uuid.uuid4().hex[:6]),
+            "surveyItemId" : self._si.id,
+            "featureLayerUrl" : self._ssi.layers[0]._url.replace("_fieldworker", ""),
+            "utcOffset" : utc_offset,
+            "uploadInfo" : json.dumps(None),
+            "f": "json",
+            "username": self._si._gis.users.me.username
+        }
+        if report_title:
+            params['uploadInfo'] = json.dumps({"type":"arcgis",
+                                               "packageFiles":True,
+                                               "parameters":{
+                                                   "title": report_title,
+                                                   "folderId": folder_id}
+                                               }
+                                              )
+        #1). Submit the request.
+        submit = self._si._gis._con.post(url, params)
+        return self._check_status(res=submit, status_type='generate_report')
+    #----------------------------------------------------------------------
+    @property
+    def report_templates(self) -> List:
+        """
+        Returns a list of saved report items
+
+        :returns: list of `Items`
+        """
+        return self._si.related_items(direction='forward',
+                                      rel_type='Survey2Data')
+    @property
+    def reports(self) -> List:
+        """returns a list of generated reports"""
+        return self._si._gis.content.search(
+            'owner: %s AND type:"Microsoft Word" AND tags:"Survey 123"' % self._ssi._gis.users.me.username,
+            max_items=10000, outside_org=False)
+    #----------------------------------------------------------------------
+    def create_report_template(self):
+        """
+        The `create_report_template` creates a simple default template that
+        can be downloaded locally, editted and uploaded back up as a report
+        template.
+
+        :returns: string
+
+        """
+        url = "https://{base}/api/featureReport/createSampleTemplate".format(base=self._baseurl)
+        gis = self._si._gis
+        params = {
+            "featureLayerUrl": self._ssi.layers[0].url.replace("_fieldworker", ""),
+            "surveyItemId": self._si.id,
+            "portalUrl": gis._url,
+            "username": gis.users.me.username,
+            "f" : "json"
+        }
+        res = gis._con.post(url, params,
+                            try_json=False,
+                            out_folder=tempfile.gettempdir(),
+                            file_name="template.docx")
+        return res
+    #----------------------------------------------------------------------
+    def _check_status(self, res, status_type):
+        """checks the status of a Survey123 operation"""
+        jid = res['jobId']
+        gis = self._si._gis
+        temp_dir = tempfile.gettempdir()
+        file_path = temp_dir
+        params = {
+            'f' : 'json',
+            'username' : self._si._gis.users.me.username,
+            'token' : self._si._gis._con.token,
+            "portalUrl" : self._si._gis._url,
+        }
+        status_url = "https://{base}/api/featureReport/jobs/{jid}/status".format(base=self._baseurl,
+                                                                                 jid=jid)
+        # 3). Start Checking the status
+        res = gis._con.get(status_url,
+                           params=params)
+        while res['jobStatus'] == 'esriJobExecuting':
+            res = self._si._gis._con.get(status_url, params=params)
+            time.sleep(1)
+        if status_type == 'default_report_template':
+            if 'results' in res and \
+               'details' in res['results'] and \
+               'resultFile' in res['results']['details'] and \
+               'url' in res['results']['details']['resultFile']:
+                url = res['results']['details']['resultFile']['url']
+                file_name = os.path.basename(url)
+                return gis._con.get(url,
+                                    file_name=file_name,
+                                    out_folder=file_path)
+            return res
+        elif status_type == 'generate_report':
+            urls = []
+            files = []
+            items = []
+            if res['jobStatus'] == 'esriJobSucceeded':
+                if 'resultFiles' in res['resultInfo']:
+                    for sub in res['resultInfo']['resultFiles']:
+                        if 'id' in sub:
+                            items.append(sub['id'])
+                        elif 'url' in sub:
+                            urls.append(sub['url'])
+                    files = [self._si._gis._con.get(url,
+                                                    file_name=os.path.basename(urlparse(url).path), add_token=False, try_json=False,
+                                                    out_folder=temp_dir) \
+                            for url in urls] + [gis.content.get(i) for i in items]
+                    if len(files) == 1:
+                        return files[0]
+                    return files
+                elif 'details' in res['resultInfo']:
+                    for res in res['resultInfo']['details']:
+                        if 'resultFile' in res:
+                            fr =  res['resultFile']
+                            if 'id' in fr:
+                                items.append(fr['id'])
+                            else:
+                                urls.append(fr['url'])
+                        del res
+
+                    files = [self._si._gis._con.get(url,
+                                                    file_name=os.path.basename(url),
+                                                    out_folder=temp_dir) \
+                        for url in urls] + [gis.content.get(i) for i in items]
+                    if len(files) == 1:
+                        return files[0]
+                    else:
+                        return files
+            return

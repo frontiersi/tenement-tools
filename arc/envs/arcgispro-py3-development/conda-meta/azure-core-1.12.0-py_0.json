@@ -1,0 +1,806 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/noarch",
+  "constrains": [],
+  "depends": [
+    "python >=3.6",
+    "requests >=2.18.4",
+    "six >=1.6"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-core-1.12.0-py_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/azure/core/__init__.py",
+    "Lib/site-packages/azure/core/_enum_meta.py",
+    "Lib/site-packages/azure/core/_match_conditions.py",
+    "Lib/site-packages/azure/core/_pipeline_client.py",
+    "Lib/site-packages/azure/core/_pipeline_client_async.py",
+    "Lib/site-packages/azure/core/_utils.py",
+    "Lib/site-packages/azure/core/_version.py",
+    "Lib/site-packages/azure/core/async_paging.py",
+    "Lib/site-packages/azure/core/configuration.py",
+    "Lib/site-packages/azure/core/credentials.py",
+    "Lib/site-packages/azure/core/credentials_async.py",
+    "Lib/site-packages/azure/core/exceptions.py",
+    "Lib/site-packages/azure/core/messaging.py",
+    "Lib/site-packages/azure/core/paging.py",
+    "Lib/site-packages/azure/core/pipeline/__init__.py",
+    "Lib/site-packages/azure/core/pipeline/_base.py",
+    "Lib/site-packages/azure/core/pipeline/_base_async.py",
+    "Lib/site-packages/azure/core/pipeline/_tools.py",
+    "Lib/site-packages/azure/core/pipeline/_tools_async.py",
+    "Lib/site-packages/azure/core/pipeline/policies/__init__.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_authentication.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_authentication_async.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_base.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_base_async.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_custom_hook.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_distributed_tracing.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_redirect.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_redirect_async.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_retry.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_retry_async.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_universal.py",
+    "Lib/site-packages/azure/core/pipeline/policies/_utils.py",
+    "Lib/site-packages/azure/core/pipeline/transport/__init__.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_aiohttp.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_base.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_base_async.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_base_requests_async.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_bigger_block_size_http_adapters.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_requests_asyncio.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_requests_basic.py",
+    "Lib/site-packages/azure/core/pipeline/transport/_requests_trio.py",
+    "Lib/site-packages/azure/core/polling/__init__.py",
+    "Lib/site-packages/azure/core/polling/_async_poller.py",
+    "Lib/site-packages/azure/core/polling/_poller.py",
+    "Lib/site-packages/azure/core/polling/async_base_polling.py",
+    "Lib/site-packages/azure/core/polling/base_polling.py",
+    "Lib/site-packages/azure/core/py.typed",
+    "Lib/site-packages/azure/core/serialization.py",
+    "Lib/site-packages/azure/core/settings.py",
+    "Lib/site-packages/azure/core/tracing/__init__.py",
+    "Lib/site-packages/azure/core/tracing/_abstract_span.py",
+    "Lib/site-packages/azure/core/tracing/common.py",
+    "Lib/site-packages/azure/core/tracing/decorator.py",
+    "Lib/site-packages/azure/core/tracing/decorator_async.py",
+    "Lib/site-packages/azure/core/tracing/ext/__init__.py",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/INSTALLER",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/METADATA",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/RECORD",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/REQUESTED",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/WHEEL",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/direct_url.json",
+    "Lib/site-packages/azure_core-1.12.0.dist-info/top_level.txt",
+    ".nonadmin",
+    "Lib/site-packages/azure/core/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_enum_meta.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_match_conditions.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_pipeline_client.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_pipeline_client_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_utils.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/_version.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/async_paging.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/configuration.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/credentials.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/credentials_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/exceptions.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/messaging.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/paging.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/__pycache__/_base.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/__pycache__/_base_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/__pycache__/_tools.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/__pycache__/_tools_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_authentication.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_authentication_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_base.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_base_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_custom_hook.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_distributed_tracing.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_redirect.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_redirect_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_retry.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_retry_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_universal.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_utils.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_aiohttp.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base_requests_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_bigger_block_size_http_adapters.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_asyncio.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_basic.cpython-37.pyc",
+    "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_trio.cpython-37.pyc",
+    "Lib/site-packages/azure/core/polling/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/polling/__pycache__/_async_poller.cpython-37.pyc",
+    "Lib/site-packages/azure/core/polling/__pycache__/_poller.cpython-37.pyc",
+    "Lib/site-packages/azure/core/polling/__pycache__/async_base_polling.cpython-37.pyc",
+    "Lib/site-packages/azure/core/polling/__pycache__/base_polling.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/serialization.cpython-37.pyc",
+    "Lib/site-packages/azure/core/__pycache__/settings.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/__pycache__/_abstract_span.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/__pycache__/common.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/__pycache__/decorator.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/__pycache__/decorator_async.cpython-37.pyc",
+    "Lib/site-packages/azure/core/tracing/ext/__pycache__/__init__.cpython-37.pyc"
+  ],
+  "fn": "azure-core-1.12.0-py_0.tar.bz2",
+  "license": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-core-1.12.0-py_0",
+    "type": 1
+  },
+  "md5": "410a9a2b6f82231cbed6e6c24392b14f",
+  "name": "azure-core",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-core-1.12.0-py_0.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/azure/core/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "670ba155ebf091fc3940e730b5059fd4e5a8d67320915f2d114ada28da6ab944",
+        "sha256_in_prefix": "670ba155ebf091fc3940e730b5059fd4e5a8d67320915f2d114ada28da6ab944",
+        "size_in_bytes": 1789
+      },
+      {
+        "_path": "site-packages/azure/core/_enum_meta.py",
+        "path_type": "hardlink",
+        "sha256": "039713e1c79133f29139ddd71372e46b85a537f1af0430ddce2de67fafcdcb07",
+        "sha256_in_prefix": "039713e1c79133f29139ddd71372e46b85a537f1af0430ddce2de67fafcdcb07",
+        "size_in_bytes": 2549
+      },
+      {
+        "_path": "site-packages/azure/core/_match_conditions.py",
+        "path_type": "hardlink",
+        "sha256": "51d2cf4e78f16cb3e82d438e1bde948f3b668d82a7670bbc02ad07737d310d54",
+        "sha256_in_prefix": "51d2cf4e78f16cb3e82d438e1bde948f3b668d82a7670bbc02ad07737d310d54",
+        "size_in_bytes": 1506
+      },
+      {
+        "_path": "site-packages/azure/core/_pipeline_client.py",
+        "path_type": "hardlink",
+        "sha256": "1b99300d11cd73ff5db134ad23066f83456ceb0144538d1d5b6ab55cfb2560ac",
+        "sha256_in_prefix": "1b99300d11cd73ff5db134ad23066f83456ceb0144538d1d5b6ab55cfb2560ac",
+        "size_in_bytes": 4456
+      },
+      {
+        "_path": "site-packages/azure/core/_pipeline_client_async.py",
+        "path_type": "hardlink",
+        "sha256": "f27ac9fdab597b1b5365a58ad96b3babd2b79c450522ad7a12642436496eb787",
+        "sha256_in_prefix": "f27ac9fdab597b1b5365a58ad96b3babd2b79c450522ad7a12642436496eb787",
+        "size_in_bytes": 4541
+      },
+      {
+        "_path": "site-packages/azure/core/_utils.py",
+        "path_type": "hardlink",
+        "sha256": "1fef464eb117fe223c12de3266b9c3669fc127cd291f095c9e90e7e5f08c0e76",
+        "sha256_in_prefix": "1fef464eb117fe223c12de3266b9c3669fc127cd291f095c9e90e7e5f08c0e76",
+        "size_in_bytes": 2010
+      },
+      {
+        "_path": "site-packages/azure/core/_version.py",
+        "path_type": "hardlink",
+        "sha256": "31a6c294a2e5a81926a8eecb23ba613a197004ef083481f7a3d20c5b698e7b1b",
+        "sha256_in_prefix": "31a6c294a2e5a81926a8eecb23ba613a197004ef083481f7a3d20c5b698e7b1b",
+        "size_in_bytes": 493
+      },
+      {
+        "_path": "site-packages/azure/core/async_paging.py",
+        "path_type": "hardlink",
+        "sha256": "99ee88ef5c10f6f07ba8e67effb5a2b3586f94184dbbf7e2711ed65e0742ee54",
+        "sha256_in_prefix": "99ee88ef5c10f6f07ba8e67effb5a2b3586f94184dbbf7e2711ed65e0742ee54",
+        "size_in_bytes": 6037
+      },
+      {
+        "_path": "site-packages/azure/core/configuration.py",
+        "path_type": "hardlink",
+        "sha256": "59750c7ff2c60ba8512d785e9b9603aadb4ef990c750d6f040ca48191a612b9d",
+        "sha256_in_prefix": "59750c7ff2c60ba8512d785e9b9603aadb4ef990c750d6f040ca48191a612b9d",
+        "size_in_bytes": 5609
+      },
+      {
+        "_path": "site-packages/azure/core/credentials.py",
+        "path_type": "hardlink",
+        "sha256": "c3943978ff47d48502e4ac0cb9cf90e907f9c4578d2ef22a22fc0f0971a7340d",
+        "sha256_in_prefix": "c3943978ff47d48502e4ac0cb9cf90e907f9c4578d2ef22a22fc0f0971a7340d",
+        "size_in_bytes": 3724
+      },
+      {
+        "_path": "site-packages/azure/core/credentials_async.py",
+        "path_type": "hardlink",
+        "sha256": "14503e05cc958edf32101bac47d61e12cf65d4099df4ad81777acfc3cad86090",
+        "sha256_in_prefix": "14503e05cc958edf32101bac47d61e12cf65d4099df4ad81777acfc3cad86090",
+        "size_in_bytes": 657
+      },
+      {
+        "_path": "site-packages/azure/core/exceptions.py",
+        "path_type": "hardlink",
+        "sha256": "5eeda126f436c48255daaef9729fa8f890e2b93186660b94fcff7da75c9c04bd",
+        "sha256_in_prefix": "5eeda126f436c48255daaef9729fa8f890e2b93186660b94fcff7da75c9c04bd",
+        "size_in_bytes": 16475
+      },
+      {
+        "_path": "site-packages/azure/core/messaging.py",
+        "path_type": "hardlink",
+        "sha256": "e43019c5d550a006c2cecd0f28636b730c9b066f4a9e2949a846522404cdc839",
+        "sha256_in_prefix": "e43019c5d550a006c2cecd0f28636b730c9b066f4a9e2949a846522404cdc839",
+        "size_in_bytes": 7308
+      },
+      {
+        "_path": "site-packages/azure/core/paging.py",
+        "path_type": "hardlink",
+        "sha256": "374db6fadf56ba2e385a41d84352245b423c9d3bb81b72f9b6ce0390a6cd6121",
+        "sha256_in_prefix": "374db6fadf56ba2e385a41d84352245b423c9d3bb81b72f9b6ce0390a6cd6121",
+        "size_in_bytes": 4892
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "4cb1f89cd090d8b8507c11d2a72b6962352c94c70b1274ff9bff65ff1934bf53",
+        "sha256_in_prefix": "4cb1f89cd090d8b8507c11d2a72b6962352c94c70b1274ff9bff65ff1934bf53",
+        "size_in_bytes": 7277
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/_base.py",
+        "path_type": "hardlink",
+        "sha256": "db78e66fbe8db577cfa4f946fb8f37863344de96f1978ef7ef3cea894b3a2f20",
+        "sha256_in_prefix": "db78e66fbe8db577cfa4f946fb8f37863344de96f1978ef7ef3cea894b3a2f20",
+        "size_in_bytes": 8284
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/_base_async.py",
+        "path_type": "hardlink",
+        "sha256": "1fa556973b0b747ab37d737e51ee27b5a094e51cfbfd8f0abc198a5c0920f48e",
+        "sha256_in_prefix": "1fa556973b0b747ab37d737e51ee27b5a094e51cfbfd8f0abc198a5c0920f48e",
+        "size_in_bytes": 8716
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/_tools.py",
+        "path_type": "hardlink",
+        "sha256": "819791799748c6e600c1b4b5d5016a5c179cf2e0a13d60749d6a041127d12be2",
+        "sha256_in_prefix": "819791799748c6e600c1b4b5d5016a5c179cf2e0a13d60749d6a041127d12be2",
+        "size_in_bytes": 1636
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/_tools_async.py",
+        "path_type": "hardlink",
+        "sha256": "5cf9fd62368909e147c6ad48dedbf37ddf2939fd0adbbbee67f1a4e0e8379b1b",
+        "sha256_in_prefix": "5cf9fd62368909e147c6ad48dedbf37ddf2939fd0adbbbee67f1a4e0e8379b1b",
+        "size_in_bytes": 1610
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "8901f33c3e7600f7a7cf86375d7d32ad18ca66aba5fb1e3cc3b0044661165b41",
+        "sha256_in_prefix": "8901f33c3e7600f7a7cf86375d7d32ad18ca66aba5fb1e3cc3b0044661165b41",
+        "size_in_bytes": 2787
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_authentication.py",
+        "path_type": "hardlink",
+        "sha256": "906b346ca857e1e571aaf9b3fbb78443db0faa9c598d187897dc38154b0314bc",
+        "sha256_in_prefix": "906b346ca857e1e571aaf9b3fbb78443db0faa9c598d187897dc38154b0314bc",
+        "size_in_bytes": 5731
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_authentication_async.py",
+        "path_type": "hardlink",
+        "sha256": "6981c0392319581292438b26836c6926e571d72d276f1f175ed3bcb51e358c46",
+        "sha256_in_prefix": "6981c0392319581292438b26836c6926e571d72d276f1f175ed3bcb51e358c46",
+        "size_in_bytes": 1733
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_base.py",
+        "path_type": "hardlink",
+        "sha256": "78563bfcf2e43770ff6c1e68f365e5aac42783c6ca5a7e0bf41641da60559f04",
+        "sha256_in_prefix": "78563bfcf2e43770ff6c1e68f365e5aac42783c6ca5a7e0bf41641da60559f04",
+        "size_in_bytes": 6022
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_base_async.py",
+        "path_type": "hardlink",
+        "sha256": "f99c6c7ed3daa9e1861ef3c4188a75a70c8e1b05b47a3cc9d8dac94d09ff02ff",
+        "sha256_in_prefix": "f99c6c7ed3daa9e1861ef3c4188a75a70c8e1b05b47a3cc9d8dac94d09ff02ff",
+        "size_in_bytes": 3205
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_custom_hook.py",
+        "path_type": "hardlink",
+        "sha256": "b2b767eba8b64b76b41208c05ad459aeb710986d0d3b3725d01e2f9cd480da46",
+        "sha256_in_prefix": "b2b767eba8b64b76b41208c05ad459aeb710986d0d3b3725d01e2f9cd480da46",
+        "size_in_bytes": 3405
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_distributed_tracing.py",
+        "path_type": "hardlink",
+        "sha256": "df2a222985d80f0cf94f5b7e273519b66c5928815cff8e779edf461b263c4d86",
+        "sha256_in_prefix": "df2a222985d80f0cf94f5b7e273519b66c5928815cff8e779edf461b263c4d86",
+        "size_in_bytes": 5596
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_redirect.py",
+        "path_type": "hardlink",
+        "sha256": "013952a0ae00171264aa16e3fbca5f714a202113509fbc384afe7e5d193561b2",
+        "sha256_in_prefix": "013952a0ae00171264aa16e3fbca5f714a202113509fbc384afe7e5d193561b2",
+        "size_in_bytes": 7155
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_redirect_async.py",
+        "path_type": "hardlink",
+        "sha256": "3626d38f5b6c11d0396d7f3a8f6717fddbf7c36d5ba7401a8ce7f66b08925539",
+        "sha256_in_prefix": "3626d38f5b6c11d0396d7f3a8f6717fddbf7c36d5ba7401a8ce7f66b08925539",
+        "size_in_bytes": 3368
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_retry.py",
+        "path_type": "hardlink",
+        "sha256": "2bd4f263637ba9aac4f22b70626ac7bf98b3a6e7509cdda42b961b14a4cbb4f5",
+        "sha256_in_prefix": "2bd4f263637ba9aac4f22b70626ac7bf98b3a6e7509cdda42b961b14a4cbb4f5",
+        "size_in_bytes": 19989
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_retry_async.py",
+        "path_type": "hardlink",
+        "sha256": "2468d25552a4ce96aaaddacbf4ec5f12e75362bf77a8e511c89092558e9a9667",
+        "sha256_in_prefix": "2468d25552a4ce96aaaddacbf4ec5f12e75362bf77a8e511c89092558e9a9667",
+        "size_in_bytes": 8018
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_universal.py",
+        "path_type": "hardlink",
+        "sha256": "bc8a0dca7ad493c5802c6aaf5b18672e3d4e2e2a1692ae274ce8a88ecf35e431",
+        "sha256_in_prefix": "bc8a0dca7ad493c5802c6aaf5b18672e3d4e2e2a1692ae274ce8a88ecf35e431",
+        "size_in_bytes": 26918
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/policies/_utils.py",
+        "path_type": "hardlink",
+        "sha256": "3b8fb7321f4a1ec157108f9ed959e7c212ea190287ee1d05f578e4f8b6f3135c",
+        "sha256_in_prefix": "3b8fb7321f4a1ec157108f9ed959e7c212ea190287ee1d05f578e4f8b6f3135c",
+        "size_in_bytes": 2806
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "056679d97149176f7f4a7328908ef8c63002e3eb8d3ff85d02ff93f383aa673c",
+        "sha256_in_prefix": "056679d97149176f7f4a7328908ef8c63002e3eb8d3ff85d02ff93f383aa673c",
+        "size_in_bytes": 4181
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_aiohttp.py",
+        "path_type": "hardlink",
+        "sha256": "42cf9b68aeb14309505b56c6347de5a21abeeae8473d2992daa62bad1c4598d8",
+        "sha256_in_prefix": "42cf9b68aeb14309505b56c6347de5a21abeeae8473d2992daa62bad1c4598d8",
+        "size_in_bytes": 11755
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_base.py",
+        "path_type": "hardlink",
+        "sha256": "9b0b4e91382a067f6d5423cc373ddbffb0b34fe0de6b1a1e13ab6b6fe0276eff",
+        "sha256_in_prefix": "9b0b4e91382a067f6d5423cc373ddbffb0b34fe0de6b1a1e13ab6b6fe0276eff",
+        "size_in_bytes": 34992
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_base_async.py",
+        "path_type": "hardlink",
+        "sha256": "f0c3422b792a03519eee09e62f6d6c6cd5a0ca81dbd25ea5cadb20000f5a153f",
+        "sha256_in_prefix": "f0c3422b792a03519eee09e62f6d6c6cd5a0ca81dbd25ea5cadb20000f5a153f",
+        "size_in_bytes": 6388
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_base_requests_async.py",
+        "path_type": "hardlink",
+        "sha256": "f28a37cf6b4d2319a7a85be54f42315c420831a4849fa8c93bd45293a5168005",
+        "sha256_in_prefix": "f28a37cf6b4d2319a7a85be54f42315c420831a4849fa8c93bd45293a5168005",
+        "size_in_bytes": 2326
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_bigger_block_size_http_adapters.py",
+        "path_type": "hardlink",
+        "sha256": "dc9f57bd74f49b509be10b59e48bcb9fc1b0864146292a1328eea46af7662e62",
+        "sha256_in_prefix": "dc9f57bd74f49b509be10b59e48bcb9fc1b0864146292a1328eea46af7662e62",
+        "size_in_bytes": 2177
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_requests_asyncio.py",
+        "path_type": "hardlink",
+        "sha256": "bdea4875942175ad9dc5a4d6ac5c3e619bffe846b1a955e0f8e5da52412da652",
+        "sha256_in_prefix": "bdea4875942175ad9dc5a4d6ac5c3e619bffe846b1a955e0f8e5da52412da652",
+        "size_in_bytes": 7490
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_requests_basic.py",
+        "path_type": "hardlink",
+        "sha256": "27ca80d8434aea47a66b3804074281d11f7b9bbeed1997e54576b42e15660035",
+        "sha256_in_prefix": "27ca80d8434aea47a66b3804074281d11f7b9bbeed1997e54576b42e15660035",
+        "size_in_bytes": 10435
+      },
+      {
+        "_path": "site-packages/azure/core/pipeline/transport/_requests_trio.py",
+        "path_type": "hardlink",
+        "sha256": "4367e75418501fa5543f0a8ef64942f1dfdeadffdf9a9627a33fcbbeaa61c341",
+        "sha256_in_prefix": "4367e75418501fa5543f0a8ef64942f1dfdeadffdf9a9627a33fcbbeaa61c341",
+        "size_in_bytes": 8171
+      },
+      {
+        "_path": "site-packages/azure/core/polling/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "111afc899db39fda9c59b8455761d5d54940807684136f30a0ffe1162c7ac892",
+        "sha256_in_prefix": "111afc899db39fda9c59b8455761d5d54940807684136f30a0ffe1162c7ac892",
+        "size_in_bytes": 1728
+      },
+      {
+        "_path": "site-packages/azure/core/polling/_async_poller.py",
+        "path_type": "hardlink",
+        "sha256": "a61b11a4a0ac977f278e485ec6ff5d2b895f56f5f32a2e1b42c2b14ee2955a24",
+        "sha256_in_prefix": "a61b11a4a0ac977f278e485ec6ff5d2b895f56f5f32a2e1b42c2b14ee2955a24",
+        "size_in_bytes": 7923
+      },
+      {
+        "_path": "site-packages/azure/core/polling/_poller.py",
+        "path_type": "hardlink",
+        "sha256": "5f1de849dd91359de6771eb77c0cdb5ad7bc3b35267bc11eb660ae3f7b895f08",
+        "sha256_in_prefix": "5f1de849dd91359de6771eb77c0cdb5ad7bc3b35267bc11eb660ae3f7b895f08",
+        "size_in_bytes": 11615
+      },
+      {
+        "_path": "site-packages/azure/core/polling/async_base_polling.py",
+        "path_type": "hardlink",
+        "sha256": "aeaa99356dfa16ce2239f667c0ba985a679f5bfecc29c356ee45a3f31f1ed223",
+        "sha256_in_prefix": "aeaa99356dfa16ce2239f667c0ba985a679f5bfecc29c356ee45a3f31f1ed223",
+        "size_in_bytes": 5033
+      },
+      {
+        "_path": "site-packages/azure/core/polling/base_polling.py",
+        "path_type": "hardlink",
+        "sha256": "bbc471718ae6eb2feafd3b2574859a97bc3af58a45f9b27729adba74d7bd6476",
+        "sha256_in_prefix": "bbc471718ae6eb2feafd3b2574859a97bc3af58a45f9b27729adba74d7bd6476",
+        "size_in_bytes": 20261
+      },
+      {
+        "_path": "site-packages/azure/core/py.typed",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/azure/core/serialization.py",
+        "path_type": "hardlink",
+        "sha256": "31e440252654adbdb56ecaa28c55685d87abccab5c72d9dd19b5e7b7f3729e63",
+        "sha256_in_prefix": "31e440252654adbdb56ecaa28c55685d87abccab5c72d9dd19b5e7b7f3729e63",
+        "size_in_bytes": 663
+      },
+      {
+        "_path": "site-packages/azure/core/settings.py",
+        "path_type": "hardlink",
+        "sha256": "c816a14cb026068db29b801140cf42ee88db8f07c1420b5db4554e4d8bc949b9",
+        "sha256_in_prefix": "c816a14cb026068db29b801140cf42ee88db8f07c1420b5db4554e4d8bc949b9",
+        "size_in_bytes": 13656
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "45e1e9dbf0ad0756eb334c4b21b00a6941c82be82dcf073b893d54f7391c8801",
+        "sha256_in_prefix": "45e1e9dbf0ad0756eb334c4b21b00a6941c82be82dcf073b893d54f7391c8801",
+        "size_in_bytes": 298
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/_abstract_span.py",
+        "path_type": "hardlink",
+        "sha256": "d0a4ed6d4c5a93eb4999063a477bbadb59695618c9d98bd6cfe29246b0e9e3a9",
+        "sha256_in_prefix": "d0a4ed6d4c5a93eb4999063a477bbadb59695618c9d98bd6cfe29246b0e9e3a9",
+        "size_in_bytes": 7105
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/common.py",
+        "path_type": "hardlink",
+        "sha256": "183683ce94fefdf18c3ee0f60bb528cd0629c9e7dc34513a8725a14334104b6a",
+        "sha256_in_prefix": "183683ce94fefdf18c3ee0f60bb528cd0629c9e7dc34513a8725a14334104b6a",
+        "size_in_bytes": 3969
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/decorator.py",
+        "path_type": "hardlink",
+        "sha256": "b63838361b9588929215f6339694f7b232e98ec11a3fee544f65a0b8bf38cd0f",
+        "sha256_in_prefix": "b63838361b9588929215f6339694f7b232e98ec11a3fee544f65a0b8bf38cd0f",
+        "size_in_bytes": 3600
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/decorator_async.py",
+        "path_type": "hardlink",
+        "sha256": "8a3cce0c6e6d3d6745d46d12373b1106e9f5f76e5a837c05c59ad14e7bb45249",
+        "sha256_in_prefix": "8a3cce0c6e6d3d6745d46d12373b1106e9f5f76e5a837c05c59ad14e7bb45249",
+        "size_in_bytes": 3539
+      },
+      {
+        "_path": "site-packages/azure/core/tracing/ext/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "a7bd13536000bae2a035e85a39d6f9c4214ff24023d216d60a4575a06ba6efe7",
+        "sha256_in_prefix": "a7bd13536000bae2a035e85a39d6f9c4214ff24023d216d60a4575a06ba6efe7",
+        "size_in_bytes": 23173
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "bac70c865b9b6c8213a98ea3eb1eda40529a52714c4646924e5c9cd7715ce4f1",
+        "sha256_in_prefix": "bac70c865b9b6c8213a98ea3eb1eda40529a52714c4646924e5c9cd7715ce4f1",
+        "size_in_bytes": 9171
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "sha256_in_prefix": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "558ab9363ccf7ba0f49f06fd34c352c4aa81c866b42a047f7fd21a85d3b2efb2",
+        "sha256_in_prefix": "558ab9363ccf7ba0f49f06fd34c352c4aa81c866b42a047f7fd21a85d3b2efb2",
+        "size_in_bytes": 102
+      },
+      {
+        "_path": "site-packages/azure_core-1.12.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "4bb0e1595f66f344c1cc084e163c4352235b2accf3a1385b9eb4b3e4ca5b1d24",
+        "sha256_in_prefix": "4bb0e1595f66f344c1cc084e163c4352235b2accf3a1385b9eb4b3e4ca5b1d24",
+        "size_in_bytes": 6
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_enum_meta.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_match_conditions.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_pipeline_client.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_pipeline_client_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_utils.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/_version.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/async_paging.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/configuration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/credentials.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/credentials_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/exceptions.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/messaging.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/paging.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/__pycache__/_base.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/__pycache__/_base_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/__pycache__/_tools.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/__pycache__/_tools_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_authentication.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_authentication_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_base.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_base_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_custom_hook.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_distributed_tracing.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_redirect.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_redirect_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_retry.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_retry_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_universal.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/policies/__pycache__/_utils.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_aiohttp.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_base_requests_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_bigger_block_size_http_adapters.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_asyncio.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_basic.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/pipeline/transport/__pycache__/_requests_trio.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/polling/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/polling/__pycache__/_async_poller.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/polling/__pycache__/_poller.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/polling/__pycache__/async_base_polling.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/polling/__pycache__/base_polling.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/serialization.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/__pycache__/settings.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/__pycache__/_abstract_span.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/__pycache__/common.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/__pycache__/decorator.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/__pycache__/decorator_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/core/tracing/ext/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "esri/noarch::azure-core==1.12.0=py_0",
+  "sha256": "2f8ad0afceac0972a71e9d6c24e23c7fc58e064921457870a0350b84891eedcc",
+  "size": 65107,
+  "subdir": "noarch",
+  "timestamp": 1615482795625,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/noarch/azure-core-1.12.0-py_0.tar.bz2",
+  "version": "1.12.0"
+}

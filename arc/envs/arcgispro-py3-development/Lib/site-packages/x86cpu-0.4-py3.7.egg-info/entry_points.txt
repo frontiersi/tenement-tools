@@ -1,0 +1,3 @@
+[console_scripts]
+x86report = x86cpu.cpuinfo:print_report
+

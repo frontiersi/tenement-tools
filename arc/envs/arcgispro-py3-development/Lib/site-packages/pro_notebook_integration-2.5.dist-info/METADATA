@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: pro-notebook-integration
+Version: 2.5
+Summary: Jupyter Server Extensions to ArcGIS Pro
+Home-page: www.esri.com
+Author: Esri
+Author-email: UNKNOWN
+License: UNKNOWN
+Platform: UNKNOWN
+Requires-Dist: tornado
+Requires-Dist: notebook
+
+UNKNOWN
+
+

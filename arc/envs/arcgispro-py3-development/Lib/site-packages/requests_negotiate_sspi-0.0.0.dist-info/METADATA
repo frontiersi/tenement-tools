@@ -1,0 +1,39 @@
+Metadata-Version: 2.1
+Name: requests-negotiate-sspi
+Version: 0.0.0
+Summary: This package allows for Single-Sign On HTTP Negotiate authentication using the requests library on Windows.
+Home-page: https://github.com/brandond/requests-negotiate-sspi
+Author: Brandon Davidson
+Author-email: brad@oatmail.org
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Win32 (MS Windows)
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python
+Provides: requests_negotiate_sspi
+Requires-Dist: pypiwin32 (>=223)
+Requires-Dist: requests (>=2.0)
+Provides-Extra: dev
+Requires-Dist: setuptools-version-command ; extra == 'dev'
+
+requests-negotiate-sspi
+=======================
+
+An implementation of HTTP Negotiate authentication for Requests. This
+module provides single-sign-on using Kerberos or NTLM using the Windows
+SSPI interface.
+
+This module supports Extended Protection for Authentication (aka Channel
+Binding Hash), which makes it usable for services that require it,
+including Active Directory Federation Services.
+
+Consult `README.md on GitHub <https://github.com/brandond/requests-negotiate-sspi/blob/master/README.md>`__ for usage instructions.
+
+

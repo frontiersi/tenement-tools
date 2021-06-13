@@ -1,0 +1,1015 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/esri/noarch",
+  "constrains": [],
+  "depends": [
+    "azure-core >=1.10.0,<2.0.0",
+    "cryptography >=2.1.4",
+    "msrest >=0.6.18",
+    "python >=3.5"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-storage-blob-12.8.0-py_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/azure/storage/blob/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_blob_client.py",
+    "Lib/site-packages/azure/storage/blob/_blob_service_client.py",
+    "Lib/site-packages/azure/storage/blob/_container_client.py",
+    "Lib/site-packages/azure/storage/blob/_deserialize.py",
+    "Lib/site-packages/azure/storage/blob/_download.py",
+    "Lib/site-packages/azure/storage/blob/_generated/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_generated/_azure_blob_storage.py",
+    "Lib/site-packages/azure/storage/blob/_generated/_configuration.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/_azure_blob_storage.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/_configuration.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_append_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_block_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_container_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_directory_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_page_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/_service_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/models/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_generated/models/_azure_blob_storage_enums.py",
+    "Lib/site-packages/azure/storage/blob/_generated/models/_models.py",
+    "Lib/site-packages/azure/storage/blob/_generated/models/_models_py3.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_append_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_block_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_container_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_directory_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_page_blob_operations.py",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/_service_operations.py",
+    "Lib/site-packages/azure/storage/blob/_lease.py",
+    "Lib/site-packages/azure/storage/blob/_list_blobs_helper.py",
+    "Lib/site-packages/azure/storage/blob/_models.py",
+    "Lib/site-packages/azure/storage/blob/_quick_query_helper.py",
+    "Lib/site-packages/azure/storage/blob/_serialize.py",
+    "Lib/site-packages/azure/storage/blob/_shared/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_shared/authentication.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__init__.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/avro_io.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/avro_io_async.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/datafile.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/datafile_async.py",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/schema.py",
+    "Lib/site-packages/azure/storage/blob/_shared/base_client.py",
+    "Lib/site-packages/azure/storage/blob/_shared/base_client_async.py",
+    "Lib/site-packages/azure/storage/blob/_shared/constants.py",
+    "Lib/site-packages/azure/storage/blob/_shared/encryption.py",
+    "Lib/site-packages/azure/storage/blob/_shared/models.py",
+    "Lib/site-packages/azure/storage/blob/_shared/parser.py",
+    "Lib/site-packages/azure/storage/blob/_shared/policies.py",
+    "Lib/site-packages/azure/storage/blob/_shared/policies_async.py",
+    "Lib/site-packages/azure/storage/blob/_shared/request_handlers.py",
+    "Lib/site-packages/azure/storage/blob/_shared/response_handlers.py",
+    "Lib/site-packages/azure/storage/blob/_shared/shared_access_signature.py",
+    "Lib/site-packages/azure/storage/blob/_shared/uploads.py",
+    "Lib/site-packages/azure/storage/blob/_shared/uploads_async.py",
+    "Lib/site-packages/azure/storage/blob/_shared_access_signature.py",
+    "Lib/site-packages/azure/storage/blob/_upload_helpers.py",
+    "Lib/site-packages/azure/storage/blob/_version.py",
+    "Lib/site-packages/azure/storage/blob/aio/__init__.py",
+    "Lib/site-packages/azure/storage/blob/aio/_blob_client_async.py",
+    "Lib/site-packages/azure/storage/blob/aio/_blob_service_client_async.py",
+    "Lib/site-packages/azure/storage/blob/aio/_container_client_async.py",
+    "Lib/site-packages/azure/storage/blob/aio/_download_async.py",
+    "Lib/site-packages/azure/storage/blob/aio/_lease_async.py",
+    "Lib/site-packages/azure/storage/blob/aio/_list_blobs_helper.py",
+    "Lib/site-packages/azure/storage/blob/aio/_models.py",
+    "Lib/site-packages/azure/storage/blob/aio/_upload_helpers.py",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/INSTALLER",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/LICENSE.txt",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/METADATA",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/RECORD",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/REQUESTED",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/WHEEL",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/direct_url.json",
+    "Lib/site-packages/azure_storage_blob-12.8.0.dist-info/top_level.txt",
+    ".nonadmin",
+    "Lib/site-packages/azure/storage/blob/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_blob_client.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_blob_service_client.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_container_client.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_deserialize.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_download.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/__pycache__/_azure_blob_storage.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/__pycache__/_configuration.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/_azure_blob_storage.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/_configuration.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_append_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_block_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_container_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_directory_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_page_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_service_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_azure_blob_storage_enums.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_models.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_models_py3.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_append_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_block_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_container_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_directory_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_page_blob_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_service_operations.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_lease.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_list_blobs_helper.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_models.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_quick_query_helper.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_serialize.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/authentication.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/avro_io.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/avro_io_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/datafile.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/datafile_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/schema.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/base_client.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/base_client_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/constants.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/encryption.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/models.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/parser.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/policies.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/policies_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/request_handlers.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/response_handlers.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/shared_access_signature.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/uploads.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/_shared/__pycache__/uploads_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_shared_access_signature.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_upload_helpers.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/__pycache__/_version.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_blob_client_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_blob_service_client_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_container_client_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_download_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_lease_async.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_list_blobs_helper.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_models.cpython-37.pyc",
+    "Lib/site-packages/azure/storage/blob/aio/__pycache__/_upload_helpers.cpython-37.pyc"
+  ],
+  "fn": "azure-storage-blob-12.8.0-py_0.tar.bz2",
+  "license": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-storage-blob-12.8.0-py_0",
+    "type": 1
+  },
+  "md5": "e5939c605737a64d95f52d7ca8c26c00",
+  "name": "azure-storage-blob",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\azure-storage-blob-12.8.0-py_0.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/azure/storage/blob/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "5b5f4af8aa14c071349fe96bd0b277a79c76db75124e04fab57fb80978eff149",
+        "sha256_in_prefix": "5b5f4af8aa14c071349fe96bd0b277a79c76db75124e04fab57fb80978eff149",
+        "size_in_bytes": 9132
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_blob_client.py",
+        "path_type": "hardlink",
+        "sha256": "f8462e36bd1b9c7e4e43e99220f3de1ca8130244c0dd03f7cb4b49aecca2ff89",
+        "sha256_in_prefix": "f8462e36bd1b9c7e4e43e99220f3de1ca8130244c0dd03f7cb4b49aecca2ff89",
+        "size_in_bytes": 196171
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_blob_service_client.py",
+        "path_type": "hardlink",
+        "sha256": "c5321448090d7a02b2be11a307087bc24536da4a81e2e2209e1a41ebcd5ef284",
+        "sha256_in_prefix": "c5321448090d7a02b2be11a307087bc24536da4a81e2e2209e1a41ebcd5ef284",
+        "size_in_bytes": 34192
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_container_client.py",
+        "path_type": "hardlink",
+        "sha256": "2ca064a3f574af1162eda9975cd3e9e0bf2f18ea97fdfcdd20224abab489fc9a",
+        "sha256_in_prefix": "2ca064a3f574af1162eda9975cd3e9e0bf2f18ea97fdfcdd20224abab489fc9a",
+        "size_in_bytes": 75930
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_deserialize.py",
+        "path_type": "hardlink",
+        "sha256": "9256295201174560b844a4995d6dd15e7c232f418738b239f07a689b5c71ed18",
+        "sha256_in_prefix": "9256295201174560b844a4995d6dd15e7c232f418738b239f07a689b5c71ed18",
+        "size_in_bytes": 7616
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_download.py",
+        "path_type": "hardlink",
+        "sha256": "b20a53909e4f5c12217294a08ded44bb96d5391963d1a380e648158d19c07452",
+        "sha256_in_prefix": "b20a53909e4f5c12217294a08ded44bb96d5391963d1a380e648158d19c07452",
+        "size_in_bytes": 22817
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "97f29143fc7710108aeceb2ba8e20cb6cf1ee651e80b71e49c8036c2c36f46ae",
+        "sha256_in_prefix": "97f29143fc7710108aeceb2ba8e20cb6cf1ee651e80b71e49c8036c2c36f46ae",
+        "size_in_bytes": 650
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/_azure_blob_storage.py",
+        "path_type": "hardlink",
+        "sha256": "34078e7d698d0cb327b9cbe9c15eff2f62a13077181524f5ad0ef450ed6e431c",
+        "sha256_in_prefix": "34078e7d698d0cb327b9cbe9c15eff2f62a13077181524f5ad0ef450ed6e431c",
+        "size_in_bytes": 3839
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/_configuration.py",
+        "path_type": "hardlink",
+        "sha256": "b85364de2b4b16873805384fb9c8356a173aba092e75f2c12cea901b454110b8",
+        "sha256_in_prefix": "b85364de2b4b16873805384fb9c8356a173aba092e75f2c12cea901b454110b8",
+        "size_in_bytes": 2478
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "4cc6b30493e4ea74da4845cb04a3332c5cd06d35cff1f61fb5d9ebd075010f95",
+        "sha256_in_prefix": "4cc6b30493e4ea74da4845cb04a3332c5cd06d35cff1f61fb5d9ebd075010f95",
+        "size_in_bytes": 549
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/_azure_blob_storage.py",
+        "path_type": "hardlink",
+        "sha256": "8e27731ab74a3d0d871fe562ad59b9769d69ae91a757009a39b823f9eb0f3ad1",
+        "sha256_in_prefix": "8e27731ab74a3d0d871fe562ad59b9769d69ae91a757009a39b823f9eb0f3ad1",
+        "size_in_bytes": 3712
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/_configuration.py",
+        "path_type": "hardlink",
+        "sha256": "943c6bd98bc5f94b8e6021be6b42456b5b91880db99d31932ccd8a708a5f5bc4",
+        "sha256_in_prefix": "943c6bd98bc5f94b8e6021be6b42456b5b91880db99d31932ccd8a708a5f5bc4",
+        "size_in_bytes": 2310
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f4d06122d1f12787abbac9ebfcb75191d33f1cb2c00d9cde28f62762e85f00c9",
+        "sha256_in_prefix": "f4d06122d1f12787abbac9ebfcb75191d33f1cb2c00d9cde28f62762e85f00c9",
+        "size_in_bytes": 1039
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_append_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "7356007e93149eb7ee74f9c8fbb7c3605a621be96e439b5d02e4d3d3be8367b3",
+        "sha256_in_prefix": "7356007e93149eb7ee74f9c8fbb7c3605a621be96e439b5d02e4d3d3be8367b3",
+        "size_in_bytes": 43847
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "595f8c9891f606e604ba68ac45b41366200bbffaf40df96fa047d6fbeaa227b7",
+        "sha256_in_prefix": "595f8c9891f606e604ba68ac45b41366200bbffaf40df96fa047d6fbeaa227b7",
+        "size_in_bytes": 195713
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_block_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "689414d7e21965a8c088fc7abd86c8378562e7241cefdb0570868bd4ac2c6238",
+        "sha256_in_prefix": "689414d7e21965a8c088fc7abd86c8378562e7241cefdb0570868bd4ac2c6238",
+        "size_in_bytes": 69400
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_container_operations.py",
+        "path_type": "hardlink",
+        "sha256": "bbc0e9c271b53ce3ebe2cc1392f041fe284f1137495efbf1cfb8658ba70f3d34",
+        "sha256_in_prefix": "bbc0e9c271b53ce3ebe2cc1392f041fe284f1137495efbf1cfb8658ba70f3d34",
+        "size_in_bytes": 93360
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_directory_operations.py",
+        "path_type": "hardlink",
+        "sha256": "0db9578733b16e2ff6348b9a825766b749669b74437591140733e234976e6e9d",
+        "sha256_in_prefix": "0db9578733b16e2ff6348b9a825766b749669b74437591140733e234976e6e9d",
+        "size_in_bytes": 44892
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_page_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "61e2fbe132a5d6f5233e9572d4766b87d1e61973a1657bacd543aedb6ab2a531",
+        "sha256_in_prefix": "61e2fbe132a5d6f5233e9572d4766b87d1e61973a1657bacd543aedb6ab2a531",
+        "size_in_bytes": 86529
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/aio/operations/_service_operations.py",
+        "path_type": "hardlink",
+        "sha256": "b0755f44641580c78e2dbc419e1b36b6f14447e80f138db660ad9e748679efd3",
+        "sha256_in_prefix": "b0755f44641580c78e2dbc419e1b36b6f14447e80f138db660ad9e748679efd3",
+        "size_in_bytes": 37903
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/models/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "26bbdeb5a401fdd8b4cacc7d9c772cb4b31d64f86fb1dc7c34586250a211d045",
+        "sha256_in_prefix": "26bbdeb5a401fdd8b4cacc7d9c772cb4b31d64f86fb1dc7c34586250a211d045",
+        "size_in_bytes": 8566
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/models/_azure_blob_storage_enums.py",
+        "path_type": "hardlink",
+        "sha256": "b5b3456ba685c678b692aa1eef38679c091063f0b2c5cd3ab882ffc6d338d9ae",
+        "sha256_in_prefix": "b5b3456ba685c678b692aa1eef38679c091063f0b2c5cd3ab882ffc6d338d9ae",
+        "size_in_bytes": 12339
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/models/_models.py",
+        "path_type": "hardlink",
+        "sha256": "d43beb4e7ecb63f4dfa92b7e9b5acd0636f925e3407bc12010b87017e18ddf3d",
+        "sha256_in_prefix": "d43beb4e7ecb63f4dfa92b7e9b5acd0636f925e3407bc12010b87017e18ddf3d",
+        "size_in_bytes": 73237
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/models/_models_py3.py",
+        "path_type": "hardlink",
+        "sha256": "a68794c62ed96710551d76a6b73ba68fea127a25a2883a82879651064fd1306e",
+        "sha256_in_prefix": "a68794c62ed96710551d76a6b73ba68fea127a25a2883a82879651064fd1306e",
+        "size_in_bytes": 79928
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f4d06122d1f12787abbac9ebfcb75191d33f1cb2c00d9cde28f62762e85f00c9",
+        "sha256_in_prefix": "f4d06122d1f12787abbac9ebfcb75191d33f1cb2c00d9cde28f62762e85f00c9",
+        "size_in_bytes": 1039
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_append_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "a35292eede4b74d779f6499576ed5134adfdecc396befade3437de266538ce44",
+        "sha256_in_prefix": "a35292eede4b74d779f6499576ed5134adfdecc396befade3437de266538ce44",
+        "size_in_bytes": 44308
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "75fa857aad36140f28e19513647966d522b7c147f41e82eac553a74cc9f4bf08",
+        "sha256_in_prefix": "75fa857aad36140f28e19513647966d522b7c147f41e82eac553a74cc9f4bf08",
+        "size_in_bytes": 197322
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_block_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "b4891565dec9754820f48397d7108c1728c5ca1e357af490a49a6c0fa651773f",
+        "sha256_in_prefix": "b4891565dec9754820f48397d7108c1728c5ca1e357af490a49a6c0fa651773f",
+        "size_in_bytes": 70111
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_container_operations.py",
+        "path_type": "hardlink",
+        "sha256": "8982e500bb6b05bc90907cf4cb9c47679facaa82b1e6af572e091aa808c3436d",
+        "sha256_in_prefix": "8982e500bb6b05bc90907cf4cb9c47679facaa82b1e6af572e091aa808c3436d",
+        "size_in_bytes": 94314
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_directory_operations.py",
+        "path_type": "hardlink",
+        "sha256": "9802edb69b3ada94f0973c488e4524b662ed635fd892bcf809d957ec824276f8",
+        "sha256_in_prefix": "9802edb69b3ada94f0973c488e4524b662ed635fd892bcf809d957ec824276f8",
+        "size_in_bytes": 45352
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_page_blob_operations.py",
+        "path_type": "hardlink",
+        "sha256": "f59920d6b1e0e728d5ace8792efc69f88ad58b3e42a84929b2a248f791be9d59",
+        "sha256_in_prefix": "f59920d6b1e0e728d5ace8792efc69f88ad58b3e42a84929b2a248f791be9d59",
+        "size_in_bytes": 87365
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_generated/operations/_service_operations.py",
+        "path_type": "hardlink",
+        "sha256": "5eeb45ac325d00c8ced6ecacf64eec9d3a13a9a382f59f1f053ea6a8dcb430e8",
+        "sha256_in_prefix": "5eeb45ac325d00c8ced6ecacf64eec9d3a13a9a382f59f1f053ea6a8dcb430e8",
+        "size_in_bytes": 38354
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_lease.py",
+        "path_type": "hardlink",
+        "sha256": "1824b63cdff631ccdfa4e4af71479de2b7ca018629264eaf0c012c0d48761f32",
+        "sha256_in_prefix": "1824b63cdff631ccdfa4e4af71479de2b7ca018629264eaf0c012c0d48761f32",
+        "size_in_bytes": 16585
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_list_blobs_helper.py",
+        "path_type": "hardlink",
+        "sha256": "256b1d0c778a15b1045c9f167f6530384f21ddb8a65add837cf2141ffb086e34",
+        "sha256_in_prefix": "256b1d0c778a15b1045c9f167f6530384f21ddb8a65add837cf2141ffb086e34",
+        "size_in_bytes": 10845
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_models.py",
+        "path_type": "hardlink",
+        "sha256": "c2f32ff98ffba49d6092a3de0aac7612d96bde675eabf27a756823e45741e6ba",
+        "sha256_in_prefix": "c2f32ff98ffba49d6092a3de0aac7612d96bde675eabf27a756823e45741e6ba",
+        "size_in_bytes": 47492
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_quick_query_helper.py",
+        "path_type": "hardlink",
+        "sha256": "1da133a3e4513f4854540bf9c2015da8d12e3f190952dadd97081cf0d560d7ec",
+        "sha256_in_prefix": "1da133a3e4513f4854540bf9c2015da8d12e3f190952dadd97081cf0d560d7ec",
+        "size_in_bytes": 6271
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_serialize.py",
+        "path_type": "hardlink",
+        "sha256": "79723754df76873495cfa615cf6335cf7dc3e51bb05798c865996340d64812b4",
+        "sha256_in_prefix": "79723754df76873495cfa615cf6335cf7dc3e51bb05798c865996340d64812b4",
+        "size_in_bytes": 7367
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "fae53a38f2e98e9d74b67a55d0af43d989623b6e8db3096b6a582de687981325",
+        "sha256_in_prefix": "fae53a38f2e98e9d74b67a55d0af43d989623b6e8db3096b6a582de687981325",
+        "size_in_bytes": 1529
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/authentication.py",
+        "path_type": "hardlink",
+        "sha256": "60f87e28954c535682e41b8e7e232322ebac5ab494d05c18457ca6999f843f9b",
+        "sha256_in_prefix": "60f87e28954c535682e41b8e7e232322ebac5ab494d05c18457ca6999f843f9b",
+        "size_in_bytes": 5369
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "0a1fa6592dbfbe0a2733d2e355a11375a5b9d4e2fa2df1b6dd7fb4b47d80163c",
+        "sha256_in_prefix": "0a1fa6592dbfbe0a2733d2e355a11375a5b9d4e2fa2df1b6dd7fb4b47d80163c",
+        "size_in_bytes": 310
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/avro_io.py",
+        "path_type": "hardlink",
+        "sha256": "fe3fbdc3c2ebcf07ee596c4e0ea05c94e8c1bd0906a8ec900150d794456f6cea",
+        "sha256_in_prefix": "fe3fbdc3c2ebcf07ee596c4e0ea05c94e8c1bd0906a8ec900150d794456f6cea",
+        "size_in_bytes": 16446
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/avro_io_async.py",
+        "path_type": "hardlink",
+        "sha256": "49a112345b2ba7c123c10c53b68468436d9499209de043410c716038da2fb182",
+        "sha256_in_prefix": "49a112345b2ba7c123c10c53b68468436d9499209de043410c716038da2fb182",
+        "size_in_bytes": 16593
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/datafile.py",
+        "path_type": "hardlink",
+        "sha256": "00b479101881167d89ad580cae9f44a0ccafcaa1a2fb80387d4a98bfc9bba674",
+        "sha256_in_prefix": "00b479101881167d89ad580cae9f44a0ccafcaa1a2fb80387d4a98bfc9bba674",
+        "size_in_bytes": 8563
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/datafile_async.py",
+        "path_type": "hardlink",
+        "sha256": "6b29a4a95f91d37e11556d5d13663c19ad110fc7644daf1b624047e0de52f95e",
+        "sha256_in_prefix": "6b29a4a95f91d37e11556d5d13663c19ad110fc7644daf1b624047e0de52f95e",
+        "size_in_bytes": 7334
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/avro/schema.py",
+        "path_type": "hardlink",
+        "sha256": "6556286d4cc88c5c1603fb9b3e9d278f4a715d849bb628c586066543ebf8cbac",
+        "sha256_in_prefix": "6556286d4cc88c5c1603fb9b3e9d278f4a715d849bb628c586066543ebf8cbac",
+        "size_in_bytes": 36373
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/base_client.py",
+        "path_type": "hardlink",
+        "sha256": "e93d9aa97a7933f7d639dcf7b768c4e5235f43a521924a5594afcfa367bac1e8",
+        "sha256_in_prefix": "e93d9aa97a7933f7d639dcf7b768c4e5235f43a521924a5594afcfa367bac1e8",
+        "size_in_bytes": 17005
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/base_client_async.py",
+        "path_type": "hardlink",
+        "sha256": "64180880addc828482530893c67f0cbbbb43f5cf45aec5c830de067a0b1a00c0",
+        "sha256_in_prefix": "64180880addc828482530893c67f0cbbbb43f5cf45aec5c830de067a0b1a00c0",
+        "size_in_bytes": 7082
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/constants.py",
+        "path_type": "hardlink",
+        "sha256": "d0888b520b4f3c944c1ffe58e14b46c6dd43000d635e5f01e38652167fbfa52b",
+        "sha256_in_prefix": "d0888b520b4f3c944c1ffe58e14b46c6dd43000d635e5f01e38652167fbfa52b",
+        "size_in_bytes": 1102
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/encryption.py",
+        "path_type": "hardlink",
+        "sha256": "2f5f354d95042c31f8d265be277b4e1fe349364624fda15fbb7877cd82e47f41",
+        "sha256_in_prefix": "2f5f354d95042c31f8d265be277b4e1fe349364624fda15fbb7877cd82e47f41",
+        "size_in_bytes": 22608
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/models.py",
+        "path_type": "hardlink",
+        "sha256": "87ebe079708fcec0b11b702fb62be90fb9c595ab963ed6cdc0ac14c8987475ca",
+        "sha256_in_prefix": "87ebe079708fcec0b11b702fb62be90fb9c595ab963ed6cdc0ac14c8987475ca",
+        "size_in_bytes": 19763
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/parser.py",
+        "path_type": "hardlink",
+        "sha256": "78e83e1b414eadd76c8f67f0e4e2e432085d73951f7e9faa3adad2598241ec0e",
+        "sha256_in_prefix": "78e83e1b414eadd76c8f67f0e4e2e432085d73951f7e9faa3adad2598241ec0e",
+        "size_in_bytes": 617
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/policies.py",
+        "path_type": "hardlink",
+        "sha256": "c12c64fde7774c86740386b8abeffccd76116eaa726adaf0183138758c9a340c",
+        "sha256_in_prefix": "c12c64fde7774c86740386b8abeffccd76116eaa726adaf0183138758c9a340c",
+        "size_in_bytes": 26717
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/policies_async.py",
+        "path_type": "hardlink",
+        "sha256": "7a0a21cd8044bae6ec6a00fff9d692bdb76a91c36774d2e146a592e2dc5d578a",
+        "sha256_in_prefix": "7a0a21cd8044bae6ec6a00fff9d692bdb76a91c36774d2e146a592e2dc5d578a",
+        "size_in_bytes": 9993
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/request_handlers.py",
+        "path_type": "hardlink",
+        "sha256": "f1f1345d5bfe201123820f863e2354b76272a62b1cf072b464474ee3d015dcc7",
+        "sha256_in_prefix": "f1f1345d5bfe201123820f863e2354b76272a62b1cf072b464474ee3d015dcc7",
+        "size_in_bytes": 5333
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/response_handlers.py",
+        "path_type": "hardlink",
+        "sha256": "9ee257d62dc5073c435f9ad87ce5111dc948ff31853e695de40ae5aaff4b57e4",
+        "sha256_in_prefix": "9ee257d62dc5073c435f9ad87ce5111dc948ff31853e695de40ae5aaff4b57e4",
+        "size_in_bytes": 6957
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/shared_access_signature.py",
+        "path_type": "hardlink",
+        "sha256": "798439da8b7c774951180531a877b319ef0d2ed6883b9f444541ae054037b95b",
+        "sha256_in_prefix": "798439da8b7c774951180531a877b319ef0d2ed6883b9f444541ae054037b95b",
+        "size_in_bytes": 9898
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/uploads.py",
+        "path_type": "hardlink",
+        "sha256": "a5f4a7a69d91539e093dc33e03b52cba0b51cfc8548d96080e931d798fd7b9bd",
+        "sha256_in_prefix": "a5f4a7a69d91539e093dc33e03b52cba0b51cfc8548d96080e931d798fd7b9bd",
+        "size_in_bytes": 20123
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared/uploads_async.py",
+        "path_type": "hardlink",
+        "sha256": "756d072aa928f15f05683dbc76e095f4c3101d9dda21e101bf04a13003cff9f0",
+        "sha256_in_prefix": "756d072aa928f15f05683dbc76e095f4c3101d9dda21e101bf04a13003cff9f0",
+        "size_in_bytes": 13243
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_shared_access_signature.py",
+        "path_type": "hardlink",
+        "sha256": "581f855d3fa0db4b47f03b965c111c26af3e1af7965441bbfd84bb97d22edfe4",
+        "sha256_in_prefix": "581f855d3fa0db4b47f03b965c111c26af3e1af7965441bbfd84bb97d22edfe4",
+        "size_in_bytes": 30819
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_upload_helpers.py",
+        "path_type": "hardlink",
+        "sha256": "4148555b6ebe791a09f9715b65136b58070375ce2130b1c7666c9572390a3a27",
+        "sha256_in_prefix": "4148555b6ebe791a09f9715b65136b58070375ce2130b1c7666c9572390a3a27",
+        "size_in_bytes": 11605
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/_version.py",
+        "path_type": "hardlink",
+        "sha256": "e6882bddcab3ef5a504a911f14cbe17ef19f514bd867c83df8297de0ad9857f8",
+        "sha256_in_prefix": "e6882bddcab3ef5a504a911f14cbe17ef19f514bd867c83df8297de0ad9857f8",
+        "size_in_bytes": 330
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f4890bc3f8c1fda72992ab85410937621a838ea064e9fbfad9641421e5b2dd62",
+        "sha256_in_prefix": "f4890bc3f8c1fda72992ab85410937621a838ea064e9fbfad9641421e5b2dd62",
+        "size_in_bytes": 6940
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_blob_client_async.py",
+        "path_type": "hardlink",
+        "sha256": "e47e773c2d4ac4ea149612a48d929fa7a0032c6e29061abc0a5d17dcee3d558f",
+        "sha256_in_prefix": "e47e773c2d4ac4ea149612a48d929fa7a0032c6e29061abc0a5d17dcee3d558f",
+        "size_in_bytes": 134543
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_blob_service_client_async.py",
+        "path_type": "hardlink",
+        "sha256": "afff106143fd0d64dbf83fb6a52d16885193eb5c3de6c927e28878c721143ba3",
+        "sha256_in_prefix": "afff106143fd0d64dbf83fb6a52d16885193eb5c3de6c927e28878c721143ba3",
+        "size_in_bytes": 32551
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_container_client_async.py",
+        "path_type": "hardlink",
+        "sha256": "63367d806427f8b04ecc57d47955bc33f5e46a827ba3020245ab900def2d1b73",
+        "sha256_in_prefix": "63367d806427f8b04ecc57d47955bc33f5e46a827ba3020245ab900def2d1b73",
+        "size_in_bytes": 59831
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_download_async.py",
+        "path_type": "hardlink",
+        "sha256": "2a4e17574db20165c4e6624bf62d963dbfe52c6b8f5ad54fb18b356c1ae56946",
+        "sha256_in_prefix": "2a4e17574db20165c4e6624bf62d963dbfe52c6b8f5ad54fb18b356c1ae56946",
+        "size_in_bytes": 20186
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_lease_async.py",
+        "path_type": "hardlink",
+        "sha256": "d02cd468eefff260b3ce2d97ad45f1fe49b79350c766adf979bbbc99779c3c2d",
+        "sha256_in_prefix": "d02cd468eefff260b3ce2d97ad45f1fe49b79350c766adf979bbbc99779c3c2d",
+        "size_in_bytes": 16327
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_list_blobs_helper.py",
+        "path_type": "hardlink",
+        "sha256": "fb2130368258bd93ed9109374437c9023489da4c655255ac78beb194d15a10b2",
+        "sha256_in_prefix": "fb2130368258bd93ed9109374437c9023489da4c655255ac78beb194d15a10b2",
+        "size_in_bytes": 7674
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_models.py",
+        "path_type": "hardlink",
+        "sha256": "d6894e547fabca7f0b218105b9acbf35ea0b68dfaddd4c1ec774646b4fc838d5",
+        "sha256_in_prefix": "d6894e547fabca7f0b218105b9acbf35ea0b68dfaddd4c1ec774646b4fc838d5",
+        "size_in_bytes": 6406
+      },
+      {
+        "_path": "site-packages/azure/storage/blob/aio/_upload_helpers.py",
+        "path_type": "hardlink",
+        "sha256": "c37f96d8375a7c54e37a739b1d940f66c8d6278ada581ec07e166cef2aaf4e47",
+        "sha256_in_prefix": "c37f96d8375a7c54e37a739b1d940f66c8d6278ada581ec07e166cef2aaf4e47",
+        "size_in_bytes": 10704
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/LICENSE.txt",
+        "path_type": "hardlink",
+        "sha256": "290343e6311b94fbac0eb3debe684d6d63ba29f0ac1c125c9abfb6362d73fde2",
+        "sha256_in_prefix": "290343e6311b94fbac0eb3debe684d6d63ba29f0ac1c125c9abfb6362d73fde2",
+        "size_in_bytes": 1075
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "10e7cf22020cd038b59e11b4ac05bdd57fe8d0b4f698cdb3da7be38daabbd03e",
+        "sha256_in_prefix": "10e7cf22020cd038b59e11b4ac05bdd57fe8d0b4f698cdb3da7be38daabbd03e",
+        "size_in_bytes": 24450
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "b6564ee2a26883e06a92be5b915f510bb80aef5d2ea6824b33ae61a06363bfee",
+        "sha256_in_prefix": "b6564ee2a26883e06a92be5b915f510bb80aef5d2ea6824b33ae61a06363bfee",
+        "size_in_bytes": 13434
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "sha256_in_prefix": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "1e1a96c35699f24a9c3f7ea202bad9ac72bfe122b6416b3cb41cd0868a17c2c3",
+        "sha256_in_prefix": "1e1a96c35699f24a9c3f7ea202bad9ac72bfe122b6416b3cb41cd0868a17c2c3",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/azure_storage_blob-12.8.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "4bb0e1595f66f344c1cc084e163c4352235b2accf3a1385b9eb4b3e4ca5b1d24",
+        "sha256_in_prefix": "4bb0e1595f66f344c1cc084e163c4352235b2accf3a1385b9eb4b3e4ca5b1d24",
+        "size_in_bytes": 6
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_blob_client.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_blob_service_client.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_container_client.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_deserialize.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_download.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/__pycache__/_azure_blob_storage.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/__pycache__/_configuration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/_azure_blob_storage.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/__pycache__/_configuration.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_append_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_block_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_container_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_directory_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_page_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/aio/operations/__pycache__/_service_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_azure_blob_storage_enums.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_models.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/models/__pycache__/_models_py3.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_append_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_block_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_container_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_directory_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_page_blob_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_generated/operations/__pycache__/_service_operations.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_lease.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_list_blobs_helper.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_models.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_quick_query_helper.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_serialize.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/authentication.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/avro_io.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/avro_io_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/datafile.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/datafile_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/avro/__pycache__/schema.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/base_client.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/base_client_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/constants.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/encryption.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/models.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/parser.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/policies.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/policies_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/request_handlers.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/response_handlers.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/shared_access_signature.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/uploads.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/_shared/__pycache__/uploads_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_shared_access_signature.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_upload_helpers.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/__pycache__/_version.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_blob_client_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_blob_service_client_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_container_client_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_download_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_lease_async.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_list_blobs_helper.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_models.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/azure/storage/blob/aio/__pycache__/_upload_helpers.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "esri/noarch::azure-storage-blob==12.8.0=py_0",
+  "sha256": "a31b76816dfc773eaaa4bf013d62db581a496b9b86dbbf4a613136fcc79276e4",
+  "size": 191743,
+  "subdir": "noarch",
+  "timestamp": 1615483096092,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/noarch/azure-storage-blob-12.8.0-py_0.tar.bz2",
+  "version": "12.8.0"
+}
