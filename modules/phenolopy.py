@@ -369,7 +369,7 @@ def resample(ds, interval='1M', inplace=True):
         
     # resample based on user selected interval and reducer
     if interval in ['1W', '1SM', '1M']:
-        ds = ds.resample(time=interval).median('time')
+        ds = ds.resample(time=interval).median('time', keep_attrs=True)
     else:
         raise ValueError('Provided resample interval not supported.')
                             
@@ -442,7 +442,7 @@ def group(ds, interval='month', inplace=True):
           
     # group based on user selected interval and reducer
     if interval in ['week', 'month']:
-        ds = ds.groupby('time' + '.' + interval).median('time')
+        ds = ds.groupby('time' + '.' + interval).median('time', keep_attrs=True)
         ds = ds.rename({interval: 'time'})
     else:
         raise ValueError('Provided interval not supported.')
