@@ -679,8 +679,8 @@ def build_vrt_file(vrt_list):
         f = tmp.name + '.vrt'
 
         # create vrt options
-        opts = gdal.BuildVRTOptions(separate=True)
-        #bandList=[1],
+        opts = gdal.BuildVRTOptions(separate=True,
+                                    bandList=[1])
         #outputBounds=boundingbox,
         #resampleAlg='bilinear',
         #resolution='user',
@@ -908,4 +908,4 @@ def build_xr_datasets(vrt_dict):
     
     # notify and return
     print('Built an xarray dataset successfully.')
-    return ds
+    return ds # change back to ds
