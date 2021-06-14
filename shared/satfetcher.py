@@ -9,9 +9,9 @@ import numpy as np
 import xarray as xr
 
 sys.path.append('../../shared')
-import tools
+import satfetcher, tools
 
-
+# # # # # DEA # # #
 # todo - metadata, checks
 def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None, 
                  time_range=None, min_gooddata=0.90, use_dask=False):
@@ -212,7 +212,7 @@ def conform_dea_ard_band_names(ds, platform=None):
     print('Satellite band names conformed successfully.')
     return ds
 
-
+# # # # # LOCAL DATA # # #
 # meta
 def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-9999):
     """
@@ -428,3 +428,197 @@ def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
     # notify user and return
     print('Netcdf converted to xarray dataset successfully.')
     return ds
+
+
+# # # # # COG # # #
+
+# meta, checks
+def make_vrt_dataset_xml(x_size, y_size, axis_map, srs, trans):
+    """
+    take paramets for vrt and create a raster xml object
+    """
+    
+    # imports
+    from lxml import etree as et
+
+    # set up root vrt dataset elem
+    xml_ds = '<VRTDataset rasterXSize="{x_size}" rasterYSize="{y_size}"></VRTDataset>'
+    xml_ds = et.fromstring(xml_ds.format(x_size=x_size, y_size=y_size))
+
+    # set up srs element and add to vrt dataset
+    xml_srs = '<SRS dataAxisToSRSAxisMapping="{axis_map}">{srs}</SRS>'
+    xml_ds.append(et.fromstring(xml_srs.format(axis_map=axis_map, srs=srs)))
+
+    # set up geo transform element and add to vrt dataset
+    xml_trans = '<GeoTransform>{trans}</GeoTransform>'
+    xml_ds.append(et.fromstring(xml_trans.format(trans=trans)))
+    
+    # return xml dataset
+    return xml_ds
+
+# meta, checks
+def make_vrt_raster_xml(x_size, y_size, dtype, band_num, nodata, dt, rel_to_vrt, url, src_band):
+    """
+    take paramets for vrt and create a raster xml object
+    """
+
+    # imports
+    from lxml import etree as et
+    
+    # set up root vrt raster elem
+    xml_rast = '<VRTRasterBand dataType="{dtype}" band="{band_num}"></VRTRasterBand>'
+    xml_rast = et.fromstring(xml_rast.format(dtype=dtype, band_num=band_num))
+        
+    # add a top-level nodata value element and add to vrt raster
+    xml_ndv = '<NoDataValue>{nodata}</NoDataValue>'
+    xml_rast.append(et.fromstring(xml_ndv.format(nodata=nodata)))    
+    
+    # set up top-level complexsource element, dont add it to rast yet
+    xml_complex = '<ComplexSource></ComplexSource>'
+    xml_complex = et.fromstring(xml_complex)
+    
+    # add a description elem to hold datetime to the complex source
+    xml_desc = '<Description>{dt}</Description>'
+    xml_complex.append(et.fromstring(xml_desc.format(dt=dt)))
+
+    # add source filename to complex source
+    xml_filename = '<SourceFilename relativeToVRT="{rel_to_vrt}">/vsicurl/{url}</SourceFilename>'
+    xml_complex.append(et.fromstring(xml_filename.format(rel_to_vrt=rel_to_vrt, url=url)))
+    
+    # add source band num to complex source
+    xml_src_band = '<SourceBand>{src_band}</SourceBand>'
+    xml_complex.append(et.fromstring(xml_src_band.format(src_band=src_band)))
+    
+    # add source properties to complex source. hardcoded block size for now
+    xml_src_props = '<SourceProperties RasterXSize="{x_size}" RasterYSize="{y_size}"' + ' ' + \
+                    'DataType="{dtype}" BlockXSize="512" BlockYSize="512"></SourceProperties>'
+    xml_complex.append(et.fromstring(xml_src_props.format(x_size=x_size, y_size=y_size, dtype=dtype)))
+    
+    # add a src rect to complex source. hardcoded offset for now
+    xml_src_rect = '<SrcRect xOff="0" yOff="0" xSize="{x_size}" ySize="{y_size}"></SrcRect>'
+    xml_complex.append(et.fromstring(xml_src_rect.format(x_size=x_size, y_size=y_size)))
+    
+    # add a dst rect to complex source. hardedcoded offset for now
+    xml_dst_rect = '<DstRect xOff="0" yOff="0" xSize="{x_size}" ySize="{y_size}"></DstRect>'
+    xml_complex.append(et.fromstring(xml_dst_rect.format(x_size=x_size, y_size=y_size)))
+    
+    # add a lower-level nodata elem to complex source
+    xml_nd = '<NODATA>{nodata}</NODATA>'
+    xml_complex.append(et.fromstring(xml_nd.format(nodata=nodata)))
+        
+    # finally, add filled in complex source element to rast
+    xml_rast.append(xml_complex)
+    
+    # return xml raster
+    return xml_rast
+
+# todo checks, meta
+def build_vrt_list(feat_list, band=None):
+    """
+    take a list of stac features and band(s) names and build gdal
+    friendly vrt xml objects in list.
+    band : list, str
+        Can be a list or string of name of band(s) required.
+    """
+    
+    # imports
+    from osgeo import osr
+    from lxml import etree as et
+    
+    # check if band provided, if so and is str, make list
+    if band is None:
+        bands = []
+    elif not isinstance(band, list):
+        bands = [band]
+    else:
+        bands = band
+                    
+    # check features type, length
+    if not isinstance(feat_list, list):
+        raise TypeError('Features must be a list of xml objects.')
+    elif not len(feat_list) > 0:
+        raise ValueError('No features provided.')
+
+    # set list vrt of each scene
+    vrt_list = []
+
+    # iter stac scenes, build a vrt
+    for feat in feat_list:
+
+        # get scene identity and properties
+        f_id = feat.get('id')
+        f_props = feat.get('properties')
+
+        # get scene-level date
+        f_dt = f_props.get('datetime')
+
+        # get scene-level x, y parameters
+        f_x_size = f_props.get('proj:shape')[1]
+        f_y_size = f_props.get('proj:shape')[0]
+
+        # get scene-level epsg src as wkt
+        f_srs = osr.SpatialReference()
+        f_srs.ImportFromEPSG(int(f_props.get('proj:epsg')))
+        f_srs = f_srs.ExportToWkt()
+
+        # get scene-level transform
+        import rasterio
+        aff = rasterio.transform.Affine(*f_props.get('proj:transform')[0:6])
+        f_transform = ', '.join(str(p) for p in rasterio.transform.Affine.to_gdal(aff))
+        
+        print(f_props.get('proj:transform')[0:6])
+        print(aff)
+        print(f_transform)
+        raise
+
+        # build a top-level vrt dataset xml object
+        xml_ds = satfetcher.make_vrt_dataset_xml(x_size=f_x_size,
+                                                 y_size=f_y_size,
+                                                 axis_map='1,2',  # hardcoded
+                                                 srs=f_srs,
+                                                 trans=f_transform)
+        
+        # iterate bands and build raster vrts
+        band_idx = 1
+        for band in bands:
+            if band in feat.get('assets'):
+
+                # get asset
+                asset = feat.get('assets').get(band)
+
+                # set dtype to in16 unless mask
+                a_dtype = 'Int8' if band == 'oa_mask' else 'Int16'
+
+                # get asset raster x, y sizes
+                a_x_size = asset.get('proj:shape')[1]
+                a_y_size = asset.get('proj:shape')[0]
+
+                # get raster url, replace s3 with https
+                a_url = asset.get('href')
+                a_url = a_url.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
+
+                # get nodata value
+                a_nodata = -999
+
+                # build raster xml
+                xml_rast = satfetcher.make_vrt_raster_xml(x_size=a_x_size,
+                                                          y_size=a_y_size,
+                                                          dtype=a_dtype,
+                                                          band_num=band_idx,
+                                                          nodata=a_nodata,
+                                                          dt=f_dt,
+                                                          rel_to_vrt=0,  # hardcoded
+                                                          url=a_url,
+                                                          src_band=1)  # hardcoded
+
+                # append raster xml to vrt dataset xml
+                xml_ds.append(xml_rast)
+
+                # increase band index
+                band_idx += 1
+
+        # decode to utf-8 string and append to vrt list
+        xml_ds = et.tostring(xml_ds).decode('utf-8')
+        vrt_list.append(xml_ds)
+        
+    return vrt_list
