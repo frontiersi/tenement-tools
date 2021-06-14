@@ -513,7 +513,7 @@ def make_vrt_raster_xml(x_size, y_size, dtype, band_num, nodata, dt, rel_to_vrt,
     return xml_rast
 
 # todo checks, meta
-def build_vrt_list(feat_list, band=None):
+def make_vrt_list(feat_list, band=None):
     """
     take a list of stac features and band(s) names and build gdal
     friendly vrt xml objects in list.
@@ -522,8 +522,9 @@ def build_vrt_list(feat_list, band=None):
     """
     
     # imports
-    from osgeo import osr
     from lxml import etree as et
+    from rasterio.crs import CRS
+    from rasterio.transform import Affine
     
     # check if band provided, if so and is str, make list
     if band is None:
@@ -538,7 +539,7 @@ def build_vrt_list(feat_list, band=None):
         raise TypeError('Features must be a list of xml objects.')
     elif not len(feat_list) > 0:
         raise ValueError('No features provided.')
-
+        
     # set list vrt of each scene
     vrt_list = []
 
@@ -557,19 +558,12 @@ def build_vrt_list(feat_list, band=None):
         f_y_size = f_props.get('proj:shape')[0]
 
         # get scene-level epsg src as wkt
-        f_srs = osr.SpatialReference()
-        f_srs.ImportFromEPSG(int(f_props.get('proj:epsg')))
-        f_srs = f_srs.ExportToWkt()
+        f_srs = CRS.from_epsg(f_props.get('proj:epsg'))
+        f_srs = f_srs.wkt
 
         # get scene-level transform
-        import rasterio
-        aff = rasterio.transform.Affine(*f_props.get('proj:transform')[0:6])
-        f_transform = ', '.join(str(p) for p in rasterio.transform.Affine.to_gdal(aff))
-        
-        print(f_props.get('proj:transform')[0:6])
-        print(aff)
-        print(f_transform)
-        raise
+        aff = Affine(*f_props.get('proj:transform')[0:6])
+        f_transform = ', '.join(str(p) for p in Affine.to_gdal(aff))
 
         # build a top-level vrt dataset xml object
         xml_ds = satfetcher.make_vrt_dataset_xml(x_size=f_x_size,
@@ -586,8 +580,9 @@ def build_vrt_list(feat_list, band=None):
                 # get asset
                 asset = feat.get('assets').get(band)
 
-                # set dtype to in16 unless mask
-                a_dtype = 'Int8' if band == 'oa_mask' else 'Int16'
+                # set dtype to int16... todo bug in rasterio with int8?
+                #a_dtype = 'UInt8' if band == 'oa_fmask' else 'Int16'
+                a_dtype = 'Int16'
 
                 # get asset raster x, y sizes
                 a_x_size = asset.get('proj:shape')[1]
@@ -596,9 +591,9 @@ def build_vrt_list(feat_list, band=None):
                 # get raster url, replace s3 with https
                 a_url = asset.get('href')
                 a_url = a_url.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-
+                
                 # get nodata value
-                a_nodata = -999
+                a_nodata = 0 if band == 'oa_fmask' else -999
 
                 # build raster xml
                 xml_rast = satfetcher.make_vrt_raster_xml(x_size=a_x_size,
@@ -622,3 +617,189 @@ def build_vrt_list(feat_list, band=None):
         vrt_list.append(xml_ds)
         
     return vrt_list
+
+# meta, check
+def get_dea_landsat_vrt_dict(feat_list):
+    """
+    this func is designed to take all releveant landsat bands
+    on the dea public database for each scene in stac query.
+    it results in a list of vrts for each band seperately and maps
+    them to a dict where band name is the key, list is the value pair.
+    """
+        
+    # notify
+    print('Getting landsat vrts for each relevant bands.')
+                        
+    # check features type, length
+    if not isinstance(feat_list, list):
+        raise TypeError('Features must be a list of xml objects.')
+    elif not len(feat_list) > 0:
+        raise ValueError('No features provided.')
+    
+    # required dea landsat ard band names
+    bands = [
+        'nbart_blue', 
+        'nbart_green',
+        'nbart_red',
+        'nbart_nir',
+        'nbart_swir_1',
+        'nbart_swir_2',
+        'oa_fmask'
+    ]
+    
+    # iter each band name and build associated vrt list
+    band_vrts_dict = {}
+    for band in bands:
+        print('Building landsat vrt list for band: {}.'.format(band))
+        band_vrts_dict[band] = make_vrt_list(feat_list, band=band)
+        
+    # notify and return
+    print('Got {} landsat vrt band lists successfully.'.format(len(band_vrts_dict)))
+    return band_vrts_dict
+    
+
+    
+# checks, meta - resample, warp tech needed NEEDS WORK!
+def build_vrt_file(vrt_list):
+
+    # imports
+    import tempfile
+    import gdal
+        
+    # check features type, length
+    if not isinstance(vrt_list, list):
+        raise TypeError('VRT list must be a list of xml objects.')
+    elif not len(vrt_list) > 0:
+        raise ValueError('No VRT xml objects provided.')
+    
+    # build vrt
+    with tempfile.NamedTemporaryFile() as tmp:
+
+        # append vrt extension to temp file
+        f = tmp.name + '.vrt'
+
+        # create vrt options
+        opts = gdal.BuildVRTOptions(separate=True)
+        #bandList=[1],
+        #outputBounds=boundingbox,
+        #resampleAlg='bilinear',
+        #resolution='user',
+        #xRes=30.0,
+        #yRes=30.0,
+        #outputSRS=rasterio.crs.CRS.from_epsg(3577).wkt
+        #targetAlignedPixels=True
+        
+        # warp/translate?
+        # todo
+
+        # consutruct vrt in memory, write it with none
+        vrt = gdal.BuildVRT(f, vrt_list, options=opts)
+        vrt.FlushCache()
+        
+        # decode ytf-8?
+        
+        return f
+
+# meta, checks
+def combine_vrts_per_band(band_vrt_dict):
+    """
+    takes a dictionary of band name : vrt list key, value pairs and
+    for each band, combines vrts into one vrt using the build vrt file 
+    function (just a call to gdal.BuildVRT).
+    """
+        
+    # notify
+    print('Combining VRTs into single VRTs per band.')
+                        
+    # check features type, length
+    if not isinstance(band_vrt_dict, dict):
+        raise TypeError('Features must be a dict of band : vrt list objects.')
+    elif not len(band_vrt_dict) > 0:
+        raise ValueError('No band vrts in dictionary.')
+    
+    # get list of band names in dict
+    bands = [band for band in band_vrt_dict]
+    
+    # iter each band name and build associated vrt dict
+    vrt_file_dict = {}
+    for band in bands:
+        print('Combining VRTs into temp. file for band: {}.'.format(band))
+        vrt_list = band_vrt_dict[band]
+        vrt_file_dict[band] = satfetcher.build_vrt_file(vrt_list)
+
+    # notify and return
+    print('Combined {} band vrt lists successfully.'.format(len(vrt_file_dict)))
+    return vrt_file_dict
+
+
+
+# meta, checks, rethink it
+def parse_vrt_datetimes(vrt_list):
+    """
+    takes a list of vrt files and extracts datetime from
+    the descriptiont tag.
+    """
+    
+    # imports
+    from lxml import etree as et
+    
+    # checks
+    
+    # set dt map and counter
+    dt_map = {}
+    i = 1
+    
+    # iter items and parse description, skip errors
+    for item in vrt_list:
+        try:
+            # parse out description tag as text
+            root = et.fromstring(item)
+            desc = root.findall('.//Description')[0]
+            desc = desc.text
+
+            # add index and datetime to datetime
+            dt_map[i] = desc
+            i += 1
+
+        except Exception as e:
+            print('Warning: {} at index: {}.'.format(e, i))
+          
+    # return
+    return dt_map
+
+# meta, checks, as above
+def get_vrt_file_datetimes(vrt_file_dict):
+    """
+    takes a dictionary of band : vrt files and parses
+    datetimes from each vrt file. spits out a dict of
+    band name : dicts (band indexes : datetimes)
+    """
+    
+    # imports
+    import gdal
+    
+    # notify
+    print('Extracting datetimes for VRTs per band.')
+                        
+    # check features type, length
+    if not isinstance(vrt_file_dict, dict):
+        raise TypeError('VRTs must be a dict of band name : vrt files.')
+    elif not len(vrt_file_dict) > 0:
+        raise ValueError('No vrts in dictionary.')
+    
+    # get list of band names in dict
+    bands = [band for band in vrt_file_dict]
+    
+    # iter each band name and build associated vrt dict
+    dt_dict = {}
+    for band in bands:
+        print('Extracting datetimes from VRTs for band: {}.'.format(band))
+        
+        # get vrt file for current band, open with gdal and extract
+        vrt_list = vrt_file_dict[band]
+        tmp = gdal.Open(vrt_list).GetFileList()
+        dt_dict[band] = satfetcher.parse_vrt_datetimes(tmp)
+
+    # notify and return
+    print('Extracted {} band vrt datetimes successfully.'.format(len(dt_dict)))
+    return dt_dict
