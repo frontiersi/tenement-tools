@@ -123,6 +123,8 @@
     <AddInContent Include="DarkImages\AddInDesktop32.png" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="cogGallery.cs" />
+    <Compile Include="cogSplitButton.cs" />
     <Compile Include="gdvspectraGallery.cs" />
     <Compile Include="gdvspectraSplitButton.cs" />
     <Compile Include="Module1.cs" />
@@ -130,6 +132,12 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="gdvspectraGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="cogGalleryTemplate.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
