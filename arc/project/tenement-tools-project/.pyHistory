@@ -7,3 +7,5 @@ import osgeo
 from osgeo import gdal
 from osgeo import osr
 import rasterio
+import affine
+from dateutil.parser import parse
