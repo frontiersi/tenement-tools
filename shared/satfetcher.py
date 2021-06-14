@@ -803,3 +803,109 @@ def get_vrt_file_datetimes(vrt_file_dict):
     # notify and return
     print('Extracted {} band vrt datetimes successfully.'.format(len(dt_dict)))
     return dt_dict
+
+
+
+# checks, meta
+def prepare_full_vrt_dicts(vrt_file_dict, vrt_dt_dict):
+    """
+    takes vrt file and datetime file dicts and combines
+    into one final dict
+    """
+    
+    # imports
+    from collections import Counter
+    
+    # notify
+    print('Combining vrt files and datetimes per band.')
+    
+    # checks
+    
+    # get list of band names in dict
+    file_bands = [band for band in vrt_file_dict]
+    dt_bands = [band for band in vrt_dt_dict]
+    
+    # check if same bands lists identical
+    if Counter(file_bands) != Counter(dt_bands):
+        raise ValueError('VRT and datetime band names not identical.')
+        
+    # iter vrt file dict and create as we go
+    vrt_dict = {}
+    for band in file_bands:
+        vrt_dict[band] = {
+            'vrt_datetimes': vrt_dt_dict[band],
+            'vrt_file': vrt_file_dict[band]}
+        
+    # notify and return
+    print('Combined vrt files and datetimes per band successfully.')
+    return vrt_dict
+
+
+
+# meta, checks, more features
+def build_xr_datasets(vrt_dict):
+    """
+    """
+
+    # imports
+    import xarray as xr
+    from dateutil.parser import parse
+
+    # notify
+    print('Building an xarray dataset from vrt files and datetimes.')
+
+    # checks
+
+    # get list of band names in dict
+    bands = [band for band in vrt_dict]
+
+    # iter bands and append to dataset list
+    ds_list = []
+    for band in bands:
+        
+        # notify
+        print('Working on dataset for band: {}'.format(band))
+
+        # get date dt index and values
+        vrt_dt = vrt_dict[band].get('vrt_datetimes')
+
+        # prepare datetimes
+        np_dt = {}
+        for k, v in vrt_dt.items():
+            v = parse(v, ignoretz=True)
+            np_dt[k] = np.datetime64(v)
+
+        # get vrt file
+        vrt = vrt_dict[band].get('vrt_file')
+
+        # create chunks
+        chunks = {'band': 1, 'x': 'auto', 'y': 'auto'}
+
+        # open into xarray via rasterio
+        ds = xr.open_rasterio(vrt, chunks=chunks)
+
+        # rename dim band  to time
+        ds = ds.rename({'band': 'time'})
+
+        # convert to dataset and name var to band
+        ds = ds.to_dataset(name=band, promote_attrs=True)
+
+        # remap times from indexes to datetimes
+        ds['time'] = [np_dt[i] for i in ds['time'].values.tolist()]
+
+        # sort datetime
+        ds = ds.sortby('time')
+
+        # append
+        ds_list.append(ds)
+
+    # bail if nothing worked
+    if not ds_list:
+        raise ValueError('No datasets were created.')
+
+    # concatenate datasets into one
+    ds = xr.merge(ds_list, combine_attrs='override')
+    
+    # notify and return
+    print('Built an xarray dataset successfully.')
+    return ds
