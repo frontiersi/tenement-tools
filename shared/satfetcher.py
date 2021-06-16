@@ -96,6 +96,7 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
             'output_crs': 'EPSG:3577',
             'resolution': resolution,
             'group_by': 'solar_day',
+            'ls7_slc_off': False,
             'min_gooddata': min_gooddata
         }
             
