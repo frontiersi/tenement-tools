@@ -702,43 +702,7 @@ def calc_num_seasons(ds):
     print('Success!')
         
     return ds_nos
- 
-
-def add_crs(ds, crs):
-    """
-    Takes an xarray Dataset adds previously extracted crs metadata, if exists. 
-    Returns None if not found.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A single- or multi-dimensional array with/without crs metadata.
-
-    Returns
-    -------
-    ds: xarray Dataset
-        A Dataset with a new crs.
-    """
-    
-    # notify user
-    print('Beginning addition of CRS metadata.')
-    try:
-        # notify user
-        print('> Adding CRS metadata.')
-        
-        # assign crs via odc utils
-        ds = assign_crs(ds, str(crs))
-        
-        # notify user
-        print('> Success!\n')
-        
-    except:
-        # notify user
-        print('> Could not add CRS metadata to data. Aborting.\n')
-        pass
-        
-    return ds
-    
+     
 
 def get_pos(da):
     """
@@ -1867,10 +1831,10 @@ def get_lios(da, da_sos_times, da_eos_times):
     # get attrs
     attrs = da.attrs
 
-    # get vals between sos and eos times, replace any outside vals with 0
+    # get vals between sos and eos times, replace any outside vals with all time min
     print('Calculating long integral of season (lios) values.')
     da_lios_values = da.where((da['time.dayofyear'] >= da_sos_times) &
-                              (da['time.dayofyear'] <= da_eos_times), 0)
+                              (da['time.dayofyear'] <= da_eos_times), 0.0)
     
     # calculate lios using trapz (note: more sophisticated than integrate)
     da_lios_values = xr.apply_ufunc(np.trapz, 
@@ -1878,7 +1842,7 @@ def get_lios(da, da_sos_times, da_eos_times):
                                     input_core_dims=[['time']],
                                     dask='parallelized', 
                                     output_dtypes=[np.float32],
-                                    kwargs={'dx': 1})
+                                    kwargs={'dx': 2})
     
     # convert type, rename
     da_lios_values = da_lios_values.astype('float32')
@@ -1931,7 +1895,7 @@ def get_sios(da, da_sos_times, da_eos_times, da_base_values):
     # get veg vals between sos and eos times, replace any outside vals with 0
     print('Calculating short integral of season (sios) values.')
     da_sios_values = da.where((da['time.dayofyear'] >= da_sos_times) &
-                              (da['time.dayofyear'] <= da_eos_times), 0)
+                              (da['time.dayofyear'] <= da_eos_times), 0.0)
     
     # calculate sios using trapz (note: more sophisticated than integrate)
     da_sios_values = xr.apply_ufunc(np.trapz, 
@@ -2081,15 +2045,77 @@ def get_siot(da, da_base_values):
     return da_siot_values
     
 
-
-def calc_phenometrics(ds, metrics, peak_metric='pos', base_metric='bse', method='first_of_slope', factor=0.5,
+def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='first_of_slope', factor=0.5,
                       thresh_sides='two_sided', abs_value=0, inplace=True):
     """
+    Generate 1 or more phenometrics from an xr dataset or array. Users can chose 
+    the peak (pos or mos) or base (vos or bse) metric to detect the amplitude
+    of the seasonal signal per pixel. Several methods are available to detect
+    sos and eos also (see below). 
+    
+    Parameters
+    ----------
+    ds : xarray Dataset/DataArray
+        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
+        and time values. 
+    metric : list or str
+        A string or list of metrics to return.
+    peak_metric: str
+        A string of pos or mos. Defines the peak part of the signal to use
+        as the peak. Default is pos.
+    base_metric: str
+        A string of vos or bse. Defines the lowest part of the signal to use
+        as the base. Default is bse.
+    method: str
+        A string indicating which start of season detection method to use. Default is
+        same as TIMESAT: seasonal_amplitude. The available options include:
+        1. first_of_slope: lowest vege value of slope is sos (i.e. first lowest value).
+        2. median_of_slope: middle vege value of slope is sos (i.e. median value).
+        3. seasonal_amplitude: uses a percentage of the amplitude from base to find sos.
+        4. absolute_value: users defined absolute value in vege index units is used to find sos.
+        5. relative_amplitude: robust mean peak and base, and a factor of that area, used to find sos.
+        6. stl_trend: robust but slow - uses seasonal decomp LOESS method to find trend line and sos.
+    factor: float
+        A float value between 0 and 1 which is used to increase or decrease the amplitude
+        threshold for the seasonal_amplitude method. A factor closer to 0 results in start 
+        of season nearer to min value, a factor closer to 1 results in start of season
+        closer to peak of season.
+    thresh_sides: str
+        A string indicating whether the sos value threshold calculation should be the min 
+        value of left slope (one_sided) only, or use the bse/vos value (two_sided) calculated
+        earlier. Default is two_sided, as per TIMESAT 3.3. That said, one_sided is potentially
+        more robust.
+    abs_value: float
+        For absolute_value method only. Defines the absolute value in units of the vege index to
+        which sos is defined. The part of the vege slope that the absolute value hits will be the
+        sos value and time.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+        An xarray DataArray type with 1 or more phenometrics.
     """
     
-    # check metrics
-    #metric = ['pos']
+    # notify user
+    print('Beginning calculation of phenometrics. Please wait.')
+    
+    # check metric provided
+    if metric is None:
+        raise ValueError('Must provide at least one month.')       
+                
+    # check metric is list, if not, make it one
+    metrics = metric if isinstance(metric, list) else [metric]
 
+    # check metrics supported
+    allowed_metrics = ['pos', 'mos', 'vos', 'bse','aos', 'sos', 'eos', 
+                       'los', 'ros', 'rod', 'lios', 'sios', 'liot', 'siot']
+    for metric in metrics:
+        if metric not in metrics:
+            raise ValueError('Metric: {} not supported.'.format(metric))
+    
     # check xr type, dims
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
         raise TypeError('Dataset not an xarray type.')
@@ -2124,17 +2150,11 @@ def calc_phenometrics(ds, metrics, peak_metric='pos', base_metric='bse', method=
         raise ValueError('> The peak_metric parameter must be either pos or mos.')
     elif base_metric not in ['bse', 'vos']:
         raise ValueError('> The base_metric parameter must be either bse or vos.')
-        
-    # get crs info before work
-    crs = tools.get_xr_crs(ds=ds)
 
     # take a mask of all-nan slices for clean up at end and set all-nan to 0s
     ds_all_nan_mask = ds.isnull().all('time')
     ds = ds.where(~ds_all_nan_mask, 0.0)
-        
-    # notify user
-    print('Beginning calculation of phenometrics. Please wait.')
-    
+
     # calc peak of season (pos) values and times
     da_pos_values, da_pos_times = get_pos(da=ds)
             
@@ -2209,40 +2229,36 @@ def calc_phenometrics(ds, metrics, peak_metric='pos', base_metric='bse', method=
     # calc short integral of total (siot) values (time not possible)
     da_siot_values = get_siot(da=ds, 
                               da_base_values=da_base)
-
-    return da_lios_values, da_liot_values
     
-    # create data array list
-    da_list = [
-        da_pos_values, 
-        da_pos_times,
-        da_mos_values, 
-        da_vos_values, 
-        da_vos_times,
-        da_bse_values,
-        da_aos_values,
-        da_sos_values, 
-        da_sos_times,
-        da_eos_values, 
-        da_eos_times,
-        da_los_values,
-        da_roi_values,
-        da_rod_values,
-        da_lios_values,
-        da_sios_values,
-        da_liot_values,
-        da_siot_values
-    ]
-  
+    # create dict of metrics
+    da_dict = {
+        'pos':  [da_pos_values, da_pos_times],
+        'mos':  [da_mos_values],
+        'vos':  [da_vos_values, da_vos_times],
+        'bse':  [da_bse_values],
+        'aos':  [da_aos_values],
+        'sos':  [da_sos_values, da_sos_times],
+        'eos':  [da_eos_values, da_eos_times],
+        'los':  [da_los_values],
+        'ros':  [da_roi_values],
+        'rod':  [da_rod_values],
+        'lios': [da_lios_values],
+        'sios': [da_sios_values],
+        'liot': [da_liot_values],
+        'siot': [da_siot_values]
+    }
+    
+    # if requested, add metric list
+    da_list = []
+    for metric in metrics:
+        da_list = da_list + da_dict.get(metric)
+
     # combine data arrays into one dataset
-    ds_phenos = xr.merge(da_list)
+    ds = xr.merge(da_list)
     
     # set original all nan pixels back to nan
-    ds_phenos = ds_phenos.where(~da_all_nan_mask)
-    
-    # add crs metadata back onto dataset
-    ds_phenos = add_crs(ds=ds_phenos, crs=crs)
+    ds = ds.where(~ds_all_nan_mask)
     
     # notify user
     print('Phenometrics calculated successfully!')
-    return ds_phenos
+    return ds
