@@ -3,6 +3,7 @@ using ArcGIS.Core.Data;
 using ArcGIS.Core.Geometry;
 using ArcGIS.Desktop.Catalog;
 using ArcGIS.Desktop.Core;
+using ArcGIS.Desktop.Core.Geoprocessing;
 using ArcGIS.Desktop.Editing;
 using ArcGIS.Desktop.Extensions;
 using ArcGIS.Desktop.Framework;
@@ -13,7 +14,9 @@ using ArcGIS.Desktop.Layouts;
 using ArcGIS.Desktop.Mapping;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -83,8 +86,26 @@ namespace TenementToolsApp
             var gallery_item = base.SelectedItem.ToString();
 
             // temp: tell dev what was called
-            ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
+            //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
 
+            // open gdvspectra likelihood tool pane
+            if (gallery_item == "GDV Likelihood") {
+
+                // set toolname
+                string toolname = "GDVSpectra";
+
+                // create inputs and null them
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try { 
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                } 
+                catch (Exception e) { 
+                    Debug.WriteLine("DID NOT FIND TOOL");
+                };
+            };
         }
     }
 }
