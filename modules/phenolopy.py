@@ -130,6 +130,9 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=Tru
                 print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
             else:
                 print('Generated roll window size is: {0}'.format(win_size))
+                
+            # temp - bug in rolling, need to rechunk
+            ds = ds.chunk(-1)
 
             # calc rolling median for whole dataset
             ds_med = ds.rolling(time=win_size, center=True, keep_attrs=True).median()
@@ -370,7 +373,7 @@ def resample(ds, interval='1M', inplace=True):
         raise ValueError('Provided resample interval not supported.')
                             
     # notify user and return
-    print('Resampled dataset successful.\n')
+    print('Resampled dataset successful.')
     return ds
 
 
@@ -2045,7 +2048,7 @@ def get_siot(da, da_base_values):
     return da_siot_values
     
 
-def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='first_of_slope', factor=0.5,
+def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', method='first_of_slope', factor=0.5,
                       thresh_sides='two_sided', abs_value=0, inplace=True):
     """
     Generate 1 or more phenometrics from an xr dataset or array. Users can chose 
@@ -2059,7 +2062,7 @@ def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='
         A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
         and time values. 
     metric : list or str
-        A string or list of metrics to return.
+        A string or list of metrics to return. Leave empty to fetch all.
     peak_metric: str
         A string of pos or mos. Defines the peak part of the signal to use
         as the peak. Default is pos.
@@ -2100,18 +2103,19 @@ def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='
     """
     
     # notify user
-    print('Beginning calculation of phenometrics. Please wait.')
+    print('Beginning calculation of phenometrics.')
     
-    # check metric provided
-    if metric is None:
-        raise ValueError('Must provide at least one month.')       
-                
-    # check metric is list, if not, make it one
-    metrics = metric if isinstance(metric, list) else [metric]
-
     # check metrics supported
     allowed_metrics = ['pos', 'mos', 'vos', 'bse','aos', 'sos', 'eos', 
                        'los', 'ros', 'rod', 'lios', 'sios', 'liot', 'siot']
+    
+    # check metric provided
+    if metric is None:
+        print('No metric requested, generating all.')   
+        metric = allowed_metrics
+           
+    # check metric is list, if not, make it one
+    metrics = metric if isinstance(metric, list) else [metric]
     for metric in metrics:
         if metric not in metrics:
             raise ValueError('Metric: {} not supported.'.format(metric))
@@ -2140,6 +2144,9 @@ def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
+        
+    # get attrs
+    attrs = ds.attrs
     
     # check if dask - not yet supported
     if bool(ds.chunks):
@@ -2258,6 +2265,9 @@ def calc_phenometrics(ds, metric, peak_metric='pos', base_metric='bse', method='
     
     # set original all nan pixels back to nan
     ds = ds.where(~ds_all_nan_mask)
+    
+    # add attrs back on
+    ds.attrs = attrs
     
     # notify user
     print('Phenometrics calculated successfully!')
