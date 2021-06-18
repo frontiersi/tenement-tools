@@ -28,9 +28,6 @@ from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../../shared')
 import tools
 
-#sys.path.append('../GDVTOOLS')
-#import gdv_tools
-
 # todo - metadata
 def get_dataset_classes(ds, nodata_value=-9999):
     """
