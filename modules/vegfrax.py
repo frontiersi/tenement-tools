@@ -71,6 +71,25 @@ def get_dataset_classes(ds, nodata_value=-9999):
     print('> Detected classes in dataset: {0}'.format(', '.join([str(c) for c in np_classes])))
     return np_classes
 
+# checks, meta, more
+def clip_high_to_low(ds_high, ds_low):
+    """
+    """
+    
+    # checks
+    
+    # get extents from ds low - avoid geobox
+    l = float(ds_low['x'].min().values)
+    r = float(ds_low['x'].max().values)
+    t = float(ds_low['y'].min().values)
+    b = float(ds_low['y'].max().values)
+    
+    # subset ds high to ds low
+    ds_high = ds_high.sel(x=slice(l, r), 
+                          y=slice(b, t))
+    
+    return ds_high
+
 #
 def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_factor=3, nodata_value=-9999):
     """
@@ -251,7 +270,7 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # if class dataset not chunked, chunk it now
     if not bool(ds_class.chunks):
-        ds_class = ds_class.chunk({'x': len(ds_class['x']), 'y': len(ds_class['y'])})
+        ds_class = ds_class.chunk({'x': 'auto', 'y': 'auto'})
 
     # convert to data array    
     da_class = ds_class.to_array()
