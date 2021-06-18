@@ -431,10 +431,8 @@ def subset_records(df_records, p_a_column=None):
 def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_nodata='any'):
     """
     Takes a pandas dataframe of occurrence records and clips them
-    to a xarray dataset or array. Existing fields in the dataframe can
-    be saved in output if field name is placed in keep_fields parameter.
-    It is recommended a binary mask is used as ds input, with nan
-    represented by nodata_value paramter. if_nodata = if any vars in pixel
+    to a xarray dataset or array. It is recommended a binary mask is used 
+    as ds input, with nan represented by nodata_value paramter. if_nodata = if any vars in pixel
     are nan, ignore point, if all are, ignore.
 
     Parameters
