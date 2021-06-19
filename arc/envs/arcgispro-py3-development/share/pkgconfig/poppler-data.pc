@@ -1,8 +1,0 @@
-poppler_datadir=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/share/poppler
-
-Name: poppler-data
-Description: Encoding files for use with poppler
-Version: 0.4.10
-
-Cflags: -DPOPPLER_DATADIR=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/share/poppler
-

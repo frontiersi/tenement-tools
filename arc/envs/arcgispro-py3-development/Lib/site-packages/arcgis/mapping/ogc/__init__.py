@@ -1,9 +1,0 @@
-from ._wms import WMSLayer
-from .wmts import WMTSLayer
-from ._csv import CSVLayer
-from ._georss import GeoRSSLayer
-from ._kml import KMLLayer
-from ._geojson import GeoJSONLayer
-
-__all__ = ['WMTSLayer', 'CSVLayer', 'GeoRSSLayer',
-           'KMLLayer', 'WMSLayer', 'GeoJSONLayer']
