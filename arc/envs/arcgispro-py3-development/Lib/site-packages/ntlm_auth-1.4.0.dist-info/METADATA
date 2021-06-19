@@ -1,0 +1,29 @@
+Metadata-Version: 2.1
+Name: ntlm-auth
+Version: 1.4.0
+Summary: Creates NTLM authentication structures
+Home-page: https://github.com/jborean93/ntlm-auth
+Author: Jordan Borean
+Author-email: jborean93@gmail.com
+License: MIT
+Keywords: authentication auth microsoft ntlm lm
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Requires-Python: >=2.6,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*
+Requires-Dist: ordereddict ; python_version<"2.7"
+Provides-Extra: cryptography
+Requires-Dist: cryptography (<2.2) ; (python_version<"2.7") and extra == 'cryptography'
+Requires-Dist: cryptography ; (python_version>="2.7") and extra == 'cryptography'
+
+UNKNOWN
+
+

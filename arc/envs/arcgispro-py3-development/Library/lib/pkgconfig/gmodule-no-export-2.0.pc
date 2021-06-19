@@ -1,0 +1,13 @@
+prefix=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+gmodule_supported=true
+
+Name: GModule
+Description: Dynamic module loader for GLib
+Version: 2.68.3
+Requires: glib-2.0
+Libs: -L${libdir} -lgmodule-2.0
+Libs.private: -lintl -liconv
+Cflags: -I${includedir}

@@ -1,0 +1,1 @@
+import arcpy_init; arcpy_init.set_product_paths()

@@ -1,0 +1,80 @@
+Metadata-Version: 2.1
+Name: despatch
+Version: 0.1.0
+Summary: Despatch lets you control CPU dispatching for MKL
+Home-page: https://github.com/esri
+Author: Shaun Walbridge
+Author-email: shaun.walbridge@gmail.com
+License: Apache Software License 2.0
+Keywords: despatch
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Requires-Dist: x86cpu
+
+========
+Despatch
+========
+
+   "But, Lord! to see how my Lord Bruncker undertakes the despatch of the fire-ships"
+
+   /dÉªËˆspÃ¦tÊƒ/ An archaic form of dispatch
+
+Despatch lets you control CPU dispatching for MKL
+
+
+* License: Apache Software License 2.0
+
+
+Features
+--------
+
+* Helps you control the dynamic dispatch mechanism of MKL. Has a handful of cases where
+  it can be useful:
+
+  1. With AMD CPUs. AMD CPUs are by default dispatched the SSE2 version of the code, 
+       and there is no way other than through debug settings to influence this behavior.
+  2. When running in a virtualized machine where the cpuid instruction will return 
+       different flags than what the CPU actually supports. MKL by default uses feature
+       detection, but relies on CPU metadata, which leads it astray.
+  3. You may just want to bind to a different MKL implementation. In some cases, using an
+       earlier instruction set is faster than the newer one. This can be due to 
+       downclocking on newer instruction sets, micro-optimizations, and many other 
+       behavior differences.
+  4. Minimizing environment size. If you're working in a resource constrained environment
+       but still want to use existing packages without recompiling, you can strip the 
+       unneeded MKL DLLs from your environmenment and force only a specific codepath. 
+       Note that if you do this, your environments will no longer be directly portable.
+
+
+Despatch supports two functions: set_optimal, which will chose the optimal branch for 
+your CPU, and set_cpu_type, which accepts an instruction set to be used.
+
+Credits
+-------
+
+This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+
+.. _Cookiecutter: https://github.com/audreyr/cookiecutter
+.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+
+
+=========
+Changelog
+=========
+
+0.1.0 (2018-12-17)
+------------------
+
+* Initial version. Known limitations: only tested on 64-bit Windows with MKL as conda package
+
+

@@ -1,0 +1,10 @@
+
+[develop]
+pytest>=4.6
+pycodestyle
+pytest-cov
+codecov
+wheel
+
+[tests]
+pytest>=4.6

@@ -1,0 +1,84 @@
+{
+  "arch": "x86_64",
+  "build": "3",
+  "build_number": 3,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\arrow-cpp-1.0.1-3",
+  "features": "",
+  "files": [
+    "Library/bin/arrow.dll",
+    "Library/bin/arrow_dataset.dll",
+    "Library/bin/arrow_flight.dll",
+    "Library/bin/arrow_python.dll",
+    "Library/bin/arrow_python_flight.dll",
+    "Library/bin/parquet.dll",
+    ".nonadmin"
+  ],
+  "fn": "arrow-cpp-1.0.1-3.tar.bz2",
+  "license": "Apache 2.0",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\arrow-cpp-1.0.1-3",
+    "type": 1
+  },
+  "md5": "2e2a289ab8b135a00abc25d5e51c1f5b",
+  "name": "arrow-cpp",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\arrow-cpp-1.0.1-3",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Library/bin/arrow.dll",
+        "path_type": "hardlink",
+        "sha256": "3cce376260ebf324d2578143a33f79d5e03b485d80002234cb0dbbf180f9f6f5",
+        "sha256_in_prefix": "3cce376260ebf324d2578143a33f79d5e03b485d80002234cb0dbbf180f9f6f5",
+        "size_in_bytes": 9293376
+      },
+      {
+        "_path": "Library/bin/arrow_dataset.dll",
+        "path_type": "hardlink",
+        "sha256": "8001a217ddda07add9b89845699dee732cc40dfc2c67d37b18546859ade21826",
+        "sha256_in_prefix": "8001a217ddda07add9b89845699dee732cc40dfc2c67d37b18546859ade21826",
+        "size_in_bytes": 1064000
+      },
+      {
+        "_path": "Library/bin/arrow_flight.dll",
+        "path_type": "hardlink",
+        "sha256": "eb0d5e50680fb08d583dec448c8b2d053a72cd1e678af12298be1f05f8d6595f",
+        "sha256_in_prefix": "eb0d5e50680fb08d583dec448c8b2d053a72cd1e678af12298be1f05f8d6595f",
+        "size_in_bytes": 4401728
+      },
+      {
+        "_path": "Library/bin/arrow_python.dll",
+        "path_type": "hardlink",
+        "sha256": "56695fde5680de28e645315919963685ce743305fc2f44097134cbc524aba51f",
+        "sha256_in_prefix": "56695fde5680de28e645315919963685ce743305fc2f44097134cbc524aba51f",
+        "size_in_bytes": 1728064
+      },
+      {
+        "_path": "Library/bin/arrow_python_flight.dll",
+        "path_type": "hardlink",
+        "sha256": "ba800e0c20655d0a0f08770da0ff8f09660d321386ab82c51c89f939bb4d45d2",
+        "sha256_in_prefix": "ba800e0c20655d0a0f08770da0ff8f09660d321386ab82c51c89f939bb4d45d2",
+        "size_in_bytes": 144448
+      },
+      {
+        "_path": "Library/bin/parquet.dll",
+        "path_type": "hardlink",
+        "sha256": "27224e133f7f14ad2e0ec73a22e2d7aaa2365a08d00dc84fd35873427b4fb7b7",
+        "sha256_in_prefix": "27224e133f7f14ad2e0ec73a22e2d7aaa2365a08d00dc84fd35873427b4fb7b7",
+        "size_in_bytes": 2864192
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::arrow-cpp==1.0.1=3",
+  "sha256": "2c130bdef4d48047f5dd269f38bb442fcfd117c4bea594ff6744cdc16ecaf47f",
+  "size": 4992412,
+  "subdir": "win-64",
+  "timestamp": 1618886670778,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/arrow-cpp-1.0.1-3.tar.bz2",
+  "version": "1.0.1"
+}

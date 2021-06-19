@@ -1,0 +1,335 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/noarch",
+  "constrains": [],
+  "depends": [
+    "appdirs",
+    "attrs >=18.1.0",
+    "click >=6.5",
+    "mypy_extensions",
+    "pathspec",
+    "python >=3.6",
+    "regex",
+    "toml >=0.9.4",
+    "typed-ast",
+    "typing_extensions"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\black-19.10b0-py_0",
+  "features": "",
+  "files": [
+    "Scripts/blackd",
+    "Lib/site-packages/_black_version.py",
+    "Lib/site-packages/black-19.10b0.dist-info/INSTALLER",
+    "Lib/site-packages/black-19.10b0.dist-info/LICENSE",
+    "Lib/site-packages/black-19.10b0.dist-info/METADATA",
+    "Lib/site-packages/black-19.10b0.dist-info/RECORD",
+    "Lib/site-packages/black-19.10b0.dist-info/WHEEL",
+    "Lib/site-packages/black-19.10b0.dist-info/entry_points.txt",
+    "Lib/site-packages/black-19.10b0.dist-info/top_level.txt",
+    "Lib/site-packages/black.py",
+    "Lib/site-packages/blackd.py",
+    "Lib/site-packages/blib2to3/Grammar.txt",
+    "Lib/site-packages/blib2to3/PatternGrammar.txt",
+    "Lib/site-packages/blib2to3/__init__.py",
+    "Lib/site-packages/blib2to3/pgen2/__init__.py",
+    "Lib/site-packages/blib2to3/pgen2/conv.py",
+    "Lib/site-packages/blib2to3/pgen2/driver.py",
+    "Lib/site-packages/blib2to3/pgen2/grammar.py",
+    "Lib/site-packages/blib2to3/pgen2/literals.py",
+    "Lib/site-packages/blib2to3/pgen2/parse.py",
+    "Lib/site-packages/blib2to3/pgen2/pgen.py",
+    "Lib/site-packages/blib2to3/pgen2/token.py",
+    "Lib/site-packages/blib2to3/pgen2/tokenize.py",
+    "Lib/site-packages/blib2to3/pygram.py",
+    "Lib/site-packages/blib2to3/pytree.py",
+    ".nonadmin",
+    "Lib/site-packages/__pycache__/_black_version.cpython-37.pyc",
+    "Lib/site-packages/__pycache__/black.cpython-37.pyc",
+    "Lib/site-packages/__pycache__/blackd.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/conv.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/driver.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/grammar.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/literals.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/parse.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/pgen.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/token.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/pgen2/__pycache__/tokenize.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/__pycache__/pygram.cpython-37.pyc",
+    "Lib/site-packages/blib2to3/__pycache__/pytree.cpython-37.pyc",
+    "Scripts/black-script.py",
+    "Scripts/black.exe"
+  ],
+  "fn": "black-19.10b0-py_0.conda",
+  "license": "MIT",
+  "license_family": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\black-19.10b0-py_0",
+    "type": 1
+  },
+  "md5": "dda9c1964ca705ed9dc055eb3a3d813a",
+  "name": "black",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\black-19.10b0-py_0",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "python-scripts/blackd",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/opt/anaconda1anaconda2anaconda3",
+        "sha256": "0d49fc4de899b1d0d26e7bfda14d58e44a61588415e560494e0e580033dff784",
+        "sha256_in_prefix": "f2f9a6623d3397c2cd1e5c01cdc73a52536195e2d93f3765814283e4cd6b069b",
+        "size_in_bytes": 281
+      },
+      {
+        "_path": "site-packages/_black_version.py",
+        "path_type": "hardlink",
+        "sha256": "1fc2f0985dfce2625d94081b73353363cefcdc796d5a9dc8e8124d175d521e55",
+        "sha256_in_prefix": "1fc2f0985dfce2625d94081b73353363cefcdc796d5a9dc8e8124d175d521e55",
+        "size_in_bytes": 20
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "9c0428f0c3b4779850cf5bd96e11aaa8afc72d4a86d4a36223d7aba2e58d6e00",
+        "sha256_in_prefix": "9c0428f0c3b4779850cf5bd96e11aaa8afc72d4a86d4a36223d7aba2e58d6e00",
+        "size_in_bytes": 1080
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "50de349c6a155534a9bcbad307036c5e065d648c282854abac30c73fa07bf80d",
+        "sha256_in_prefix": "50de349c6a155534a9bcbad307036c5e065d648c282854abac30c73fa07bf80d",
+        "size_in_bytes": 58841
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "88d6bed0985d483aee3a442573cc3a369810b0483ef0eedea783c65c4bba24d6",
+        "sha256_in_prefix": "88d6bed0985d483aee3a442573cc3a369810b0483ef0eedea783c65c4bba24d6",
+        "size_in_bytes": 2792
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "4e5f318d6f17e05df928b9cdd5ee9e9d94f818772fcc69aac7fdfde3533433a4",
+        "sha256_in_prefix": "4e5f318d6f17e05df928b9cdd5ee9e9d94f818772fcc69aac7fdfde3533433a4",
+        "size_in_bytes": 93
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/entry_points.txt",
+        "path_type": "hardlink",
+        "sha256": "2e3ef82af37402d19424342e2ae6c1c5dcb9cbd1145635454fc4fe8103af77f0",
+        "sha256_in_prefix": "2e3ef82af37402d19424342e2ae6c1c5dcb9cbd1145635454fc4fe8103af77f0",
+        "size_in_bytes": 79
+      },
+      {
+        "_path": "site-packages/black-19.10b0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "b60c9078a8179009b683ce770a5fce28208863b8aeda29b9da7302591be26a55",
+        "sha256_in_prefix": "b60c9078a8179009b683ce770a5fce28208863b8aeda29b9da7302591be26a55",
+        "size_in_bytes": 37
+      },
+      {
+        "_path": "site-packages/black.py",
+        "path_type": "hardlink",
+        "sha256": "e39205ef63a035f17c5a978d1e7c55d9019f6c22ee6d5e578e5e79708eb9918b",
+        "sha256_in_prefix": "e39205ef63a035f17c5a978d1e7c55d9019f6c22ee6d5e578e5e79708eb9918b",
+        "size_in_bytes": 140161
+      },
+      {
+        "_path": "site-packages/blackd.py",
+        "path_type": "hardlink",
+        "sha256": "242c5a2b884b90c47055f64c8fc151a514580b4d7bdbe8ee2aa6cddb66c848b1",
+        "sha256_in_prefix": "242c5a2b884b90c47055f64c8fc151a514580b4d7bdbe8ee2aa6cddb66c848b1",
+        "size_in_bytes": 6672
+      },
+      {
+        "_path": "site-packages/blib2to3/Grammar.txt",
+        "path_type": "hardlink",
+        "sha256": "74f778124133404f56aa1975e9bbe551cde16f79c8b656ef064af504ca7504e1",
+        "sha256_in_prefix": "74f778124133404f56aa1975e9bbe551cde16f79c8b656ef064af504ca7504e1",
+        "size_in_bytes": 9628
+      },
+      {
+        "_path": "site-packages/blib2to3/PatternGrammar.txt",
+        "path_type": "hardlink",
+        "sha256": "ee5ba5db3b6722a0e2fbe2560ebc1c883e72328ef9c3b4da1c7c5d1cc649bce3",
+        "sha256_in_prefix": "ee5ba5db3b6722a0e2fbe2560ebc1c883e72328ef9c3b4da1c7c5d1cc649bce3",
+        "size_in_bytes": 793
+      },
+      {
+        "_path": "site-packages/blib2to3/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f7ff302fd49cbfcfc2b3c1c9c891c6bf1d6fc1712bb2ebe5b00a8d64b709411d",
+        "sha256_in_prefix": "f7ff302fd49cbfcfc2b3c1c9c891c6bf1d6fc1712bb2ebe5b00a8d64b709411d",
+        "size_in_bytes": 8
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "858eb0f50533bd3bd16fe32815f77fabfed92ede885070b6cb15827ec66ea500",
+        "sha256_in_prefix": "858eb0f50533bd3bd16fe32815f77fabfed92ede885070b6cb15827ec66ea500",
+        "size_in_bytes": 143
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/conv.py",
+        "path_type": "hardlink",
+        "sha256": "f2d6fc2bee9ba7d7b94cca05ffbeace757d32f2ff41c28d948dcbda25f13c888",
+        "sha256_in_prefix": "f2d6fc2bee9ba7d7b94cca05ffbeace757d32f2ff41c28d948dcbda25f13c888",
+        "size_in_bytes": 9593
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/driver.py",
+        "path_type": "hardlink",
+        "sha256": "6d7a31d0c05d4202e0822015721147946fa1e36cc7adc8ad46c6091fc3179e5e",
+        "sha256_in_prefix": "6d7a31d0c05d4202e0822015721147946fa1e36cc7adc8ad46c6091fc3179e5e",
+        "size_in_bytes": 7638
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/grammar.py",
+        "path_type": "hardlink",
+        "sha256": "fb71216ba7140d6e4717f12696c3924a943a9378363ed60d8f38700a6c7a9485",
+        "sha256_in_prefix": "fb71216ba7140d6e4717f12696c3924a943a9378363ed60d8f38700a6c7a9485",
+        "size_in_bytes": 5880
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/literals.py",
+        "path_type": "hardlink",
+        "sha256": "c8ec1f1424cdce9fb31257ff669b1ed89f7fc91f608bea50c1de75fe5b4ce3ec",
+        "sha256_in_prefix": "c8ec1f1424cdce9fb31257ff669b1ed89f7fc91f608bea50c1de75fe5b4ce3ec",
+        "size_in_bytes": 1537
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/parse.py",
+        "path_type": "hardlink",
+        "sha256": "e63ee22076c8a587f720b9348bdb44a035eae6cf03f205242b27422ac5718238",
+        "sha256_in_prefix": "e63ee22076c8a587f720b9348bdb44a035eae6cf03f205242b27422ac5718238",
+        "size_in_bytes": 8011
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/pgen.py",
+        "path_type": "hardlink",
+        "sha256": "c3a9725d6a58c9018313015cdf97308eb783da82793ab13aa831096cbe3944ff",
+        "sha256_in_prefix": "c3a9725d6a58c9018313015cdf97308eb783da82793ab13aa831096cbe3944ff",
+        "size_in_bytes": 13807
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/token.py",
+        "path_type": "hardlink",
+        "sha256": "4efc46fd011e6e7dd80dda709422f0431a3244f7a07f4b6cb0f4fb0fd2b7433b",
+        "sha256_in_prefix": "4efc46fd011e6e7dd80dda709422f0431a3244f7a07f4b6cb0f4fb0fd2b7433b",
+        "size_in_bytes": 1281
+      },
+      {
+        "_path": "site-packages/blib2to3/pgen2/tokenize.py",
+        "path_type": "hardlink",
+        "sha256": "e2c43cd55021183aee20ac3485302b067ccccff6770f23e2ba75ab3502e88899",
+        "sha256_in_prefix": "e2c43cd55021183aee20ac3485302b067ccccff6770f23e2ba75ab3502e88899",
+        "size_in_bytes": 21876
+      },
+      {
+        "_path": "site-packages/blib2to3/pygram.py",
+        "path_type": "hardlink",
+        "sha256": "997a503ea1dc6a6170721d1193226c6fdd967749143f74d6eddfaef5d5a10866",
+        "sha256_in_prefix": "997a503ea1dc6a6170721d1193226c6fdd967749143f74d6eddfaef5d5a10866",
+        "size_in_bytes": 2085
+      },
+      {
+        "_path": "site-packages/blib2to3/pytree.py",
+        "path_type": "hardlink",
+        "sha256": "4568f720be14f8b8e1927e2568dd02de9ec845d7ef4f76884634d5fb1f612b57",
+        "sha256_in_prefix": "4568f720be14f8b8e1927e2568dd02de9ec845d7ef4f76884634d5fb1f612b57",
+        "size_in_bytes": 28530
+      },
+      {
+        "_path": "Lib/site-packages/__pycache__/_black_version.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/__pycache__/black.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/__pycache__/blackd.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/conv.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/driver.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/grammar.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/literals.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/parse.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/pgen.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/token.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/pgen2/__pycache__/tokenize.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/__pycache__/pygram.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/blib2to3/__pycache__/pytree.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Scripts/black-script.py",
+        "path_type": "windows_python_entry_point_script"
+      },
+      {
+        "_path": "Scripts/black.exe",
+        "path_type": "windows_python_entry_point_exe"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "defaults/noarch::black==19.10b0=py_0",
+  "sha256": "01a92043ef222e513d5f7f0bdf71f147b542b7f21b4d5f9fb589b92847cbaa8d",
+  "size": 88382,
+  "subdir": "noarch",
+  "timestamp": 1582216009714,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/noarch/black-19.10b0-py_0.conda",
+  "version": "19.10b0"
+}

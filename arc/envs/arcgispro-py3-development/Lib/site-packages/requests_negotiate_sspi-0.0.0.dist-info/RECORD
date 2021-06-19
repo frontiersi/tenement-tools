@@ -1,0 +1,11 @@
+requests_negotiate_sspi-0.0.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+requests_negotiate_sspi-0.0.0.dist-info/LICENSE.txt,sha256=dwr4KR9whTjY_4haC7xOBFzXAFMXQcT5lSjUNcFNf1U,11751
+requests_negotiate_sspi-0.0.0.dist-info/METADATA,sha256=i4cha2f9hWksfGNTLR-1jyEWWjcecSsD0gQ8aP2vcec,1533
+requests_negotiate_sspi-0.0.0.dist-info/RECORD,,
+requests_negotiate_sspi-0.0.0.dist-info/WHEEL,sha256=YUYzQ6UQdoqxXjimOitTqynltBCkwY6qlTfTh2IzqQU,97
+requests_negotiate_sspi-0.0.0.dist-info/direct_url.json,sha256=oincRKfF2YU9bOMXW5x2qW_BLSZQllU5RJ5pDK5CtFM,115
+requests_negotiate_sspi-0.0.0.dist-info/top_level.txt,sha256=S-iTb8Vgr_zJ6YkGFSAI1STicFNN8ahvucJaTTGQQWg,24
+requests_negotiate_sspi/__init__.py,sha256=CbncB4XuK7g4OuV_LfV7Jfs2fkrEA9pgYZFNRckfXOQ,1009
+requests_negotiate_sspi/__pycache__/__init__.cpython-37.pyc,,
+requests_negotiate_sspi/__pycache__/requests_negotiate_sspi.cpython-37.pyc,,
+requests_negotiate_sspi/requests_negotiate_sspi.py,sha256=6SwDAvE5w3JoSt9q7nzSp9mZ73eK5zw9Ixdvk4RkicY,8972

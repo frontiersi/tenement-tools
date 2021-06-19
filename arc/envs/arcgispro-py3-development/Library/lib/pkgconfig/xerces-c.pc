@@ -1,0 +1,11 @@
+prefix=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library
+exec_prefix=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library
+libdir=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library/lib
+includedir=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library/include
+
+Name: Xerces-C++
+Description: Validating XML parser library for C++
+Version: 3.2.2
+Libs: -LC:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library/lib -lxerces-c
+Libs.private: 
+Cflags: -IC:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library/include

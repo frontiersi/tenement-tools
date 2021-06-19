@@ -1,0 +1,111 @@
+{
+  "arch": "x86_64",
+  "build": "py37_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\olefile-0.46-py37_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/olefile-0.46-py3.7.egg-info/PKG-INFO",
+    "Lib/site-packages/olefile-0.46-py3.7.egg-info/SOURCES.txt",
+    "Lib/site-packages/olefile-0.46-py3.7.egg-info/dependency_links.txt",
+    "Lib/site-packages/olefile-0.46-py3.7.egg-info/installed-files.txt",
+    "Lib/site-packages/olefile-0.46-py3.7.egg-info/top_level.txt",
+    "Lib/site-packages/olefile/__init__.py",
+    "Lib/site-packages/olefile/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/olefile/__pycache__/olefile.cpython-37.pyc",
+    "Lib/site-packages/olefile/olefile.py",
+    ".nonadmin"
+  ],
+  "fn": "olefile-0.46-py37_0.conda",
+  "license": "BSD 2-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\olefile-0.46-py37_0",
+    "type": 1
+  },
+  "md5": "5b816e0c9bc88a0c3a779d7004a5ba34",
+  "name": "olefile",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\olefile-0.46-py37_0",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/olefile-0.46-py3.7.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "97f87bfa56690282e73f4ef5089c7a0729558357d87e2685faf08c328a0a5407",
+        "sha256_in_prefix": "97f87bfa56690282e73f4ef5089c7a0729558357d87e2685faf08c328a0a5407",
+        "size_in_bytes": 11301
+      },
+      {
+        "_path": "Lib/site-packages/olefile-0.46-py3.7.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "af9795f3018cfa75311649b424f5201c5b295825bf753de162cf78e499312472",
+        "sha256_in_prefix": "af9795f3018cfa75311649b424f5201c5b295825bf753de162cf78e499312472",
+        "size_in_bytes": 584
+      },
+      {
+        "_path": "Lib/site-packages/olefile-0.46-py3.7.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "Lib/site-packages/olefile-0.46-py3.7.egg-info/installed-files.txt",
+        "path_type": "hardlink",
+        "sha256": "f3f116bd0f1b77f6efabe8d7d8b808aaf83896f67a27fc48c2dae49dabdff2e8",
+        "sha256_in_prefix": "f3f116bd0f1b77f6efabe8d7d8b808aaf83896f67a27fc48c2dae49dabdff2e8",
+        "size_in_bytes": 202
+      },
+      {
+        "_path": "Lib/site-packages/olefile-0.46-py3.7.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "bad496e3f9cfa7eaf2b510fb56f312fbc812a7d05498a6110cd7757b1f50da4b",
+        "sha256_in_prefix": "bad496e3f9cfa7eaf2b510fb56f312fbc812a7d05498a6110cd7757b1f50da4b",
+        "size_in_bytes": 8
+      },
+      {
+        "_path": "Lib/site-packages/olefile/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "5e81aec95ac09c993ad53fcfd93b3a6f67f1d1ff0bfee49214cabcfe51f0c17a",
+        "sha256_in_prefix": "5e81aec95ac09c993ad53fcfd93b3a6f67f1d1ff0bfee49214cabcfe51f0c17a",
+        "size_in_bytes": 995
+      },
+      {
+        "_path": "Lib/site-packages/olefile/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "ca1e5cbb388962765f2b57405d76a7de1d2fea34d0f7e03561f49c374a4e0093",
+        "sha256_in_prefix": "ca1e5cbb388962765f2b57405d76a7de1d2fea34d0f7e03561f49c374a4e0093",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "Lib/site-packages/olefile/__pycache__/olefile.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "1a7dc78462313bc2c5a3cf7013abe04b8a15ada602a67daa8b05bd8a07afd1cb",
+        "sha256_in_prefix": "1a7dc78462313bc2c5a3cf7013abe04b8a15ada602a67daa8b05bd8a07afd1cb",
+        "size_in_bytes": 55751
+      },
+      {
+        "_path": "Lib/site-packages/olefile/olefile.py",
+        "path_type": "hardlink",
+        "sha256": "e8e1a9ee52dca783b7e8e6fff9d344e18926fafefd4ce48e41f03b2d4725c47e",
+        "sha256_in_prefix": "e8e1a9ee52dca783b7e8e6fff9d344e18926fafefd4ce48e41f03b2d4725c47e",
+        "size_in_bytes": 105311
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "defaults/win-64::olefile==0.46=py37_0",
+  "sha256": "6d5b3f8d608a09c9e5983d8e62d0bcae370e55332d1bef2c0c32b91e607dc36d",
+  "size": 49947,
+  "subdir": "win-64",
+  "timestamp": 1536697722425,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/olefile-0.46-py37_0.conda",
+  "version": "0.46"
+}

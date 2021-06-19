@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: Pillow
+Version: 7.1.2
+Summary: Python Imaging Library (Fork)
+Home-page: https://python-pillow.org
+Author: Alex Clark (PIL Fork Author)
+Author-email: aclark@python-pillow.org
+License: HPND
+Project-URL: Documentation, https://pillow.readthedocs.io
+Project-URL: Source, https://github.com/python-pillow/Pillow
+Project-URL: Funding, https://tidelift.com/subscription/pkg/pypi-pillow?utm_source=pypi-pillow&utm_medium=pypi
+
+Pillow
+
+

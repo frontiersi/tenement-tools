@@ -1,0 +1,14 @@
+prefix=C:/Users/Lewis/Documents/GitHub/tenement-tools/arc/envs/arcgispro-py3-development/Library
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: hdf5_cpp
+Description: HDF5 (Hierarchical Data Format 5) Software Library
+Version: 1.10.5
+
+Cflags: -I${includedir}
+Libs: -L${libdir}  -lhdf5_cpp
+Requires: hdf5
+Libs.private:   -lhdf5_cpp
+Requires.private: hdf5

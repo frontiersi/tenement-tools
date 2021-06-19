@@ -1,0 +1,15 @@
+..\..\..\etc\jupyter\nbconfig\notebook.d\widgetsnbextension.json
+..\..\..\share\jupyter\nbextensions\jupyter-js-widgets\extension.js
+..\..\..\share\jupyter\nbextensions\jupyter-js-widgets\extension.js.map
+..\widgetsnbextension\__init__.py
+..\widgetsnbextension\__pycache__\__init__.cpython-37.pyc
+..\widgetsnbextension\__pycache__\_version.cpython-37.pyc
+..\widgetsnbextension\_version.py
+..\widgetsnbextension\static\extension.js
+..\widgetsnbextension\static\extension.js.map
+PKG-INFO
+SOURCES.txt
+dependency_links.txt
+not-zip-safe
+requires.txt
+top_level.txt

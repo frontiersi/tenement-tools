@@ -1,0 +1,227 @@
+{
+  "build": "h0e60522_0",
+  "build_number": 0,
+  "channel": "https://conda.anaconda.org/conda-forge/win-64",
+  "constrains": [],
+  "depends": [
+    "gettext >=0.19.8.1,<1.0a0",
+    "glib-tools 2.68.3 h0e60522_0",
+    "libglib 2.68.3 h1e62bf3_0",
+    "python *",
+    "vc >=14.1,<15.0a0",
+    "vs2015_runtime >=14.16.27012"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\glib-2.68.3-h0e60522_0",
+  "features": "",
+  "files": [
+    "Library/bin/gdbus-codegen",
+    "Library/bin/gdbus.exe",
+    "Library/bin/glib-genmarshal",
+    "Library/bin/glib-mkenums",
+    "Library/bin/gresource.exe",
+    "Library/bin/gsettings.exe",
+    "Library/bin/gspawn-win64-helper-console.exe",
+    "Library/bin/gspawn-win64-helper.exe",
+    "Library/bin/gtester-report",
+    "Library/lib/pkgconfig/gio-2.0.pc",
+    "Library/lib/pkgconfig/gio-windows-2.0.pc",
+    "Library/lib/pkgconfig/glib-2.0.pc",
+    "Library/lib/pkgconfig/gmodule-2.0.pc",
+    "Library/lib/pkgconfig/gmodule-export-2.0.pc",
+    "Library/lib/pkgconfig/gmodule-no-export-2.0.pc",
+    "Library/lib/pkgconfig/gobject-2.0.pc",
+    "Library/lib/pkgconfig/gthread-2.0.pc",
+    "Library/share/bash-completion/completions/gapplication",
+    "Library/share/bash-completion/completions/gdbus",
+    "Library/share/bash-completion/completions/gresource",
+    "Library/share/bash-completion/completions/gsettings",
+    ".nonadmin"
+  ],
+  "fn": "glib-2.68.3-h0e60522_0.tar.bz2",
+  "license": "LGPL-2.1-or-later",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\glib-2.68.3-h0e60522_0",
+    "type": 1
+  },
+  "md5": "6b3cc6b6571ac0d2d8b131cf6bbe7de4",
+  "name": "glib",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\glib-2.68.3-h0e60522_0.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Library/bin/gdbus-codegen",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "7a043a5065c5b9361be19a3990b9d47987b57fc9bf05a97c30956941472d8cff",
+        "sha256_in_prefix": "e2f089fc24f2df74b3e231c12faaff95f68a409d023acdecbf8b42bd5f7595c5",
+        "size_in_bytes": 2084
+      },
+      {
+        "_path": "Library/bin/gdbus.exe",
+        "path_type": "hardlink",
+        "sha256": "47b6791bbdc137853d8c4663f35b813398995d5ee4e71f8feb3270adaa791501",
+        "sha256_in_prefix": "47b6791bbdc137853d8c4663f35b813398995d5ee4e71f8feb3270adaa791501",
+        "size_in_bytes": 104960
+      },
+      {
+        "_path": "Library/bin/glib-genmarshal",
+        "path_type": "hardlink",
+        "sha256": "ce18304c1089b9e3325604f3ab489e437e1948335cb205c6db932e1467046971",
+        "sha256_in_prefix": "ce18304c1089b9e3325604f3ab489e437e1948335cb205c6db932e1467046971",
+        "size_in_bytes": 41109
+      },
+      {
+        "_path": "Library/bin/glib-mkenums",
+        "path_type": "hardlink",
+        "sha256": "ac4a23f48cfbdbefb93b2fdf5fb6411cc576a3088034d10508e52c5a3ff52619",
+        "sha256_in_prefix": "ac4a23f48cfbdbefb93b2fdf5fb6411cc576a3088034d10508e52c5a3ff52619",
+        "size_in_bytes": 30801
+      },
+      {
+        "_path": "Library/bin/gresource.exe",
+        "path_type": "hardlink",
+        "sha256": "161233bfa8fb2d894a0a177153edac61f4221fcb8e3285f7f33b58f38e5b8a4a",
+        "sha256_in_prefix": "161233bfa8fb2d894a0a177153edac61f4221fcb8e3285f7f33b58f38e5b8a4a",
+        "size_in_bytes": 80384
+      },
+      {
+        "_path": "Library/bin/gsettings.exe",
+        "path_type": "hardlink",
+        "sha256": "df9307c5a50fd26d2d1cbdc4d8b8ca2faf52b3825f6e73f3b23d14435bc73b08",
+        "sha256_in_prefix": "df9307c5a50fd26d2d1cbdc4d8b8ca2faf52b3825f6e73f3b23d14435bc73b08",
+        "size_in_bytes": 89088
+      },
+      {
+        "_path": "Library/bin/gspawn-win64-helper-console.exe",
+        "path_type": "hardlink",
+        "sha256": "791cd23aa8e28eab7b3625981564cab9b867f203bed0cf87a49030c9360fbfff",
+        "sha256_in_prefix": "791cd23aa8e28eab7b3625981564cab9b867f203bed0cf87a49030c9360fbfff",
+        "size_in_bytes": 11776
+      },
+      {
+        "_path": "Library/bin/gspawn-win64-helper.exe",
+        "path_type": "hardlink",
+        "sha256": "ab1c08a491a5908ccc1ce01c3b77e9b738749eeb79d5fa7572154e6aa2bf0d07",
+        "sha256_in_prefix": "ab1c08a491a5908ccc1ce01c3b77e9b738749eeb79d5fa7572154e6aa2bf0d07",
+        "size_in_bytes": 12288
+      },
+      {
+        "_path": "Library/bin/gtester-report",
+        "path_type": "hardlink",
+        "sha256": "146f42cbe0651e7eb038f42c9bd775db6b31b1e1039ffabe2f07f67a6f92cd07",
+        "sha256_in_prefix": "146f42cbe0651e7eb038f42c9bd775db6b31b1e1039ffabe2f07f67a6f92cd07",
+        "size_in_bytes": 19095
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gio-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "798a28e90bc89f91032149cf8193968dcb8ab4974db77456fb6b02208e2fa723",
+        "sha256_in_prefix": "c6037fa1c1ab7283597198a795f74cba2527d8d16ad95bc5b5a9f2e6b3b44506",
+        "size_in_bytes": 794
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gio-windows-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "98e7a404326858ee21750e2ac8fadc36d1d7a4ddaed18f249f178f5295ddbe76",
+        "sha256_in_prefix": "92f031cc739a3d4c6bf31046ad5b39a31b66c9c0a1029c2346b73b58f97d5a35",
+        "size_in_bytes": 313
+      },
+      {
+        "_path": "Library/lib/pkgconfig/glib-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "b2a1298c10eb6f0499ab30648ee1b7899c849ba391e4787e4fd5f5e554965ecd",
+        "sha256_in_prefix": "38d67bbd275876a698703af06e54f2da8b6d0dc4058557a64c2af01e1578f5f3",
+        "size_in_bytes": 460
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gmodule-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "8540893533c5d98e3e06353d4460defe19e6cc36b22412b2ca43170f28de05f0",
+        "sha256_in_prefix": "62e7b148c19d69c4229582581f6d14171f2f3f7c182f62399097b217019cdf52",
+        "size_in_bytes": 280
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gmodule-export-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "8540893533c5d98e3e06353d4460defe19e6cc36b22412b2ca43170f28de05f0",
+        "sha256_in_prefix": "62e7b148c19d69c4229582581f6d14171f2f3f7c182f62399097b217019cdf52",
+        "size_in_bytes": 280
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gmodule-no-export-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "43aa7c8f7bcaedb1daa4db1caf0c1ac0c0159cc1a921afaefbc2e3ddc26c6afa",
+        "sha256_in_prefix": "26de07d636e08886274574d9c5ce4cdcd767bb3d149061cef5ca8c7886526d59",
+        "size_in_bytes": 320
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gobject-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "9f83ee13ed3b17a6cde2c252cce682a226388d95b7120c43b14c6bdf1b82e04b",
+        "sha256_in_prefix": "322a344eeb2a41bcc448db090c389544cdbdd018dc29fb3bb827c71d75d8e337",
+        "size_in_bytes": 347
+      },
+      {
+        "_path": "Library/lib/pkgconfig/gthread-2.0.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "D:/bld/glib-split_1623370274515/_h_env",
+        "sha256": "daf92bb349a06780462952284817ed730e289eb771e31a90d7bf7a0d8e202b85",
+        "sha256_in_prefix": "b8d8b5377624eacd3569cc095a6b0eb4791ac3beece79e71f280c77582cdfa9e",
+        "size_in_bytes": 287
+      },
+      {
+        "_path": "Library/share/bash-completion/completions/gapplication",
+        "path_type": "hardlink",
+        "sha256": "199885a791120de218784b28d189becea2cdbdd1c297e8a4a92602a969857fe7",
+        "sha256_in_prefix": "199885a791120de218784b28d189becea2cdbdd1c297e8a4a92602a969857fe7",
+        "size_in_bytes": 1389
+      },
+      {
+        "_path": "Library/share/bash-completion/completions/gdbus",
+        "path_type": "hardlink",
+        "sha256": "819c76693b994a291c175c3d7a394022b7429644794816071ae40b5ca405105e",
+        "sha256_in_prefix": "819c76693b994a291c175c3d7a394022b7429644794816071ae40b5ca405105e",
+        "size_in_bytes": 935
+      },
+      {
+        "_path": "Library/share/bash-completion/completions/gresource",
+        "path_type": "hardlink",
+        "sha256": "a659c4fec532301c07e89d171c77b057d70941d625ab4c880c8046d9ed7148a3",
+        "sha256_in_prefix": "a659c4fec532301c07e89d171c77b057d70941d625ab4c880c8046d9ed7148a3",
+        "size_in_bytes": 1356
+      },
+      {
+        "_path": "Library/share/bash-completion/completions/gsettings",
+        "path_type": "hardlink",
+        "sha256": "8b0b278b6e20a401e94afb6164f99f73ee49af70e12e6c7c054a48fc8dccb552",
+        "sha256_in_prefix": "8b0b278b6e20a401e94afb6164f99f73ee49af70e12e6c7c054a48fc8dccb552",
+        "size_in_bytes": 2829
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "a40771b17f95cfc4cc0ed076bdad7d4b6566c1b1dbcf41f84ce9a9ec89c87d1c",
+  "size": 132536,
+  "subdir": "win-64",
+  "timestamp": 1623371259995,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/win-64/glib-2.68.3-h0e60522_0.tar.bz2",
+  "version": "2.68.3"
+}

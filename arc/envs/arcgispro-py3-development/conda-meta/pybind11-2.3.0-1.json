@@ -1,0 +1,283 @@
+{
+  "arch": "x86_64",
+  "build": "1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pybind11-2.3.0-1",
+  "features": "",
+  "files": [
+    "LICENSE",
+    "Lib/site-packages/pybind11/__init__.py",
+    "Lib/site-packages/pybind11/__main__.py",
+    "Lib/site-packages/pybind11/_version.py",
+    "Library/include/pybind11/attr.h",
+    "Library/include/pybind11/buffer_info.h",
+    "Library/include/pybind11/cast.h",
+    "Library/include/pybind11/chrono.h",
+    "Library/include/pybind11/common.h",
+    "Library/include/pybind11/complex.h",
+    "Library/include/pybind11/detail/class.h",
+    "Library/include/pybind11/detail/common.h",
+    "Library/include/pybind11/detail/descr.h",
+    "Library/include/pybind11/detail/init.h",
+    "Library/include/pybind11/detail/internals.h",
+    "Library/include/pybind11/detail/typeid.h",
+    "Library/include/pybind11/eigen.h",
+    "Library/include/pybind11/embed.h",
+    "Library/include/pybind11/eval.h",
+    "Library/include/pybind11/functional.h",
+    "Library/include/pybind11/iostream.h",
+    "Library/include/pybind11/numpy.h",
+    "Library/include/pybind11/operators.h",
+    "Library/include/pybind11/options.h",
+    "Library/include/pybind11/pybind11.h",
+    "Library/include/pybind11/pytypes.h",
+    "Library/include/pybind11/stl.h",
+    "Library/include/pybind11/stl_bind.h",
+    "Library/share/cmake/pybind11/pybind11Config.cmake",
+    "Library/share/cmake/pybind11/pybind11ConfigVersion.cmake",
+    "Library/share/cmake/pybind11/pybind11Targets.cmake",
+    ".nonadmin"
+  ],
+  "fn": "pybind11-2.3.0-1.tar.bz2",
+  "license": "BSD 3-Clause",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pybind11-2.3.0-1",
+    "type": 1
+  },
+  "md5": "47ad97be46b33b235649e27ce5340567",
+  "name": "pybind11",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\pybind11-2.3.0-1",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "LICENSE",
+        "path_type": "hardlink",
+        "sha256": "9a37ea54aa3cf12c7f3292799f20822ffd4b9b7142b36a7a9997b28c39264dc9",
+        "sha256_in_prefix": "9a37ea54aa3cf12c7f3292799f20822ffd4b9b7142b36a7a9997b28c39264dc9",
+        "size_in_bytes": 1676
+      },
+      {
+        "_path": "Lib/site-packages/pybind11/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "b91cda5e3b7a758e73411cb4a0abc14f07e3e8dc04a507b842e554a8e592a776",
+        "sha256_in_prefix": "b91cda5e3b7a758e73411cb4a0abc14f07e3e8dc04a507b842e554a8e592a776",
+        "size_in_bytes": 879
+      },
+      {
+        "_path": "Lib/site-packages/pybind11/__main__.py",
+        "path_type": "hardlink",
+        "sha256": "d147dfcd9e4d58782053be60fb7e3629cde3d04e7f813b50cef2a5f77e60503c",
+        "sha256_in_prefix": "d147dfcd9e4d58782053be60fb7e3629cde3d04e7f813b50cef2a5f77e60503c",
+        "size_in_bytes": 871
+      },
+      {
+        "_path": "Lib/site-packages/pybind11/_version.py",
+        "path_type": "hardlink",
+        "sha256": "87055cd48441694931ee93d6ec975ac8f3e2d17dd39d02c071e660efc60f8965",
+        "sha256_in_prefix": "87055cd48441694931ee93d6ec975ac8f3e2d17dd39d02c071e660efc60f8965",
+        "size_in_bytes": 72
+      },
+      {
+        "_path": "Library/include/pybind11/attr.h",
+        "path_type": "hardlink",
+        "sha256": "589d1aabe10040d7b882b77b0005e3381b37cd0a0ccee3f3302bb6e6d7734ea4",
+        "sha256_in_prefix": "589d1aabe10040d7b882b77b0005e3381b37cd0a0ccee3f3302bb6e6d7734ea4",
+        "size_in_bytes": 19063
+      },
+      {
+        "_path": "Library/include/pybind11/buffer_info.h",
+        "path_type": "hardlink",
+        "sha256": "673cdec6dbee109010aced7b632da01b41a58dcbef9d9f74870238d9a4492bc8",
+        "sha256_in_prefix": "673cdec6dbee109010aced7b632da01b41a58dcbef9d9f74870238d9a4492bc8",
+        "size_in_bytes": 4326
+      },
+      {
+        "_path": "Library/include/pybind11/cast.h",
+        "path_type": "hardlink",
+        "sha256": "007ed462a4eec218d89bb810f36f0804d759284f8cf56326ed005233eca5fbda",
+        "sha256_in_prefix": "007ed462a4eec218d89bb810f36f0804d759284f8cf56326ed005233eca5fbda",
+        "size_in_bytes": 89522
+      },
+      {
+        "_path": "Library/include/pybind11/chrono.h",
+        "path_type": "hardlink",
+        "sha256": "2db4debd0cc582e373cbf33ad5975c4f186d2222e1b0ba2e7e5c8daba907f387",
+        "sha256_in_prefix": "2db4debd0cc582e373cbf33ad5975c4f186d2222e1b0ba2e7e5c8daba907f387",
+        "size_in_bytes": 6616
+      },
+      {
+        "_path": "Library/include/pybind11/common.h",
+        "path_type": "hardlink",
+        "sha256": "01383d06dd69c05f2a9cdb88d3ce9fa6b3380944ddad9764fe0d875c4d527fa0",
+        "sha256_in_prefix": "01383d06dd69c05f2a9cdb88d3ce9fa6b3380944ddad9764fe0d875c4d527fa0",
+        "size_in_bytes": 120
+      },
+      {
+        "_path": "Library/include/pybind11/complex.h",
+        "path_type": "hardlink",
+        "sha256": "cc2c304c07246650d255980d67db4e16d5c6c3c65bf4884f286fc10d4c88c110",
+        "sha256_in_prefix": "cc2c304c07246650d255980d67db4e16d5c6c3c65bf4884f286fc10d4c88c110",
+        "size_in_bytes": 2001
+      },
+      {
+        "_path": "Library/include/pybind11/detail/class.h",
+        "path_type": "hardlink",
+        "sha256": "520e5975d71e4a2493cb3b6639b0c1aba6d4d4e3a3679dbf7a1f003b79e3aff4",
+        "sha256_in_prefix": "520e5975d71e4a2493cb3b6639b0c1aba6d4d4e3a3679dbf7a1f003b79e3aff4",
+        "size_in_bytes": 24772
+      },
+      {
+        "_path": "Library/include/pybind11/detail/common.h",
+        "path_type": "hardlink",
+        "sha256": "98608d8ddad205184ffbeb017a3259e17d726d7b9f3bc996eaadfa2bc91998d2",
+        "sha256_in_prefix": "98608d8ddad205184ffbeb017a3259e17d726d7b9f3bc996eaadfa2bc91998d2",
+        "size_in_bytes": 37065
+      },
+      {
+        "_path": "Library/include/pybind11/detail/descr.h",
+        "path_type": "hardlink",
+        "sha256": "14f0abdfb56e224db72241121921c286a5127963fa8f211de117d62ef424d6f1",
+        "sha256_in_prefix": "14f0abdfb56e224db72241121921c286a5127963fa8f211de117d62ef424d6f1",
+        "size_in_bytes": 3566
+      },
+      {
+        "_path": "Library/include/pybind11/detail/init.h",
+        "path_type": "hardlink",
+        "sha256": "b60db6a24bff8e3ab376ff7077d579492175828780112e132dadabfbf2873afa",
+        "sha256_in_prefix": "b60db6a24bff8e3ab376ff7077d579492175828780112e132dadabfbf2873afa",
+        "size_in_bytes": 16322
+      },
+      {
+        "_path": "Library/include/pybind11/detail/internals.h",
+        "path_type": "hardlink",
+        "sha256": "e2586005a3562bffabc5071dd8a7ad0cc0e985c5682f46e6e9ebcae85ea05dcd",
+        "sha256_in_prefix": "e2586005a3562bffabc5071dd8a7ad0cc0e985c5682f46e6e9ebcae85ea05dcd",
+        "size_in_bytes": 13633
+      },
+      {
+        "_path": "Library/include/pybind11/detail/typeid.h",
+        "path_type": "hardlink",
+        "sha256": "37bcf9f0023d4214bd7a26bed38bdbfc05c51b904c89a7b3f89590405aa2687f",
+        "sha256_in_prefix": "37bcf9f0023d4214bd7a26bed38bdbfc05c51b904c89a7b3f89590405aa2687f",
+        "size_in_bytes": 1450
+      },
+      {
+        "_path": "Library/include/pybind11/eigen.h",
+        "path_type": "hardlink",
+        "sha256": "95a4960669618a8465d0bf9398935ef806e999b228c653c3c790627535bfe0e3",
+        "sha256_in_prefix": "95a4960669618a8465d0bf9398935ef806e999b228c653c3c790627535bfe0e3",
+        "size_in_bytes": 29043
+      },
+      {
+        "_path": "Library/include/pybind11/embed.h",
+        "path_type": "hardlink",
+        "sha256": "b44c7fdb513d7e6703c5a5f527a76eac8b65bf6852c439677b277991f70c03b8",
+        "sha256_in_prefix": "b44c7fdb513d7e6703c5a5f527a76eac8b65bf6852c439677b277991f70c03b8",
+        "size_in_bytes": 7731
+      },
+      {
+        "_path": "Library/include/pybind11/eval.h",
+        "path_type": "hardlink",
+        "sha256": "fdac3f0d51ccd6d3bab9a3d384ebdf6bb18c296a8f6a71649ebbf1519431088a",
+        "sha256_in_prefix": "fdac3f0d51ccd6d3bab9a3d384ebdf6bb18c296a8f6a71649ebbf1519431088a",
+        "size_in_bytes": 3865
+      },
+      {
+        "_path": "Library/include/pybind11/functional.h",
+        "path_type": "hardlink",
+        "sha256": "a150b5bec99c953bfcb462aaba272bfc0d69183a2dff5cdc4a1dc53d7ff73f4f",
+        "sha256_in_prefix": "a150b5bec99c953bfcb462aaba272bfc0d69183a2dff5cdc4a1dc53d7ff73f4f",
+        "size_in_bytes": 3347
+      },
+      {
+        "_path": "Library/include/pybind11/iostream.h",
+        "path_type": "hardlink",
+        "sha256": "1f46b3fe419d1023207d3a37b1e0f2bab95ec8b20f57bf9d49cb82242c353afc",
+        "sha256_in_prefix": "1f46b3fe419d1023207d3a37b1e0f2bab95ec8b20f57bf9d49cb82242c353afc",
+        "size_in_bytes": 5616
+      },
+      {
+        "_path": "Library/include/pybind11/numpy.h",
+        "path_type": "hardlink",
+        "sha256": "4e4b150f1b4b81a43614a1658c9247719036902b327a640d31c1c94e2f2a68e5",
+        "sha256_in_prefix": "4e4b150f1b4b81a43614a1658c9247719036902b327a640d31c1c94e2f2a68e5",
+        "size_in_bytes": 65979
+      },
+      {
+        "_path": "Library/include/pybind11/operators.h",
+        "path_type": "hardlink",
+        "sha256": "c64d4d76724210bfc1bdf4030905af07f4b4b836ed114383e468f18a8d85a36d",
+        "sha256_in_prefix": "c64d4d76724210bfc1bdf4030905af07f4b4b836ed114383e468f18a8d85a36d",
+        "size_in_bytes": 8749
+      },
+      {
+        "_path": "Library/include/pybind11/options.h",
+        "path_type": "hardlink",
+        "sha256": "ae7bf9401a11341a94bf9f40db45ce3834bcb55d30187b4c1426eca7a0896e79",
+        "sha256_in_prefix": "ae7bf9401a11341a94bf9f40db45ce3834bcb55d30187b4c1426eca7a0896e79",
+        "size_in_bytes": 2031
+      },
+      {
+        "_path": "Library/include/pybind11/pybind11.h",
+        "path_type": "hardlink",
+        "sha256": "263e4f8daf1ebd803e4947810248a584c1bc489b81f04a5d41ceb66da87e4e46",
+        "sha256_in_prefix": "263e4f8daf1ebd803e4947810248a584c1bc489b81f04a5d41ceb66da87e4e46",
+        "size_in_bytes": 96604
+      },
+      {
+        "_path": "Library/include/pybind11/pytypes.h",
+        "path_type": "hardlink",
+        "sha256": "722e92af1ed479f26186e70a3e247e8ca2553090b1cce5f66023b4d44beed919",
+        "sha256_in_prefix": "722e92af1ed479f26186e70a3e247e8ca2553090b1cce5f66023b4d44beed919",
+        "size_in_bytes": 57794
+      },
+      {
+        "_path": "Library/include/pybind11/stl.h",
+        "path_type": "hardlink",
+        "sha256": "5910d1a8fa38490b28d4daa364313535f184c3e0f04d3f34c715673d00771e7a",
+        "sha256_in_prefix": "5910d1a8fa38490b28d4daa364313535f184c3e0f04d3f34c715673d00771e7a",
+        "size_in_bytes": 14029
+      },
+      {
+        "_path": "Library/include/pybind11/stl_bind.h",
+        "path_type": "hardlink",
+        "sha256": "fdb885eb4fb740396edbb3bdf6bf3fda438180cc4a7793502eb8ea0e18fad42d",
+        "sha256_in_prefix": "fdb885eb4fb740396edbb3bdf6bf3fda438180cc4a7793502eb8ea0e18fad42d",
+        "size_in_bytes": 22528
+      },
+      {
+        "_path": "Library/share/cmake/pybind11/pybind11Config.cmake",
+        "path_type": "hardlink",
+        "sha256": "dae8a4d0496cecbc7f2c353c4bb68bb418fd1727d4e9ba577393645b645d826c",
+        "sha256_in_prefix": "dae8a4d0496cecbc7f2c353c4bb68bb418fd1727d4e9ba577393645b645d826c",
+        "size_in_bytes": 5128
+      },
+      {
+        "_path": "Library/share/cmake/pybind11/pybind11ConfigVersion.cmake",
+        "path_type": "hardlink",
+        "sha256": "505d7b5864390e79c77258b4d9131c52fee668ece1ea6500b02fbd0bd05e4513",
+        "sha256_in_prefix": "505d7b5864390e79c77258b4d9131c52fee668ece1ea6500b02fbd0bd05e4513",
+        "size_in_bytes": 1416
+      },
+      {
+        "_path": "Library/share/cmake/pybind11/pybind11Targets.cmake",
+        "path_type": "hardlink",
+        "sha256": "608dffcfdd3938495f8cb57f1a98933f760bf0b31a0d5ec78b95259c709e54d9",
+        "sha256_in_prefix": "608dffcfdd3938495f8cb57f1a98933f760bf0b31a0d5ec78b95259c709e54d9",
+        "size_in_bytes": 3931
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::pybind11==2.3.0=1",
+  "size": 110796,
+  "subdir": "win-64",
+  "timestamp": 1588111236711,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/pybind11-2.3.0-1.tar.bz2",
+  "version": "2.3.0"
+}

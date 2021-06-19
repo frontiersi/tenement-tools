@@ -1,0 +1,175 @@
+{
+  "build": "pyhd3eb1b0_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/noarch",
+  "constrains": [],
+  "depends": [
+    "python"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\testpath-0.4.4-pyhd3eb1b0_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/testpath-0.4.4.dist-info/INSTALLER",
+    "Lib/site-packages/testpath-0.4.4.dist-info/LICENSE",
+    "Lib/site-packages/testpath-0.4.4.dist-info/METADATA",
+    "Lib/site-packages/testpath-0.4.4.dist-info/RECORD",
+    "Lib/site-packages/testpath-0.4.4.dist-info/REQUESTED",
+    "Lib/site-packages/testpath-0.4.4.dist-info/WHEEL",
+    "Lib/site-packages/testpath-0.4.4.dist-info/direct_url.json",
+    "Lib/site-packages/testpath/__init__.py",
+    "Lib/site-packages/testpath/asserts.py",
+    "Lib/site-packages/testpath/cli-32.exe",
+    "Lib/site-packages/testpath/cli-64.exe",
+    "Lib/site-packages/testpath/commands.py",
+    "Lib/site-packages/testpath/env.py",
+    "Lib/site-packages/testpath/tempdir.py",
+    ".nonadmin",
+    "Lib/site-packages/testpath/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/testpath/__pycache__/asserts.cpython-37.pyc",
+    "Lib/site-packages/testpath/__pycache__/commands.cpython-37.pyc",
+    "Lib/site-packages/testpath/__pycache__/env.cpython-37.pyc",
+    "Lib/site-packages/testpath/__pycache__/tempdir.cpython-37.pyc"
+  ],
+  "fn": "testpath-0.4.4-pyhd3eb1b0_0.tar.bz2",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\testpath-0.4.4-pyhd3eb1b0_0",
+    "type": 1
+  },
+  "md5": "063b37d548764c4f4a9848bddc525312",
+  "name": "testpath",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\testpath-0.4.4-pyhd3eb1b0_0",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "95f7c73530d13d9fe14e59b8bbd2eb4901aab79e119e336cd937f495cce6fc36",
+        "sha256_in_prefix": "95f7c73530d13d9fe14e59b8bbd2eb4901aab79e119e336cd937f495cce6fc36",
+        "size_in_bytes": 1528
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "e097d26f8a81ea0f6d8e0df08a4f3db06061cc91613b058431998021096622a2",
+        "sha256_in_prefix": "e097d26f8a81ea0f6d8e0df08a4f3db06061cc91613b058431998021096622a2",
+        "size_in_bytes": 1186
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "684a2ad44b94dd126b573e49c83f7fc48ae76a18d06b44efe8ec90f39c41777a",
+        "sha256_in_prefix": "684a2ad44b94dd126b573e49c83f7fc48ae76a18d06b44efe8ec90f39c41777a",
+        "size_in_bytes": 1347
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "34baa6b31f99159ea00dabd8821da81f465237e2919a971d1172190e7632f4f8",
+        "sha256_in_prefix": "34baa6b31f99159ea00dabd8821da81f465237e2919a971d1172190e7632f4f8",
+        "size_in_bytes": 99
+      },
+      {
+        "_path": "site-packages/testpath-0.4.4.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "3704258d14d5ad10b6081b29d7212afaeabcaea503c34937ffff5e8a7785f66a",
+        "sha256_in_prefix": "3704258d14d5ad10b6081b29d7212afaeabcaea503c34937ffff5e8a7785f66a",
+        "size_in_bytes": 81
+      },
+      {
+        "_path": "site-packages/testpath/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "799d662a8000c29c749b0548f0c14dfb02039e1600995c1a99186591a119f425",
+        "sha256_in_prefix": "799d662a8000c29c749b0548f0c14dfb02039e1600995c1a99186591a119f425",
+        "size_in_bytes": 220
+      },
+      {
+        "_path": "site-packages/testpath/asserts.py",
+        "path_type": "hardlink",
+        "sha256": "e10e289d57e9f2a1412b041836fe7ed91899e43d2aabe3748fee70cae5580a7e",
+        "sha256_in_prefix": "e10e289d57e9f2a1412b041836fe7ed91899e43d2aabe3748fee70cae5580a7e",
+        "size_in_bytes": 6826
+      },
+      {
+        "_path": "site-packages/testpath/cli-32.exe",
+        "path_type": "hardlink",
+        "sha256": "75f12ea2f30d9c0d872dade345f30f562e6d93847b6a509ba53beec6d0b2c346",
+        "sha256_in_prefix": "75f12ea2f30d9c0d872dade345f30f562e6d93847b6a509ba53beec6d0b2c346",
+        "size_in_bytes": 65536
+      },
+      {
+        "_path": "site-packages/testpath/cli-64.exe",
+        "path_type": "hardlink",
+        "sha256": "28b001bb9a72ae7a24242bfab248d767a1ac5dec981c672a3944f7a072375e9a",
+        "sha256_in_prefix": "28b001bb9a72ae7a24242bfab248d767a1ac5dec981c672a3944f7a072375e9a",
+        "size_in_bytes": 74752
+      },
+      {
+        "_path": "site-packages/testpath/commands.py",
+        "path_type": "hardlink",
+        "sha256": "e0a2f0c380a20ca0fc80cdab7c9bdbc9bd50dc4085a6864f8b8a19645212d10a",
+        "sha256_in_prefix": "e0a2f0c380a20ca0fc80cdab7c9bdbc9bd50dc4085a6864f8b8a19645212d10a",
+        "size_in_bytes": 4873
+      },
+      {
+        "_path": "site-packages/testpath/env.py",
+        "path_type": "hardlink",
+        "sha256": "c287366d423057dd3c21dd356a8a239b0f4ee9f88b694d2159ec7a7f459c6c08",
+        "sha256_in_prefix": "c287366d423057dd3c21dd356a8a239b0f4ee9f88b694d2159ec7a7f459c6c08",
+        "size_in_bytes": 2370
+      },
+      {
+        "_path": "site-packages/testpath/tempdir.py",
+        "path_type": "hardlink",
+        "sha256": "e2a99f77d874159f1c37d5e89efcaf01f7f95a373f21df3e62b420e099cfe07d",
+        "sha256_in_prefix": "e2a99f77d874159f1c37d5e89efcaf01f7f95a373f21df3e62b420e099cfe07d",
+        "size_in_bytes": 5246
+      },
+      {
+        "_path": "Lib/site-packages/testpath/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/testpath/__pycache__/asserts.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/testpath/__pycache__/commands.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/testpath/__pycache__/env.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/testpath/__pycache__/tempdir.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "defaults/noarch::testpath==0.4.4=pyhd3eb1b0_0",
+  "size": 87471,
+  "subdir": "noarch",
+  "timestamp": 1611930617099,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/noarch/testpath-0.4.4-pyhd3eb1b0_0.tar.bz2",
+  "version": "0.4.4"
+}

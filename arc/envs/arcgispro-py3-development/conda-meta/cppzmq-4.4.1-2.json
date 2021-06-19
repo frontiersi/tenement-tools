@@ -1,0 +1,94 @@
+{
+  "arch": "x86_64",
+  "build": "2",
+  "build_number": 2,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [
+    "libsodium",
+    "zeromq >=4.3.2,<4.4.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\cppzmq-4.4.1-2",
+  "features": "",
+  "files": [
+    "LICENSE",
+    "Library/include/zmq.hpp",
+    "Library/include/zmq_addon.hpp",
+    "Library/share/cmake/cppzmq/cppzmqConfig.cmake",
+    "Library/share/cmake/cppzmq/cppzmqConfigVersion.cmake",
+    "Library/share/cmake/cppzmq/cppzmqTargets.cmake",
+    "Library/share/cmake/cppzmq/libzmq-pkg-config/FindZeroMQ.cmake",
+    ".nonadmin"
+  ],
+  "fn": "cppzmq-4.4.1-2.tar.bz2",
+  "license": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\cppzmq-4.4.1-2",
+    "type": 1
+  },
+  "md5": "b329153a761b68a02b3cdfbb697da0a4",
+  "name": "cppzmq",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\cppzmq-4.4.1-2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "LICENSE",
+        "path_type": "hardlink",
+        "sha256": "7e6db90e2e805c72b3daa77849d1cb5f1f92da0e69750c8a4aa1d86d70704748",
+        "sha256_in_prefix": "7e6db90e2e805c72b3daa77849d1cb5f1f92da0e69750c8a4aa1d86d70704748",
+        "size_in_bytes": 1083
+      },
+      {
+        "_path": "Library/include/zmq.hpp",
+        "path_type": "hardlink",
+        "sha256": "cdb75e90ff173e13b060906a63bc42bec6c1c1d8d30944acd7896ab1e7a52498",
+        "sha256_in_prefix": "cdb75e90ff173e13b060906a63bc42bec6c1c1d8d30944acd7896ab1e7a52498",
+        "size_in_bytes": 55129
+      },
+      {
+        "_path": "Library/include/zmq_addon.hpp",
+        "path_type": "hardlink",
+        "sha256": "c84eadc9c4d8f58d3992817ae3fc339856ef7652559709054f7fa1695f40111a",
+        "sha256_in_prefix": "c84eadc9c4d8f58d3992817ae3fc339856ef7652559709054f7fa1695f40111a",
+        "size_in_bytes": 14044
+      },
+      {
+        "_path": "Library/share/cmake/cppzmq/cppzmqConfig.cmake",
+        "path_type": "hardlink",
+        "sha256": "fd274d6f3de277461e8525f1506e8d719f1cfc7be91dbc6df6892a85068f442c",
+        "sha256_in_prefix": "fd274d6f3de277461e8525f1506e8d719f1cfc7be91dbc6df6892a85068f442c",
+        "size_in_bytes": 1857
+      },
+      {
+        "_path": "Library/share/cmake/cppzmq/cppzmqConfigVersion.cmake",
+        "path_type": "hardlink",
+        "sha256": "ec68c4998bed08dac84cd1665b0ee0d1ea46b16a4010d5aa874112023a2d907e",
+        "sha256_in_prefix": "ec68c4998bed08dac84cd1665b0ee0d1ea46b16a4010d5aa874112023a2d907e",
+        "size_in_bytes": 1419
+      },
+      {
+        "_path": "Library/share/cmake/cppzmq/cppzmqTargets.cmake",
+        "path_type": "hardlink",
+        "sha256": "641266361d5a6d9bfecb5869f17af70ac93400107d843cbcdeef2535003b6bdb",
+        "sha256_in_prefix": "641266361d5a6d9bfecb5869f17af70ac93400107d843cbcdeef2535003b6bdb",
+        "size_in_bytes": 3756
+      },
+      {
+        "_path": "Library/share/cmake/cppzmq/libzmq-pkg-config/FindZeroMQ.cmake",
+        "path_type": "hardlink",
+        "sha256": "a7951cbc99bb45f4cbf6926280731b51121c553d1c4061558109bba47ab129f4",
+        "sha256_in_prefix": "a7951cbc99bb45f4cbf6926280731b51121c553d1c4061558109bba47ab129f4",
+        "size_in_bytes": 1049
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::cppzmq==4.4.1=2",
+  "size": 17475,
+  "subdir": "win-64",
+  "timestamp": 1596673884837,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/cppzmq-4.4.1-2.tar.bz2",
+  "version": "4.4.1"
+}

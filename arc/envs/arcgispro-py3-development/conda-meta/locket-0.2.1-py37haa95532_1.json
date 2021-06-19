@@ -1,0 +1,54 @@
+{
+  "build": "py37haa95532_1",
+  "build_number": 1,
+  "channel": "https://repo.anaconda.com/pkgs/main/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\locket-0.2.1-py37haa95532_1",
+  "features": "",
+  "files": [
+    "Lib/site-packages/locket-0.2.1-py3.7.egg",
+    "Lib/site-packages/locket.pth",
+    ".nonadmin"
+  ],
+  "fn": "locket-0.2.1-py37haa95532_1.conda",
+  "legacy_bz2_md5": "1c168c0648093a36774ef4017966cee0",
+  "legacy_bz2_size": 10900,
+  "license": "BSD 2-Clause",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\locket-0.2.1-py37haa95532_1",
+    "type": 1
+  },
+  "md5": "7052e8cb0779596ec41fc529c5fae3e8",
+  "name": "locket",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\locket-0.2.1-py37haa95532_1.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/locket-0.2.1-py3.7.egg",
+        "path_type": "hardlink",
+        "sha256": "8a82eb36412467858e071f8a4d7ff91079f63e0f83a7ffe06d5bd6805278a8b0",
+        "sha256_in_prefix": "8a82eb36412467858e071f8a4d7ff91079f63e0f83a7ffe06d5bd6805278a8b0",
+        "size_in_bytes": 5642
+      },
+      {
+        "_path": "Lib/site-packages/locket.pth",
+        "path_type": "hardlink",
+        "sha256": "b852c65fcd9749f625d0f91ec9ab6ac0be784b8630dba7f67bc3f536695c20b2",
+        "sha256_in_prefix": "b852c65fcd9749f625d0f91ec9ab6ac0be784b8630dba7f67bc3f536695c20b2",
+        "size_in_bytes": 26
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "ab69c85b054c87d90ae1e7fb514ba0b7b5d962ce5a42715fc4b2072432d5d4f1",
+  "size": 10488,
+  "subdir": "win-64",
+  "timestamp": 1611170874457,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/locket-0.2.1-py37haa95532_1.conda",
+  "version": "0.2.1"
+}

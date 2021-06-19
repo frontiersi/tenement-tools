@@ -1,0 +1,113 @@
+{
+  "arch": "x86_64",
+  "build": "py37hd77b12b_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/win-64",
+  "constrains": [],
+  "depends": [
+    "python >=3.7,<3.8.0a0",
+    "vc >=14.1,<15.0a0",
+    "vs2015_runtime >=14.16.27012,<15.0a0"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\kiwisolver-1.3.1-py37hd77b12b_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/INSTALLER",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/LICENSE",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/METADATA",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/RECORD",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/REQUESTED",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/WHEEL",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/direct_url.json",
+    "Lib/site-packages/kiwisolver-1.3.1.dist-info/top_level.txt",
+    "Lib/site-packages/kiwisolver.cp37-win_amd64.pyd",
+    ".nonadmin"
+  ],
+  "fn": "kiwisolver-1.3.1-py37hd77b12b_0.conda",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\kiwisolver-1.3.1-py37hd77b12b_0",
+    "type": 1
+  },
+  "md5": "b31ac9f632e6a511ae1116369e0e1dee",
+  "name": "kiwisolver",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\kiwisolver-1.3.1-py37hd77b12b_0",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/LICENSE",
+        "path_type": "hardlink",
+        "sha256": "26da8d49744796f2601fb5fe9e5d8b9e8102064ca60a8dc1825b6177cb05450c",
+        "sha256_in_prefix": "26da8d49744796f2601fb5fe9e5d8b9e8102064ca60a8dc1825b6177cb05450c",
+        "size_in_bytes": 3279
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "a13e0f821508a4b5cbdf14e39fff9df2601189c0d2c0ce2ecda502f8431834b7",
+        "sha256_in_prefix": "a13e0f821508a4b5cbdf14e39fff9df2601189c0d2c0ce2ecda502f8431834b7",
+        "size_in_bytes": 1978
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "bdea7e4441ff8989126f87201aec1eb78b0648fa15f06e7019e44dbb0062eba0",
+        "sha256_in_prefix": "bdea7e4441ff8989126f87201aec1eb78b0648fa15f06e7019e44dbb0062eba0",
+        "size_in_bytes": 776
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "ccc46a17d65f1c6c413dfbdc5b013e2f171591d075861afc872e1c39f6463d95",
+        "sha256_in_prefix": "ccc46a17d65f1c6c413dfbdc5b013e2f171591d075861afc872e1c39f6463d95",
+        "size_in_bytes": 101
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "8d1594c14d6b12810f72f253167a9fa9b300fb5425e471e916cd8f7ee1ff1ee6",
+        "sha256_in_prefix": "8d1594c14d6b12810f72f253167a9fa9b300fb5425e471e916cd8f7ee1ff1ee6",
+        "size_in_bytes": 70
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver-1.3.1.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "c6ac168fba121e5a488dcc3640c25bf29b9314f7630c13bbf00669f608d387d7",
+        "sha256_in_prefix": "c6ac168fba121e5a488dcc3640c25bf29b9314f7630c13bbf00669f608d387d7",
+        "size_in_bytes": 11
+      },
+      {
+        "_path": "Lib/site-packages/kiwisolver.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "1eef5cff5fe4487119eba223c5d74a1ed7613d17dc053f73038a06e86c4cf682",
+        "sha256_in_prefix": "1eef5cff5fe4487119eba223c5d74a1ed7613d17dc053f73038a06e86c4cf682",
+        "size_in_bytes": 124416
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "defaults/win-64::kiwisolver==1.3.1=py37hd77b12b_0",
+  "sha256": "412afcce0fb428fddbabe357b47e42ce95f891247b944f5a3df0dbf7b0e3f19b",
+  "size": 52864,
+  "subdir": "win-64",
+  "timestamp": 1612282695218,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/win-64/kiwisolver-1.3.1-py37hd77b12b_0.conda",
+  "version": "1.3.1"
+}

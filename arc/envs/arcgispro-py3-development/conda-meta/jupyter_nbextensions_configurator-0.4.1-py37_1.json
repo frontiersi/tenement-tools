@@ -1,0 +1,300 @@
+{
+  "arch": "x86_64",
+  "build": "py37_1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/esri/win-64",
+  "constrains": [],
+  "depends": [
+    "jupyter_contrib_core >=0.3.2",
+    "jupyter_core",
+    "nbconvert",
+    "notebook >=4.0",
+    "python >=3.7,<3.8.0a0",
+    "pyyaml",
+    "tornado",
+    "traitlets"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\jupyter_nbextensions_configurator-0.4.1-py37_1",
+  "features": "",
+  "files": [
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/INSTALLER",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/LICENSE.txt",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/METADATA",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/RECORD",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/WHEEL",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/direct_url.json",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/entry_points.txt",
+    "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/top_level.txt",
+    "Lib/site-packages/jupyter_nbextensions_configurator/__init__.py",
+    "Lib/site-packages/jupyter_nbextensions_configurator/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/jupyter_nbextensions_configurator/__pycache__/application.cpython-37.pyc",
+    "Lib/site-packages/jupyter_nbextensions_configurator/application.py",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/config_menu.yaml",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/icon.png",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/main.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/icon.png",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/kse_components.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/main.css",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/main.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/quickhelp_shim.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/readme.md",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/render.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/rendermd.css",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/video_play.svg",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/icon.png",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/main.js",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/readme.md",
+    "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/tree_tab.yaml",
+    "Lib/site-packages/jupyter_nbextensions_configurator/templates/nbextensions_configurator.html",
+    "Lib/site-packages/jupyter_nbextensions_configurator/templates/rendermd.html",
+    "Scripts/jupyter-nbextensions_configurator-script.py",
+    "Scripts/jupyter-nbextensions_configurator.exe",
+    ".nonadmin"
+  ],
+  "fn": "jupyter_nbextensions_configurator-0.4.1-py37_1.tar.bz2",
+  "license": "BSD-3-Clause",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\jupyter_nbextensions_configurator-0.4.1-py37_1",
+    "type": 1
+  },
+  "md5": "03c1f7a349d68296680d91368f93c52d",
+  "name": "jupyter_nbextensions_configurator",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\jupyter_nbextensions_configurator-0.4.1-py37_1",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/LICENSE.txt",
+        "path_type": "hardlink",
+        "sha256": "190dc3f5394e64a2fa6b0917dc770c5651205b1567e7308dd3c65ca893b54e75",
+        "sha256_in_prefix": "190dc3f5394e64a2fa6b0917dc770c5651205b1567e7308dd3c65ca893b54e75",
+        "size_in_bytes": 1716
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "b2e02abfef749e3712501920bce2e254a005e4196bfa2b391a292f6b700dfd16",
+        "sha256_in_prefix": "b2e02abfef749e3712501920bce2e254a005e4196bfa2b391a292f6b700dfd16",
+        "size_in_bytes": 1731
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "a5f3889b8a863b571c68afa977bd308b249ccc074a681b9f85c40d35db4a4e7c",
+        "sha256_in_prefix": "a5f3889b8a863b571c68afa977bd308b249ccc074a681b9f85c40d35db4a4e7c",
+        "size_in_bytes": 4010
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "e93dd36191386058b61d34b505e647357022f0de763994f83be749ebea267bfe",
+        "sha256_in_prefix": "e93dd36191386058b61d34b505e647357022f0de763994f83be749ebea267bfe",
+        "size_in_bytes": 116
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "c2725e73cf67f4b678a132f5ab85322449f04ea1feada40af5801e398ac7d053",
+        "sha256_in_prefix": "c2725e73cf67f4b678a132f5ab85322449f04ea1feada40af5801e398ac7d053",
+        "size_in_bytes": 115
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/entry_points.txt",
+        "path_type": "hardlink",
+        "sha256": "7026fafa8f015d9ccf0e050a5923f269550cc079faf43c3f36b6691dcf72fb30",
+        "sha256_in_prefix": "7026fafa8f015d9ccf0e050a5923f269550cc079faf43c3f36b6691dcf72fb30",
+        "size_in_bytes": 106
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator-0.4.1.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "f32255af5acbd23209f15757879f491d2d2134e154af32c413205911301ce84c",
+        "sha256_in_prefix": "f32255af5acbd23209f15757879f491d2d2134e154af32c413205911301ce84c",
+        "size_in_bytes": 34
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "bf6d5df58dc650751476b5471c2a5455ac2e67ab3fde3228474c84f4c82b7934",
+        "sha256_in_prefix": "bf6d5df58dc650751476b5471c2a5455ac2e67ab3fde3228474c84f4c82b7934",
+        "size_in_bytes": 10342
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "c6d9b4e6c9d85affaa8d1b7aafa03fcea33381e6df402ee8f25b67e81f87f89f",
+        "sha256_in_prefix": "c6d9b4e6c9d85affaa8d1b7aafa03fcea33381e6df402ee8f25b67e81f87f89f",
+        "size_in_bytes": 8755
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/__pycache__/application.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "83c71dde742b07f953ae3683335b5173127eaa861b5480bd1ad728d2612f6089",
+        "sha256_in_prefix": "83c71dde742b07f953ae3683335b5173127eaa861b5480bd1ad728d2612f6089",
+        "size_in_bytes": 4744
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/application.py",
+        "path_type": "hardlink",
+        "sha256": "a594d79d47a5c5a9ea8252ee686d671a31b6befb3bb583d1ddc40a7ac05855e3",
+        "sha256_in_prefix": "a594d79d47a5c5a9ea8252ee686d671a31b6befb3bb583d1ddc40a7ac05855e3",
+        "size_in_bytes": 4817
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/config_menu.yaml",
+        "path_type": "hardlink",
+        "sha256": "5020fb08aa43605e6dcae196b79631dc8ac0b5ee23c217bb872fd7ae9f61f0df",
+        "sha256_in_prefix": "5020fb08aa43605e6dcae196b79631dc8ac0b5ee23c217bb872fd7ae9f61f0df",
+        "size_in_bytes": 226
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/icon.png",
+        "path_type": "hardlink",
+        "sha256": "f8e572abc95d7f06e7f381f905e809ac2f397502a1ba9c01fe8a5bd5ea822817",
+        "sha256_in_prefix": "f8e572abc95d7f06e7f381f905e809ac2f397502a1ba9c01fe8a5bd5ea822817",
+        "size_in_bytes": 33794
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/config_menu/main.js",
+        "path_type": "hardlink",
+        "sha256": "0543ecc665c09cbf397ba01d919e84a0d89bec57a43471d4dec07c2ad9e0b979",
+        "sha256_in_prefix": "0543ecc665c09cbf397ba01d919e84a0d89bec57a43471d4dec07c2ad9e0b979",
+        "size_in_bytes": 967
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/icon.png",
+        "path_type": "hardlink",
+        "sha256": "64aea36de104b225d516804c0af3892e2a5c8ec0d44d6bd2c09c34164fd5030e",
+        "sha256_in_prefix": "64aea36de104b225d516804c0af3892e2a5c8ec0d44d6bd2c09c34164fd5030e",
+        "size_in_bytes": 298383
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/kse_components.js",
+        "path_type": "hardlink",
+        "sha256": "b643379c9f7a72ac698443a0a5f30dabf1a653e79267e193eb29295f4db9d37d",
+        "sha256_in_prefix": "b643379c9f7a72ac698443a0a5f30dabf1a653e79267e193eb29295f4db9d37d",
+        "size_in_bytes": 12695
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/main.css",
+        "path_type": "hardlink",
+        "sha256": "0fb2e6dde5a1385c2363e8b131ffb06cca6e8b1c46fa7f839066d9526dfe2433",
+        "sha256_in_prefix": "0fb2e6dde5a1385c2363e8b131ffb06cca6e8b1c46fa7f839066d9526dfe2433",
+        "size_in_bytes": 5354
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/main.js",
+        "path_type": "hardlink",
+        "sha256": "fcb2d89832ee7ec04b846e4beca90df3a5f4724901ec82b3163ebf18600e861f",
+        "sha256_in_prefix": "fcb2d89832ee7ec04b846e4beca90df3a5f4724901ec82b3163ebf18600e861f",
+        "size_in_bytes": 61473
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/quickhelp_shim.js",
+        "path_type": "hardlink",
+        "sha256": "7a0c9786a5a15d06c4929e199c1e18d71471e31fc55fe48d002050a820af621d",
+        "sha256_in_prefix": "7a0c9786a5a15d06c4929e199c1e18d71471e31fc55fe48d002050a820af621d",
+        "size_in_bytes": 6177
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/readme.md",
+        "path_type": "hardlink",
+        "sha256": "b1d3e688cecb8e45ec868c185e36343643545c04afcd8a9325df3f7cbad09a77",
+        "sha256_in_prefix": "b1d3e688cecb8e45ec868c185e36343643545c04afcd8a9325df3f7cbad09a77",
+        "size_in_bytes": 9447
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/render.js",
+        "path_type": "hardlink",
+        "sha256": "e81423213e354bd112613f6e71603c62cc6d0853ae969f9b06e73f31221fe430",
+        "sha256_in_prefix": "e81423213e354bd112613f6e71603c62cc6d0853ae969f9b06e73f31221fe430",
+        "size_in_bytes": 9575
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/rendermd.css",
+        "path_type": "hardlink",
+        "sha256": "8e042ada483a6c1a31045946967f35e3af4f955d739dc8e4be0b1be7dffdb6d0",
+        "sha256_in_prefix": "8e042ada483a6c1a31045946967f35e3af4f955d739dc8e4be0b1be7dffdb6d0",
+        "size_in_bytes": 1644
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/render/video_play.svg",
+        "path_type": "hardlink",
+        "sha256": "00985f0b5272a917c6d1dd884eeea51450d2c0379eda14d8edfdb4a08705ff49",
+        "sha256_in_prefix": "00985f0b5272a917c6d1dd884eeea51450d2c0379eda14d8edfdb4a08705ff49",
+        "size_in_bytes": 1655
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/icon.png",
+        "path_type": "hardlink",
+        "sha256": "bad43bab2af983884f499619560cac80cd7b708015e30de4f85a03d4abf510ba",
+        "sha256_in_prefix": "bad43bab2af983884f499619560cac80cd7b708015e30de4f85a03d4abf510ba",
+        "size_in_bytes": 132963
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/main.js",
+        "path_type": "hardlink",
+        "sha256": "422b95109a7f8d305bfacc75ebf52e577764c414c41b909f6fdd8e876bebd567",
+        "sha256_in_prefix": "422b95109a7f8d305bfacc75ebf52e577764c414c41b909f6fdd8e876bebd567",
+        "size_in_bytes": 1579
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/readme.md",
+        "path_type": "hardlink",
+        "sha256": "91f8550437246e26909cf37241d38254cfd299bf21966e0a34708df3b8d74ddb",
+        "sha256_in_prefix": "91f8550437246e26909cf37241d38254cfd299bf21966e0a34708df3b8d74ddb",
+        "size_in_bytes": 594
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/static/nbextensions_configurator/tree_tab/tree_tab.yaml",
+        "path_type": "hardlink",
+        "sha256": "836cd8156f6a3c127f58fcee55ada415027cf8dbe7355db0e57df847ffc99ad5",
+        "sha256_in_prefix": "836cd8156f6a3c127f58fcee55ada415027cf8dbe7355db0e57df847ffc99ad5",
+        "size_in_bytes": 281
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/templates/nbextensions_configurator.html",
+        "path_type": "hardlink",
+        "sha256": "b9fca0ac5ef83f06e5b3fb34fed9dcfa11bd82c5b722faa687ce3a3e56ed7d08",
+        "sha256_in_prefix": "b9fca0ac5ef83f06e5b3fb34fed9dcfa11bd82c5b722faa687ce3a3e56ed7d08",
+        "size_in_bytes": 2171
+      },
+      {
+        "_path": "Lib/site-packages/jupyter_nbextensions_configurator/templates/rendermd.html",
+        "path_type": "hardlink",
+        "sha256": "c413767bb8bbaefb133ce75d0b8427a6b0f59c6f3198091694d48128d7b03380",
+        "sha256_in_prefix": "c413767bb8bbaefb133ce75d0b8427a6b0f59c6f3198091694d48128d7b03380",
+        "size_in_bytes": 2232
+      },
+      {
+        "_path": "Scripts/jupyter-nbextensions_configurator-script.py",
+        "path_type": "hardlink",
+        "sha256": "01eb702b3ad65ad5f4f39bc6eb7393ed04a3fe010837dd11826160743b0db916",
+        "sha256_in_prefix": "01eb702b3ad65ad5f4f39bc6eb7393ed04a3fe010837dd11826160743b0db916",
+        "size_in_bytes": 239
+      },
+      {
+        "_path": "Scripts/jupyter-nbextensions_configurator.exe",
+        "path_type": "hardlink",
+        "sha256": "993203a406e04936a07829b1f482fd27d739b640482e213f4c49ea1ee78a5fcf",
+        "sha256_in_prefix": "993203a406e04936a07829b1f482fd27d739b640482e213f4c49ea1ee78a5fcf",
+        "size_in_bytes": 40960
+      }
+    ],
+    "paths_version": 1
+  },
+  "platform": "win32",
+  "requested_spec": "esri/win-64::jupyter_nbextensions_configurator==0.4.1=py37_1",
+  "size": 500582,
+  "subdir": "win-64",
+  "timestamp": 1595955591682,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/esri/win-64/jupyter_nbextensions_configurator-0.4.1-py37_1.tar.bz2",
+  "version": "0.4.1"
+}

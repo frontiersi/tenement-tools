@@ -1,0 +1,83 @@
+{
+  "build": "py_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/noarch",
+  "constrains": [],
+  "depends": [
+    "python"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\appdirs-1.4.4-py_0",
+  "features": "",
+  "files": [
+    "Lib/site-packages/appdirs-1.4.4-py3.6.egg-info/PKG-INFO",
+    "Lib/site-packages/appdirs-1.4.4-py3.6.egg-info/SOURCES.txt",
+    "Lib/site-packages/appdirs-1.4.4-py3.6.egg-info/dependency_links.txt",
+    "Lib/site-packages/appdirs-1.4.4-py3.6.egg-info/top_level.txt",
+    "Lib/site-packages/appdirs.py",
+    ".nonadmin",
+    "Lib/site-packages/__pycache__/appdirs.cpython-37.pyc"
+  ],
+  "fn": "appdirs-1.4.4-py_0.conda",
+  "license": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\appdirs-1.4.4-py_0",
+    "type": 1
+  },
+  "md5": "483878b172607008f5f8e3bfded615bc",
+  "name": "appdirs",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\appdirs-1.4.4-py_0",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/appdirs-1.4.4-py3.6.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "c228ea33458e24eb0ba2e3bc2fea9f4dfc01decadfe662966552933eada03bb6",
+        "sha256_in_prefix": "c228ea33458e24eb0ba2e3bc2fea9f4dfc01decadfe662966552933eada03bb6",
+        "size_in_bytes": 10868
+      },
+      {
+        "_path": "site-packages/appdirs-1.4.4-py3.6.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "894e7f178df32aa3f6d851af661f7dc2288e4bd6a6cdf820cf4e2105997ba401",
+        "sha256_in_prefix": "894e7f178df32aa3f6d851af661f7dc2288e4bd6a6cdf820cf4e2105997ba401",
+        "size_in_bytes": 295
+      },
+      {
+        "_path": "site-packages/appdirs-1.4.4-py3.6.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "site-packages/appdirs-1.4.4-py3.6.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "9ca9dc13c094a9911127a56e4162f8fdb92e9d23c335f9fb299a9be13af96043",
+        "sha256_in_prefix": "9ca9dc13c094a9911127a56e4162f8fdb92e9d23c335f9fb299a9be13af96043",
+        "size_in_bytes": 8
+      },
+      {
+        "_path": "site-packages/appdirs.py",
+        "path_type": "hardlink",
+        "sha256": "83df6cdac5e19ef4c49bbf688f86d62344e86a973efd298a28d5ef3971e45627",
+        "sha256_in_prefix": "83df6cdac5e19ef4c49bbf688f86d62344e86a973efd298a28d5ef3971e45627",
+        "size_in_bytes": 24720
+      },
+      {
+        "_path": "Lib/site-packages/__pycache__/appdirs.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "defaults/noarch::appdirs==1.4.4=py_0",
+  "sha256": "508940c8ebaaa9b0ffa4adad4fe2fa4cffe534e8e28cf97c6e44047d825ae665",
+  "size": 13534,
+  "subdir": "noarch",
+  "timestamp": 1597094813959,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/noarch/appdirs-1.4.4-py_0.conda",
+  "version": "1.4.4"
+}
