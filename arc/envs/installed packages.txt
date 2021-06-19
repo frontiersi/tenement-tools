@@ -19,3 +19,6 @@ conda install dask=2.30.0
 # check if rasterio can be installed - try these. cannot install 1.1.6, so ignore ver num
 conda install -c conda-forge rasterio --dry-run
 conda install -c conda-forge rasterio
+
+# install geopandas
+conda install geopandas

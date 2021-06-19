@@ -1,0 +1,907 @@
+{
+  "build": "pyhd8ed1ab_1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/conda-forge/noarch",
+  "constrains": [],
+  "depends": [
+    "pandas >=0.24",
+    "pyproj >=2.2.0",
+    "python >=3.6",
+    "shapely"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\geopandas-base-0.9.0-pyhd8ed1ab_1",
+  "features": "",
+  "files": [
+    "Lib/site-packages/geopandas-0.9.0.dist-info/INSTALLER",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/LICENSE.txt",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/METADATA",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/RECORD",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/REQUESTED",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/WHEEL",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/direct_url.json",
+    "Lib/site-packages/geopandas-0.9.0.dist-info/top_level.txt",
+    "Lib/site-packages/geopandas/__init__.py",
+    "Lib/site-packages/geopandas/_compat.py",
+    "Lib/site-packages/geopandas/_config.py",
+    "Lib/site-packages/geopandas/_vectorized.py",
+    "Lib/site-packages/geopandas/_version.py",
+    "Lib/site-packages/geopandas/array.py",
+    "Lib/site-packages/geopandas/base.py",
+    "Lib/site-packages/geopandas/conftest.py",
+    "Lib/site-packages/geopandas/datasets/__init__.py",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.README.html",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.VERSION.txt",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.cpg",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.dbf",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.prj",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.shp",
+    "Lib/site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.shx",
+    "Lib/site-packages/geopandas/datasets/naturalearth_creation.py",
+    "Lib/site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.cpg",
+    "Lib/site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.dbf",
+    "Lib/site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.prj",
+    "Lib/site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.shp",
+    "Lib/site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.shx",
+    "Lib/site-packages/geopandas/datasets/nybb_16a.zip",
+    "Lib/site-packages/geopandas/geodataframe.py",
+    "Lib/site-packages/geopandas/geoseries.py",
+    "Lib/site-packages/geopandas/io/__init__.py",
+    "Lib/site-packages/geopandas/io/arrow.py",
+    "Lib/site-packages/geopandas/io/file.py",
+    "Lib/site-packages/geopandas/io/sql.py",
+    "Lib/site-packages/geopandas/plotting.py",
+    "Lib/site-packages/geopandas/sindex.py",
+    "Lib/site-packages/geopandas/testing.py",
+    "Lib/site-packages/geopandas/tests/__init__.py",
+    "Lib/site-packages/geopandas/tests/data/null_geom.geojson",
+    "Lib/site-packages/geopandas/tests/test_api.py",
+    "Lib/site-packages/geopandas/tests/test_array.py",
+    "Lib/site-packages/geopandas/tests/test_compat.py",
+    "Lib/site-packages/geopandas/tests/test_config.py",
+    "Lib/site-packages/geopandas/tests/test_crs.py",
+    "Lib/site-packages/geopandas/tests/test_datasets.py",
+    "Lib/site-packages/geopandas/tests/test_dissolve.py",
+    "Lib/site-packages/geopandas/tests/test_extension_array.py",
+    "Lib/site-packages/geopandas/tests/test_geocode.py",
+    "Lib/site-packages/geopandas/tests/test_geodataframe.py",
+    "Lib/site-packages/geopandas/tests/test_geom_methods.py",
+    "Lib/site-packages/geopandas/tests/test_geoseries.py",
+    "Lib/site-packages/geopandas/tests/test_merge.py",
+    "Lib/site-packages/geopandas/tests/test_overlay.py",
+    "Lib/site-packages/geopandas/tests/test_pandas_methods.py",
+    "Lib/site-packages/geopandas/tests/test_plotting.py",
+    "Lib/site-packages/geopandas/tests/test_show_versions.py",
+    "Lib/site-packages/geopandas/tests/test_sindex.py",
+    "Lib/site-packages/geopandas/tests/test_testing.py",
+    "Lib/site-packages/geopandas/tests/test_types.py",
+    "Lib/site-packages/geopandas/tests/util.py",
+    "Lib/site-packages/geopandas/tools/__init__.py",
+    "Lib/site-packages/geopandas/tools/_show_versions.py",
+    "Lib/site-packages/geopandas/tools/clip.py",
+    "Lib/site-packages/geopandas/tools/crs.py",
+    "Lib/site-packages/geopandas/tools/geocoding.py",
+    "Lib/site-packages/geopandas/tools/overlay.py",
+    "Lib/site-packages/geopandas/tools/sjoin.py",
+    "Lib/site-packages/geopandas/tools/tests/__init__.py",
+    "Lib/site-packages/geopandas/tools/tests/test_clip.py",
+    "Lib/site-packages/geopandas/tools/tests/test_sjoin.py",
+    "Lib/site-packages/geopandas/tools/tests/test_tools.py",
+    "Lib/site-packages/geopandas/tools/util.py",
+    ".nonadmin",
+    "Lib/site-packages/geopandas/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/_compat.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/_config.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/_vectorized.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/_version.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/array.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/base.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/conftest.cpython-37.pyc",
+    "Lib/site-packages/geopandas/datasets/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/datasets/__pycache__/naturalearth_creation.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/geodataframe.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/geoseries.cpython-37.pyc",
+    "Lib/site-packages/geopandas/io/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/io/__pycache__/arrow.cpython-37.pyc",
+    "Lib/site-packages/geopandas/io/__pycache__/file.cpython-37.pyc",
+    "Lib/site-packages/geopandas/io/__pycache__/sql.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/plotting.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/sindex.cpython-37.pyc",
+    "Lib/site-packages/geopandas/__pycache__/testing.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_api.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_array.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_compat.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_config.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_crs.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_datasets.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_dissolve.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_extension_array.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_geocode.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_geodataframe.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_geom_methods.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_geoseries.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_merge.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_overlay.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_pandas_methods.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_plotting.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_show_versions.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_sindex.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_testing.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/test_types.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tests/__pycache__/util.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/_show_versions.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/clip.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/crs.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/geocoding.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/overlay.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/sjoin.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/tests/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/tests/__pycache__/test_clip.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/tests/__pycache__/test_sjoin.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/tests/__pycache__/test_tools.cpython-37.pyc",
+    "Lib/site-packages/geopandas/tools/__pycache__/util.cpython-37.pyc"
+  ],
+  "fn": "geopandas-base-0.9.0-pyhd8ed1ab_1.tar.bz2",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\geopandas-base-0.9.0-pyhd8ed1ab_1",
+    "type": 1
+  },
+  "md5": "d654735553553f158da4be365fdaa51a",
+  "name": "geopandas-base",
+  "noarch": "python",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\geopandas-base-0.9.0-pyhd8ed1ab_1.tar.bz2",
+  "package_type": "noarch_python",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/INSTALLER",
+        "path_type": "hardlink",
+        "sha256": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "sha256_in_prefix": "d0edee15f91b406f3f99726e44eb990be6e34fd0345b52b910c568e0eef6a2a8",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/LICENSE.txt",
+        "path_type": "hardlink",
+        "sha256": "fb00bd6d12a52c07203a9158103dc1fe4d027e0eb95304c4546eaaa5a5feebfb",
+        "sha256_in_prefix": "fb00bd6d12a52c07203a9158103dc1fe4d027e0eb95304c4546eaaa5a5feebfb",
+        "size_in_bytes": 1504
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/METADATA",
+        "path_type": "hardlink",
+        "sha256": "ff4d4f2c8ba18a6d07cd458b5244f45e7bd3a770b2b424ea4a14bb33b120a5e6",
+        "sha256_in_prefix": "ff4d4f2c8ba18a6d07cd458b5244f45e7bd3a770b2b424ea4a14bb33b120a5e6",
+        "size_in_bytes": 908
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/RECORD",
+        "path_type": "hardlink",
+        "sha256": "d90a87ca8d90d55bc0f51a3ba400a8eb4af5d858fb2d288e747ffb4983fd0ee2",
+        "sha256_in_prefix": "d90a87ca8d90d55bc0f51a3ba400a8eb4af5d858fb2d288e747ffb4983fd0ee2",
+        "size_in_bytes": 9803
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/REQUESTED",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/WHEEL",
+        "path_type": "hardlink",
+        "sha256": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "sha256_in_prefix": "67e9f2629c2b712ab17ddbb1e4c6e7fc3439db988fec9d831b72601af398c934",
+        "size_in_bytes": 110
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/direct_url.json",
+        "path_type": "hardlink",
+        "sha256": "8799fc4f973fc362773c1fa7fcedc43cd0b7bb947258f8b4ca66f1915a4f72cf",
+        "sha256_in_prefix": "8799fc4f973fc362773c1fa7fcedc43cd0b7bb947258f8b4ca66f1915a4f72cf",
+        "size_in_bytes": 105
+      },
+      {
+        "_path": "site-packages/geopandas-0.9.0.dist-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "2ff840e036c7b1126672f36770575549ea2321fbb26885fd7f77512764f48500",
+        "sha256_in_prefix": "2ff840e036c7b1126672f36770575549ea2321fbb26885fd7f77512764f48500",
+        "size_in_bytes": 10
+      },
+      {
+        "_path": "site-packages/geopandas/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "33e929f2cb2c188e15135766cc66d00b124d93a4e5d942cbb375a7eca45dcb75",
+        "sha256_in_prefix": "33e929f2cb2c188e15135766cc66d00b124d93a4e5d942cbb375a7eca45dcb75",
+        "size_in_bytes": 969
+      },
+      {
+        "_path": "site-packages/geopandas/_compat.py",
+        "path_type": "hardlink",
+        "sha256": "d583392b321a7baf5c9d817de7daf4d37bbc56aa10a99d5acef5e1f477fe124c",
+        "sha256_in_prefix": "d583392b321a7baf5c9d817de7daf4d37bbc56aa10a99d5acef5e1f477fe124c",
+        "size_in_bytes": 6385
+      },
+      {
+        "_path": "site-packages/geopandas/_config.py",
+        "path_type": "hardlink",
+        "sha256": "fbe790993cc68ee14b1022e8f2e24187a97609eb44d706a82f691399088bd05e",
+        "sha256_in_prefix": "fbe790993cc68ee14b1022e8f2e24187a97609eb44d706a82f691399088bd05e",
+        "size_in_bytes": 4083
+      },
+      {
+        "_path": "site-packages/geopandas/_vectorized.py",
+        "path_type": "hardlink",
+        "sha256": "8b6cbd201a0281314da7b5fc1c0d18e4c36278e3d3a00a977f2d107971f353ac",
+        "sha256_in_prefix": "8b6cbd201a0281314da7b5fc1c0d18e4c36278e3d3a00a977f2d107971f353ac",
+        "size_in_bytes": 27301
+      },
+      {
+        "_path": "site-packages/geopandas/_version.py",
+        "path_type": "hardlink",
+        "sha256": "6ac1139ab4162693456e53ec1d5344daaa5b6f10d0f35090110ad0c3ce301127",
+        "sha256_in_prefix": "6ac1139ab4162693456e53ec1d5344daaa5b6f10d0f35090110ad0c3ce301127",
+        "size_in_bytes": 471
+      },
+      {
+        "_path": "site-packages/geopandas/array.py",
+        "path_type": "hardlink",
+        "sha256": "2049889e602a24004f425d89ebc6c8660f2d85b46de15cc2666cbdb8d91997e5",
+        "sha256_in_prefix": "2049889e602a24004f425d89ebc6c8660f2d85b46de15cc2666cbdb8d91997e5",
+        "size_in_bytes": 43316
+      },
+      {
+        "_path": "site-packages/geopandas/base.py",
+        "path_type": "hardlink",
+        "sha256": "ccb2c1de613091c92cd6d604166649bcc389a31e6eb356674c9aa353719dadec",
+        "sha256_in_prefix": "ccb2c1de613091c92cd6d604166649bcc389a31e6eb356674c9aa353719dadec",
+        "size_in_bytes": 111554
+      },
+      {
+        "_path": "site-packages/geopandas/conftest.py",
+        "path_type": "hardlink",
+        "sha256": "7d17963000f12c8b14817afd8dfe8213425ebd8f8c98643826c75ad08017c2c8",
+        "sha256_in_prefix": "7d17963000f12c8b14817afd8dfe8213425ebd8f8c98643826c75ad08017c2c8",
+        "size_in_bytes": 694
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e6d8d7cede95e02b0d117287c7fb87ef1a91be7edb61cdc5eb25953bd1c291ff",
+        "sha256_in_prefix": "e6d8d7cede95e02b0d117287c7fb87ef1a91be7edb61cdc5eb25953bd1c291ff",
+        "size_in_bytes": 1161
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.README.html",
+        "path_type": "hardlink",
+        "sha256": "3d1f428cf1a1fd59971e6c60e92068649357367661c296be3cb4140a445f378f",
+        "sha256_in_prefix": "3d1f428cf1a1fd59971e6c60e92068649357367661c296be3cb4140a445f378f",
+        "size_in_bytes": 32111
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.VERSION.txt",
+        "path_type": "hardlink",
+        "sha256": "f22abd6773ab232869321ad4b1e47ac0c908febf4f3a2bd10c8066140f741261",
+        "sha256_in_prefix": "f22abd6773ab232869321ad4b1e47ac0c908febf4f3a2bd10c8066140f741261",
+        "size_in_bytes": 5
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.cpg",
+        "path_type": "hardlink",
+        "sha256": "09fc313075748ce8ead962229ed89c919d5a9ff71974ee725a0b48bb87d975a2",
+        "sha256_in_prefix": "09fc313075748ce8ead962229ed89c919d5a9ff71974ee725a0b48bb87d975a2",
+        "size_in_bytes": 10
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.dbf",
+        "path_type": "hardlink",
+        "sha256": "05c22f6decaf23159599e0589b3552caf192e4bceca51e58bd3cedc1ec267979",
+        "sha256_in_prefix": "05c22f6decaf23159599e0589b3552caf192e4bceca51e58bd3cedc1ec267979",
+        "size_in_bytes": 16427
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.prj",
+        "path_type": "hardlink",
+        "sha256": "98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
+        "sha256_in_prefix": "98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
+        "size_in_bytes": 143
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.shp",
+        "path_type": "hardlink",
+        "sha256": "51531805a575f6d9a51d03d593f5fa98254078ed96519395bc197fe59d0efc44",
+        "sha256_in_prefix": "51531805a575f6d9a51d03d593f5fa98254078ed96519395bc197fe59d0efc44",
+        "size_in_bytes": 5756
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_cities/naturalearth_cities.shx",
+        "path_type": "hardlink",
+        "sha256": "a59940e913714352350c9de636e45488a944d51ad1d851020bbdb18bb9f23299",
+        "sha256_in_prefix": "a59940e913714352350c9de636e45488a944d51ad1d851020bbdb18bb9f23299",
+        "size_in_bytes": 1716
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_creation.py",
+        "path_type": "hardlink",
+        "sha256": "5ea0b343c6a2d5627ea8fb5b963ee485b192ad3a58348b23e65bfa8a38f90c8a",
+        "sha256_in_prefix": "5ea0b343c6a2d5627ea8fb5b963ee485b192ad3a58348b23e65bfa8a38f90c8a",
+        "size_in_bytes": 736
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.cpg",
+        "path_type": "hardlink",
+        "sha256": "09fc313075748ce8ead962229ed89c919d5a9ff71974ee725a0b48bb87d975a2",
+        "sha256_in_prefix": "09fc313075748ce8ead962229ed89c919d5a9ff71974ee725a0b48bb87d975a2",
+        "size_in_bytes": 10
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.dbf",
+        "path_type": "hardlink",
+        "sha256": "d2ae1c99adcf8e4586a5b12c639672035fa2f3f469e7255947de00401c3ed7e1",
+        "sha256_in_prefix": "d2ae1c99adcf8e4586a5b12c639672035fa2f3f469e7255947de00401c3ed7e1",
+        "size_in_bytes": 48869
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.prj",
+        "path_type": "hardlink",
+        "sha256": "98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
+        "sha256_in_prefix": "98aaf3d1c0ecadf1a424a4536de261c3daf4e373697cb86c40c43b989daf52eb",
+        "size_in_bytes": 143
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.shp",
+        "path_type": "hardlink",
+        "sha256": "08e341606e8391e458c3f08deb312de664b56bfae376064c5aa0aee6681a5f55",
+        "sha256_in_prefix": "08e341606e8391e458c3f08deb312de664b56bfae376064c5aa0aee6681a5f55",
+        "size_in_bytes": 180924
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/naturalearth_lowres/naturalearth_lowres.shx",
+        "path_type": "hardlink",
+        "sha256": "8b0be2ad97dd484aee5c2ebc98697d5372e832b8ae58a35a661aeef6b985668d",
+        "sha256_in_prefix": "8b0be2ad97dd484aee5c2ebc98697d5372e832b8ae58a35a661aeef6b985668d",
+        "size_in_bytes": 1516
+      },
+      {
+        "_path": "site-packages/geopandas/datasets/nybb_16a.zip",
+        "path_type": "hardlink",
+        "sha256": "b4a98fc3b77be5af58676de9560c2782b902b83d1d8c7914dea8d0e75177e2a1",
+        "sha256_in_prefix": "b4a98fc3b77be5af58676de9560c2782b902b83d1d8c7914dea8d0e75177e2a1",
+        "size_in_bytes": 661032
+      },
+      {
+        "_path": "site-packages/geopandas/geodataframe.py",
+        "path_type": "hardlink",
+        "sha256": "a0ea54df60650bb4012be457167f932aab2455604036241f831073b2793e4a9e",
+        "sha256_in_prefix": "a0ea54df60650bb4012be457167f932aab2455604036241f831073b2793e4a9e",
+        "size_in_bytes": 64184
+      },
+      {
+        "_path": "site-packages/geopandas/geoseries.py",
+        "path_type": "hardlink",
+        "sha256": "1ccde155fbd1e65562352adff47d8e142996609b7f0e8d09071d2dea6c41b0f7",
+        "sha256_in_prefix": "1ccde155fbd1e65562352adff47d8e142996609b7f0e8d09071d2dea6c41b0f7",
+        "size_in_bytes": 40294
+      },
+      {
+        "_path": "site-packages/geopandas/io/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/geopandas/io/arrow.py",
+        "path_type": "hardlink",
+        "sha256": "212dfcdcdea9b8b8f03495f0823659168d6f6e590cfed7d7f8ce631cc6e09116",
+        "sha256_in_prefix": "212dfcdcdea9b8b8f03495f0823659168d6f6e590cfed7d7f8ce631cc6e09116",
+        "size_in_bytes": 14773
+      },
+      {
+        "_path": "site-packages/geopandas/io/file.py",
+        "path_type": "hardlink",
+        "sha256": "23215ac2010bd993353c4eaf3619249898c3d81b4bea178e40e18ffc08b6de7c",
+        "sha256_in_prefix": "23215ac2010bd993353c4eaf3619249898c3d81b4bea178e40e18ffc08b6de7c",
+        "size_in_bytes": 13697
+      },
+      {
+        "_path": "site-packages/geopandas/io/sql.py",
+        "path_type": "hardlink",
+        "sha256": "6ca08bec0c7d9bbb00440b668e2ca2ab7b31c4941a1f20483c180e8809b2d1f0",
+        "sha256_in_prefix": "6ca08bec0c7d9bbb00440b668e2ca2ab7b31c4941a1f20483c180e8809b2d1f0",
+        "size_in_bytes": 14124
+      },
+      {
+        "_path": "site-packages/geopandas/plotting.py",
+        "path_type": "hardlink",
+        "sha256": "95dc59ca376db894e66d0edd182b9d6fc9ecfa4d46ae4d9f9fbd7fb9b3939eaa",
+        "sha256_in_prefix": "95dc59ca376db894e66d0edd182b9d6fc9ecfa4d46ae4d9f9fbd7fb9b3939eaa",
+        "size_in_bytes": 36526
+      },
+      {
+        "_path": "site-packages/geopandas/sindex.py",
+        "path_type": "hardlink",
+        "sha256": "f085b51ebba4aff2567442b3310a20f017b795936ead1fd39a7abd2710804e92",
+        "sha256_in_prefix": "f085b51ebba4aff2567442b3310a20f017b795936ead1fd39a7abd2710804e92",
+        "size_in_bytes": 21858
+      },
+      {
+        "_path": "site-packages/geopandas/testing.py",
+        "path_type": "hardlink",
+        "sha256": "dac6e08a731748b526080bcf0add8b3464efdbfb9a83c2f4bd4c364f662ab70b",
+        "sha256_in_prefix": "dac6e08a731748b526080bcf0add8b3464efdbfb9a83c2f4bd4c364f662ab70b",
+        "size_in_bytes": 9486
+      },
+      {
+        "_path": "site-packages/geopandas/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/geopandas/tests/data/null_geom.geojson",
+        "path_type": "hardlink",
+        "sha256": "5e87f89afda555a1b1d43d9dc12864169d6d0149a4f222be12d40a6a86ad8066",
+        "sha256_in_prefix": "5e87f89afda555a1b1d43d9dc12864169d6d0149a4f222be12d40a6a86ad8066",
+        "size_in_bytes": 506
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_api.py",
+        "path_type": "hardlink",
+        "sha256": "efea4a8571520d34bfb27e045cb446458ebced27483fefd3f2de15e7245d4142",
+        "sha256_in_prefix": "efea4a8571520d34bfb27e045cb446458ebced27483fefd3f2de15e7245d4142",
+        "size_in_bytes": 1153
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_array.py",
+        "path_type": "hardlink",
+        "sha256": "3a6a6a0cc1a9d091521d6913d103bcda65e67480e073d5a2d1f8b0ce4f0e16a4",
+        "sha256_in_prefix": "3a6a6a0cc1a9d091521d6913d103bcda65e67480e073d5a2d1f8b0ce4f0e16a4",
+        "size_in_bytes": 26836
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_compat.py",
+        "path_type": "hardlink",
+        "sha256": "5f673b86bac9cfeb2f4e626bd7092a25f707c52844f2d507b0706ea77a8932f7",
+        "sha256_in_prefix": "5f673b86bac9cfeb2f4e626bd7092a25f707c52844f2d507b0706ea77a8932f7",
+        "size_in_bytes": 923
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_config.py",
+        "path_type": "hardlink",
+        "sha256": "81849f0bc8d9049533e59f5d8c8e535fb3079912ecc4abf85849a622e6156aed",
+        "sha256_in_prefix": "81849f0bc8d9049533e59f5d8c8e535fb3079912ecc4abf85849a622e6156aed",
+        "size_in_bytes": 781
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_crs.py",
+        "path_type": "hardlink",
+        "sha256": "8ad5a570e27b4c1d377c4ca708bf36ecfaa83d894b44fd087bff552db167f43f",
+        "sha256_in_prefix": "8ad5a570e27b4c1d377c4ca708bf36ecfaa83d894b44fd087bff552db167f43f",
+        "size_in_bytes": 21680
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_datasets.py",
+        "path_type": "hardlink",
+        "sha256": "0738cc608f444729840d514c14f1d105f793aa4cd8006f3def0f8191b855aa49",
+        "sha256_in_prefix": "0738cc608f444729840d514c14f1d105f793aa4cd8006f3def0f8191b855aa49",
+        "size_in_bytes": 312
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_dissolve.py",
+        "path_type": "hardlink",
+        "sha256": "87cd3df93a0c4c6e3a20254d376469f3faf3516f90143fde7a3263a3b56e4187",
+        "sha256_in_prefix": "87cd3df93a0c4c6e3a20254d376469f3faf3516f90143fde7a3263a3b56e4187",
+        "size_in_bytes": 9283
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_extension_array.py",
+        "path_type": "hardlink",
+        "sha256": "4fae92c46965008a6ce62874c9f911a7b9b8bc16bfb33d72be595d799547c1c8",
+        "sha256_in_prefix": "4fae92c46965008a6ce62874c9f911a7b9b8bc16bfb33d72be595d799547c1c8",
+        "size_in_bytes": 15258
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_geocode.py",
+        "path_type": "hardlink",
+        "sha256": "1adbbcd85a7f6ce241213532badfaf15778df93705c29d0f352c9adef27da247",
+        "sha256_in_prefix": "1adbbcd85a7f6ce241213532badfaf15778df93705c29d0f352c9adef27da247",
+        "size_in_bytes": 5410
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_geodataframe.py",
+        "path_type": "hardlink",
+        "sha256": "963de5549fdadedb023939f8019cee558577ba0d86802a68005488efcf870fe1",
+        "sha256_in_prefix": "963de5549fdadedb023939f8019cee558577ba0d86802a68005488efcf870fe1",
+        "size_in_bytes": 35283
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_geom_methods.py",
+        "path_type": "hardlink",
+        "sha256": "848790cf520f26b820dbbbc6ee850ab2c7b21b6f16dc8deea0730d3d5f6c019e",
+        "sha256_in_prefix": "848790cf520f26b820dbbbc6ee850ab2c7b21b6f16dc8deea0730d3d5f6c019e",
+        "size_in_bytes": 37334
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_geoseries.py",
+        "path_type": "hardlink",
+        "sha256": "cbf6451c824b1ca8af53d44ad3cc599a4b7ebf5c8a80d88b8bf496ed1fab272c",
+        "sha256_in_prefix": "cbf6451c824b1ca8af53d44ad3cc599a4b7ebf5c8a80d88b8bf496ed1fab272c",
+        "size_in_bytes": 16325
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_merge.py",
+        "path_type": "hardlink",
+        "sha256": "c55cab70e3ef882c350c3c358b1f564687b6f1820a90d1445724cfe05186689f",
+        "sha256_in_prefix": "c55cab70e3ef882c350c3c358b1f564687b6f1820a90d1445724cfe05186689f",
+        "size_in_bytes": 2105
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_overlay.py",
+        "path_type": "hardlink",
+        "sha256": "1218ef3892805a059a16cf358ed8e07e5aeb647139f9eb26e30227569feadb4f",
+        "sha256_in_prefix": "1218ef3892805a059a16cf358ed8e07e5aeb647139f9eb26e30227569feadb4f",
+        "size_in_bytes": 20148
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_pandas_methods.py",
+        "path_type": "hardlink",
+        "sha256": "ed78b25e87fb43cb94b0997258088c545bde7c2724c461026937ac01579ddb49",
+        "sha256_in_prefix": "ed78b25e87fb43cb94b0997258088c545bde7c2724c461026937ac01579ddb49",
+        "size_in_bytes": 17336
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_plotting.py",
+        "path_type": "hardlink",
+        "sha256": "da2e3ad28f4c3e8b992f2896903807995ddea29196d74963decf4213652cb08b",
+        "sha256_in_prefix": "da2e3ad28f4c3e8b992f2896903807995ddea29196d74963decf4213652cb08b",
+        "size_in_bytes": 64812
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_show_versions.py",
+        "path_type": "hardlink",
+        "sha256": "97c98e8e544e86d08441f0905626578631bf17a4d24d223c4ed6896e1396fa8e",
+        "sha256_in_prefix": "97c98e8e544e86d08441f0905626578631bf17a4d24d223c4ed6896e1396fa8e",
+        "size_in_bytes": 1171
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_sindex.py",
+        "path_type": "hardlink",
+        "sha256": "98b3ca7e386ae7a5f9a820f2b486dcf7dbc451fc423895f924319887b4cdba7b",
+        "sha256_in_prefix": "98b3ca7e386ae7a5f9a820f2b486dcf7dbc451fc423895f924319887b4cdba7b",
+        "size_in_bytes": 27341
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_testing.py",
+        "path_type": "hardlink",
+        "sha256": "2820fe7f446433bf1b2e111c43981eb7ed7ba7c154783e040324fd3f8e7432ab",
+        "sha256_in_prefix": "2820fe7f446433bf1b2e111c43981eb7ed7ba7c154783e040324fd3f8e7432ab",
+        "size_in_bytes": 3774
+      },
+      {
+        "_path": "site-packages/geopandas/tests/test_types.py",
+        "path_type": "hardlink",
+        "sha256": "0c7656f1b45bb788f66e3b1654e8ab719556b0aba7552bf6d945b8765b198da3",
+        "sha256_in_prefix": "0c7656f1b45bb788f66e3b1654e8ab719556b0aba7552bf6d945b8765b198da3",
+        "size_in_bytes": 2504
+      },
+      {
+        "_path": "site-packages/geopandas/tests/util.py",
+        "path_type": "hardlink",
+        "sha256": "1cb1b6683b7a56e2b42ddf4e7fedf65a1ccfba0d04f15858bd410b2d4606bfd3",
+        "sha256_in_prefix": "1cb1b6683b7a56e2b42ddf4e7fedf65a1ccfba0d04f15858bd410b2d4606bfd3",
+        "size_in_bytes": 4235
+      },
+      {
+        "_path": "site-packages/geopandas/tools/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f8108f415f6f635683214d5a0de1efcaabfcb14fdd685b289b9ee8981e45411f",
+        "sha256_in_prefix": "f8108f415f6f635683214d5a0de1efcaabfcb14fdd685b289b9ee8981e45411f",
+        "size_in_bytes": 329
+      },
+      {
+        "_path": "site-packages/geopandas/tools/_show_versions.py",
+        "path_type": "hardlink",
+        "sha256": "125aaa1a4a723f224c8e377cc5939dc6286dcb4c1a2e0f190f44bb658f465874",
+        "sha256_in_prefix": "125aaa1a4a723f224c8e377cc5939dc6286dcb4c1a2e0f190f44bb658f465874",
+        "size_in_bytes": 3307
+      },
+      {
+        "_path": "site-packages/geopandas/tools/clip.py",
+        "path_type": "hardlink",
+        "sha256": "aae2258d9c40ef6ba91a67b51a0d10e6964548b04b5a1daca391a5c839c3fbe2",
+        "sha256_in_prefix": "aae2258d9c40ef6ba91a67b51a0d10e6964548b04b5a1daca391a5c839c3fbe2",
+        "size_in_bytes": 8098
+      },
+      {
+        "_path": "site-packages/geopandas/tools/crs.py",
+        "path_type": "hardlink",
+        "sha256": "f5ae212924db22dc12f88b8f60eea30b9b78dd6ca8ee693547c4c1f0aff4699f",
+        "sha256_in_prefix": "f5ae212924db22dc12f88b8f60eea30b9b78dd6ca8ee693547c4c1f0aff4699f",
+        "size_in_bytes": 1489
+      },
+      {
+        "_path": "site-packages/geopandas/tools/geocoding.py",
+        "path_type": "hardlink",
+        "sha256": "3bc2a2c3a43a45a6bd9e8687263cfd264a8e25a02047bb5459d8ebf65228b3db",
+        "sha256_in_prefix": "3bc2a2c3a43a45a6bd9e8687263cfd264a8e25a02047bb5459d8ebf65228b3db",
+        "size_in_bytes": 5897
+      },
+      {
+        "_path": "site-packages/geopandas/tools/overlay.py",
+        "path_type": "hardlink",
+        "sha256": "c7da7ccde5fc607557aac14481e32ad5156a48b448717989854d3cd4bd045e3a",
+        "sha256_in_prefix": "c7da7ccde5fc607557aac14481e32ad5156a48b448717989854d3cd4bd045e3a",
+        "size_in_bytes": 13373
+      },
+      {
+        "_path": "site-packages/geopandas/tools/sjoin.py",
+        "path_type": "hardlink",
+        "sha256": "d41ba864d3cf7b9bbc885968af48cfe548ce6b97aa1238d6f1defc6645778809",
+        "sha256_in_prefix": "d41ba864d3cf7b9bbc885968af48cfe548ce6b97aa1238d6f1defc6645778809",
+        "size_in_bytes": 11220
+      },
+      {
+        "_path": "site-packages/geopandas/tools/tests/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "site-packages/geopandas/tools/tests/test_clip.py",
+        "path_type": "hardlink",
+        "sha256": "c79ccf51d82e9f846f1a03e64548d29b38760e2003a2b68dd252abe3fc28dd5d",
+        "sha256_in_prefix": "c79ccf51d82e9f846f1a03e64548d29b38760e2003a2b68dd252abe3fc28dd5d",
+        "size_in_bytes": 14652
+      },
+      {
+        "_path": "site-packages/geopandas/tools/tests/test_sjoin.py",
+        "path_type": "hardlink",
+        "sha256": "628dab5aaf0532d6ab465abe5c0a50977cf2c70544da0ba210bc021019788a38",
+        "sha256_in_prefix": "628dab5aaf0532d6ab465abe5c0a50977cf2c70544da0ba210bc021019788a38",
+        "size_in_bytes": 18421
+      },
+      {
+        "_path": "site-packages/geopandas/tools/tests/test_tools.py",
+        "path_type": "hardlink",
+        "sha256": "4e79830eff9134177e962d2d9c3016366f19acb0a49596fcc0ff7e724eebbb58",
+        "sha256_in_prefix": "4e79830eff9134177e962d2d9c3016366f19acb0a49596fcc0ff7e724eebbb58",
+        "size_in_bytes": 2954
+      },
+      {
+        "_path": "site-packages/geopandas/tools/util.py",
+        "path_type": "hardlink",
+        "sha256": "6109b461e38466df1f875f5b051352e7e2d22186310a9da6cea702e1b50e3d2b",
+        "sha256_in_prefix": "6109b461e38466df1f875f5b051352e7e2d22186310a9da6cea702e1b50e3d2b",
+        "size_in_bytes": 1454
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/_compat.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/_config.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/_vectorized.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/_version.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/array.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/base.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/conftest.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/datasets/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/datasets/__pycache__/naturalearth_creation.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/geodataframe.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/geoseries.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/io/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/io/__pycache__/arrow.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/io/__pycache__/file.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/io/__pycache__/sql.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/plotting.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/sindex.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/__pycache__/testing.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_api.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_array.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_compat.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_config.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_crs.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_datasets.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_dissolve.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_extension_array.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_geocode.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_geodataframe.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_geom_methods.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_geoseries.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_merge.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_overlay.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_pandas_methods.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_plotting.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_show_versions.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_sindex.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_testing.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/test_types.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tests/__pycache__/util.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/_show_versions.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/clip.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/crs.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/geocoding.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/overlay.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/sjoin.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/tests/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/tests/__pycache__/test_clip.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/tests/__pycache__/test_sjoin.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/tests/__pycache__/test_tools.cpython-37.pyc",
+        "path_type": "pyc_file"
+      },
+      {
+        "_path": "Lib/site-packages/geopandas/tools/__pycache__/util.cpython-37.pyc",
+        "path_type": "pyc_file"
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "ab791ac63521aa9a66f52547e4a7d46093855012c211d145732a6ccb96b4da29",
+  "size": 972297,
+  "subdir": "noarch",
+  "timestamp": 1623249788428,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/noarch/geopandas-base-0.9.0-pyhd8ed1ab_1.tar.bz2",
+  "version": "0.9.0"
+}

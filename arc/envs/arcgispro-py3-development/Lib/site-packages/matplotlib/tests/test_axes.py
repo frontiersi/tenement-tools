@@ -305,6 +305,50 @@ def test_twinx_cla():
     assert ax.yaxis.get_visible()
 
 
+@pytest.mark.parametrize('twin', ('x', 'y'))
+@check_figures_equal(extensions=['png'], tol=0.19)
+def test_twin_logscale(fig_test, fig_ref, twin):
+    twin_func = f'twin{twin}'  # test twinx or twiny
+    set_scale = f'set_{twin}scale'
+    x = np.arange(1, 100)
+
+    # Change scale after twinning.
+    ax_test = fig_test.add_subplot(2, 1, 1)
+    ax_twin = getattr(ax_test, twin_func)()
+    getattr(ax_test, set_scale)('log')
+    ax_twin.plot(x, x)
+
+    # Twin after changing scale.
+    ax_test = fig_test.add_subplot(2, 1, 2)
+    getattr(ax_test, set_scale)('log')
+    ax_twin = getattr(ax_test, twin_func)()
+    ax_twin.plot(x, x)
+
+    for i in [1, 2]:
+        ax_ref = fig_ref.add_subplot(2, 1, i)
+        getattr(ax_ref, set_scale)('log')
+        ax_ref.plot(x, x)
+
+        # This is a hack because twinned Axes double-draw the frame.
+        # Remove this when that is fixed.
+        Path = matplotlib.path.Path
+        fig_ref.add_artist(
+            matplotlib.patches.PathPatch(
+                Path([[0, 0], [0, 1],
+                      [0, 1], [1, 1],
+                      [1, 1], [1, 0],
+                      [1, 0], [0, 0]],
+                     [Path.MOVETO, Path.LINETO] * 4),
+                transform=ax_ref.transAxes,
+                facecolor='none',
+                edgecolor=mpl.rcParams['axes.edgecolor'],
+                linewidth=mpl.rcParams['axes.linewidth'],
+                capstyle='projecting'))
+
+    remove_ticks_and_titles(fig_test)
+    remove_ticks_and_titles(fig_ref)
+
+
 @image_comparison(['twin_autoscale.png'])
 def test_twinx_axis_scales():
     x = np.array([0, 0.5, 1])
@@ -1118,6 +1162,14 @@ def test_pcolorargs():
         x = np.ma.array(x, mask=(x < 0))
     with pytest.raises(ValueError):
         ax.pcolormesh(x, y, Z[:-1, :-1])
+    # Expect a warning with non-increasing coordinates
+    x = [359, 0, 1]
+    y = [-10, 10]
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros(X.shape)
+    with pytest.warns(UserWarning,
+                      match='are not monotonically increasing or decreasing'):
+        ax.pcolormesh(X, Y, Z, shading='auto')
 
 
 @check_figures_equal(extensions=["png"])
@@ -1605,6 +1657,16 @@ def test_hist_log_2(fig_test, fig_ref):
         # Use hist(..., log=True).
         for ax in axs_ref[:, i]:
             ax.hist(1, 1, log=True, histtype=histtype)
+
+
+def test_hist_log_barstacked():
+    fig, axs = plt.subplots(2)
+    axs[0].hist([[0], [0, 1]], 2, histtype="barstacked")
+    axs[0].set_yscale("log")
+    axs[1].hist([0, 0, 1], 2, histtype="barstacked")
+    axs[1].set_yscale("log")
+    fig.canvas.draw()
+    assert axs[0].get_ylim() == axs[1].get_ylim()
 
 
 @image_comparison(['hist_bar_empty.png'], remove_text=True)
@@ -5428,6 +5490,19 @@ def test_title_xticks_top_both():
     ax.set_title('xlabel top')
     fig.canvas.draw()
     assert ax.title.get_position()[1] > 1.04
+
+
+def test_title_no_move_off_page():
+    # If an axes is off the figure (ie. if it is cropped during a save)
+    # make sure that the automatic title repositioning does not get done.
+    mpl.rcParams['axes.titley'] = None
+    fig = plt.figure()
+    ax = fig.add_axes([0.1, -0.5, 0.8, 0.2])
+    ax.tick_params(axis="x",
+                   bottom=True, top=True, labelbottom=True, labeltop=True)
+    tt = ax.set_title('Boo')
+    fig.canvas.draw()
+    assert tt.get_position()[1] == 1.0
 
 
 def test_offset_label_color():

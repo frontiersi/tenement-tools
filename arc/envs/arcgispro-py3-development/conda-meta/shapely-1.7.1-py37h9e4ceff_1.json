@@ -1,0 +1,754 @@
+{
+  "build": "py37h9e4ceff_1",
+  "build_number": 1,
+  "channel": "https://conda.anaconda.org/conda-forge/win-64",
+  "constrains": [],
+  "depends": [
+    "geos >=3.8.1,<3.8.2.0a0",
+    "numpy >=1.16.6,<2.0a0",
+    "python >=3.7,<3.8.0a0",
+    "python_abi 3.7.* *_cp37m",
+    "vc >=14.1,<15.0a0",
+    "vs2015_runtime >=14.16.27012"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\shapely-1.7.1-py37h9e4ceff_1",
+  "features": "",
+  "files": [
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/PKG-INFO",
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/SOURCES.txt",
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/dependency_links.txt",
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/installed-files.txt",
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/requires.txt",
+    "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/top_level.txt",
+    "Lib/site-packages/shapely/__init__.py",
+    "Lib/site-packages/shapely/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/_buildcfg.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/affinity.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/coords.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/ctypes_declarations.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/errors.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/geos.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/impl.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/iterops.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/linref.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/ops.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/predicates.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/prepared.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/strtree.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/topology.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/validation.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/wkb.cpython-37.pyc",
+    "Lib/site-packages/shapely/__pycache__/wkt.cpython-37.pyc",
+    "Lib/site-packages/shapely/_buildcfg.py",
+    "Lib/site-packages/shapely/_geos.pxi",
+    "Lib/site-packages/shapely/affinity.py",
+    "Lib/site-packages/shapely/algorithms/__init__.py",
+    "Lib/site-packages/shapely/algorithms/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/algorithms/__pycache__/cga.cpython-37.pyc",
+    "Lib/site-packages/shapely/algorithms/__pycache__/polylabel.cpython-37.pyc",
+    "Lib/site-packages/shapely/algorithms/cga.py",
+    "Lib/site-packages/shapely/algorithms/polylabel.py",
+    "Lib/site-packages/shapely/coords.py",
+    "Lib/site-packages/shapely/ctypes_declarations.py",
+    "Lib/site-packages/shapely/errors.py",
+    "Lib/site-packages/shapely/examples/__init__.py",
+    "Lib/site-packages/shapely/examples/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/examples/__pycache__/dissolve.cpython-37.pyc",
+    "Lib/site-packages/shapely/examples/__pycache__/geoms.cpython-37.pyc",
+    "Lib/site-packages/shapely/examples/__pycache__/intersect.cpython-37.pyc",
+    "Lib/site-packages/shapely/examples/dissolve.py",
+    "Lib/site-packages/shapely/examples/geoms.py",
+    "Lib/site-packages/shapely/examples/intersect.py",
+    "Lib/site-packages/shapely/geometry/__init__.py",
+    "Lib/site-packages/shapely/geometry/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/base.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/collection.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/geo.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/linestring.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/multilinestring.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/multipoint.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/multipolygon.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/point.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/polygon.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/__pycache__/proxy.cpython-37.pyc",
+    "Lib/site-packages/shapely/geometry/base.py",
+    "Lib/site-packages/shapely/geometry/collection.py",
+    "Lib/site-packages/shapely/geometry/geo.py",
+    "Lib/site-packages/shapely/geometry/linestring.py",
+    "Lib/site-packages/shapely/geometry/multilinestring.py",
+    "Lib/site-packages/shapely/geometry/multipoint.py",
+    "Lib/site-packages/shapely/geometry/multipolygon.py",
+    "Lib/site-packages/shapely/geometry/point.py",
+    "Lib/site-packages/shapely/geometry/polygon.py",
+    "Lib/site-packages/shapely/geometry/proxy.py",
+    "Lib/site-packages/shapely/geos.py",
+    "Lib/site-packages/shapely/impl.py",
+    "Lib/site-packages/shapely/iterops.py",
+    "Lib/site-packages/shapely/linref.py",
+    "Lib/site-packages/shapely/ops.py",
+    "Lib/site-packages/shapely/predicates.py",
+    "Lib/site-packages/shapely/prepared.py",
+    "Lib/site-packages/shapely/speedups/__init__.py",
+    "Lib/site-packages/shapely/speedups/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/speedups/_speedups.c",
+    "Lib/site-packages/shapely/speedups/_speedups.cp37-win_amd64.pyd",
+    "Lib/site-packages/shapely/speedups/_speedups.pyx",
+    "Lib/site-packages/shapely/strtree.py",
+    "Lib/site-packages/shapely/topology.py",
+    "Lib/site-packages/shapely/validation.py",
+    "Lib/site-packages/shapely/vectorized/__init__.py",
+    "Lib/site-packages/shapely/vectorized/__pycache__/__init__.cpython-37.pyc",
+    "Lib/site-packages/shapely/vectorized/_vectorized.c",
+    "Lib/site-packages/shapely/vectorized/_vectorized.cp37-win_amd64.pyd",
+    "Lib/site-packages/shapely/vectorized/_vectorized.pyx",
+    "Lib/site-packages/shapely/wkb.py",
+    "Lib/site-packages/shapely/wkt.py",
+    ".nonadmin"
+  ],
+  "fn": "shapely-1.7.1-py37h9e4ceff_1.tar.bz2",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\shapely-1.7.1-py37h9e4ceff_1",
+    "type": 1
+  },
+  "md5": "9f7e7ce21a17a2bdccd7ab8935648757",
+  "name": "shapely",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\shapely-1.7.1-py37h9e4ceff_1.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/PKG-INFO",
+        "path_type": "hardlink",
+        "sha256": "dfe2493ed69928795f41e3c48b01e86133a14deb17ce59b1075e9823792bd5c3",
+        "sha256_in_prefix": "dfe2493ed69928795f41e3c48b01e86133a14deb17ce59b1075e9823792bd5c3",
+        "size_in_bytes": 43652
+      },
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/SOURCES.txt",
+        "path_type": "hardlink",
+        "sha256": "114894fdb5e0b5788f6724346c60091344fe672943e62f3d48b6bf3516fff18e",
+        "sha256_in_prefix": "114894fdb5e0b5788f6724346c60091344fe672943e62f3d48b6bf3516fff18e",
+        "size_in_bytes": 3457
+      },
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/dependency_links.txt",
+        "path_type": "hardlink",
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "size_in_bytes": 1
+      },
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/installed-files.txt",
+        "path_type": "hardlink",
+        "sha256": "da1230a630a0b0d551340560ebdcf1b0c9a278791d60ff254440b191101a9b2c",
+        "sha256_in_prefix": "da1230a630a0b0d551340560ebdcf1b0c9a278791d60ff254440b191101a9b2c",
+        "size_in_bytes": 3416
+      },
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/requires.txt",
+        "path_type": "hardlink",
+        "sha256": "a3fb0f29a0ed1e9b34d127ce10c53eb15efb7aae326bf9d529f06dfefaadb769",
+        "sha256_in_prefix": "a3fb0f29a0ed1e9b34d127ce10c53eb15efb7aae326bf9d529f06dfefaadb769",
+        "size_in_bytes": 77
+      },
+      {
+        "_path": "Lib/site-packages/Shapely-1.7.1-py3.7.egg-info/top_level.txt",
+        "path_type": "hardlink",
+        "sha256": "7f173950828a95da4a3f7971d9dbcce51de159e2b0966556ebe9df8a4af7894d",
+        "sha256_in_prefix": "7f173950828a95da4a3f7971d9dbcce51de159e2b0966556ebe9df8a4af7894d",
+        "size_in_bytes": 8
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "ac7aa83aa6b72f1597beb0669e79b62c3995f489663046f9a8e9b0e5da23ddf9",
+        "sha256_in_prefix": "ac7aa83aa6b72f1597beb0669e79b62c3995f489663046f9a8e9b0e5da23ddf9",
+        "size_in_bytes": 22
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "ab79df5d492f49a2805d5889d72e35a6bc54819008e921275bc00d9fae6b5c0b",
+        "sha256_in_prefix": "ab79df5d492f49a2805d5889d72e35a6bc54819008e921275bc00d9fae6b5c0b",
+        "size_in_bytes": 145
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/_buildcfg.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f075864bb8b4fb36f15b16765cb7cde11ceb3eb5dfa5edc8c8b077b47c3f8b72",
+        "sha256_in_prefix": "f075864bb8b4fb36f15b16765cb7cde11ceb3eb5dfa5edc8c8b077b47c3f8b72",
+        "size_in_bytes": 5524
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/affinity.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f5a9e98c3297b52986ba47c60c743a9d6a2e0d392cdbdfd917fce866321d2b36",
+        "sha256_in_prefix": "f5a9e98c3297b52986ba47c60c743a9d6a2e0d392cdbdfd917fce866321d2b36",
+        "size_in_bytes": 7635
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/coords.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "6dd95a86a005899c80be2cc908b4b24f28679a0fdd635fcbd950e619d86bce78",
+        "sha256_in_prefix": "6dd95a86a005899c80be2cc908b4b24f28679a0fdd635fcbd950e619d86bce78",
+        "size_in_bytes": 4810
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/ctypes_declarations.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "a274bf989fa68e85c9d298e256ac9fc5aef1e789b86498ac1e49f28e83ad3695",
+        "sha256_in_prefix": "a274bf989fa68e85c9d298e256ac9fc5aef1e789b86498ac1e49f28e83ad3695",
+        "size_in_bytes": 7972
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/errors.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "79904a67048a9ff701e6071c8f8f63a474f17b37a6363680876f280754b01107",
+        "sha256_in_prefix": "79904a67048a9ff701e6071c8f8f63a474f17b37a6363680876f280754b01107",
+        "size_in_bytes": 1908
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/geos.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "9bf320e4b53d1b3d44698438d8afbdf1165b3d9bd5e5a9cf810e980d29ef3f52",
+        "sha256_in_prefix": "9bf320e4b53d1b3d44698438d8afbdf1165b3d9bd5e5a9cf810e980d29ef3f52",
+        "size_in_bytes": 24967
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/impl.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "09e47f2b75bb435949f825f89b5c3fcb3e5d447362a5abfe683c008f28000b52",
+        "sha256_in_prefix": "09e47f2b75bb435949f825f89b5c3fcb3e5d447362a5abfe683c008f28000b52",
+        "size_in_bytes": 5240
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/iterops.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "2b53126b49eb568aca07ab2657942241343b13d9e080a4c783da28b1629a4b53",
+        "sha256_in_prefix": "2b53126b49eb568aca07ab2657942241343b13d9e080a4c783da28b1629a4b53",
+        "size_in_bytes": 1107
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/linref.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f8fc71abfa00a6232088e2c5cf80c089154576c3f111c1ab97bd9a57d4e54c3e",
+        "sha256_in_prefix": "f8fc71abfa00a6232088e2c5cf80c089154576c3f111c1ab97bd9a57d4e54c3e",
+        "size_in_bytes": 1312
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/ops.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "78ea2cb8be6a36a8eb792abde4ec79888df380deed7d0d44c920271ca1040b97",
+        "sha256_in_prefix": "78ea2cb8be6a36a8eb792abde4ec79888df380deed7d0d44c920271ca1040b97",
+        "size_in_bytes": 19306
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/predicates.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "4307a5ce0cc6e6243c70f9499e08ce49e93549dc4a3174a684ef5dfdf1b7b27f",
+        "sha256_in_prefix": "4307a5ce0cc6e6243c70f9499e08ce49e93549dc4a3174a684ef5dfdf1b7b27f",
+        "size_in_bytes": 1041
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/prepared.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "34a242ef438b6438a1902ade5543a80046850a8fdc3f066c738f8355274be394",
+        "sha256_in_prefix": "34a242ef438b6438a1902ade5543a80046850a8fdc3f066c738f8355274be394",
+        "size_in_bytes": 3905
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/strtree.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "262f58eb15b80c1b8bd4699701fa798abdd7a2ac7f240e1471e8aac443e4d4d6",
+        "sha256_in_prefix": "262f58eb15b80c1b8bd4699701fa798abdd7a2ac7f240e1471e8aac443e4d4d6",
+        "size_in_bytes": 3793
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/topology.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "bfb04f071fc01d51559650eca12acdd421cb64cb565c9616b6c18737f1141a37",
+        "sha256_in_prefix": "bfb04f071fc01d51559650eca12acdd421cb64cb565c9616b6c18737f1141a37",
+        "size_in_bytes": 3186
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/validation.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "820f6836bd4fbf58af6cb14544a4e6a6082c172924949edbbb07fcbeaedc56c0",
+        "sha256_in_prefix": "820f6836bd4fbf58af6cb14544a4e6a6082c172924949edbbb07fcbeaedc56c0",
+        "size_in_bytes": 312
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/wkb.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "5740e318e37d12c2de3a7828cf8ac1fd9af03d5a2e951c73a9d60724f18a4325",
+        "sha256_in_prefix": "5740e318e37d12c2de3a7828cf8ac1fd9af03d5a2e951c73a9d60724f18a4325",
+        "size_in_bytes": 1879
+      },
+      {
+        "_path": "Lib/site-packages/shapely/__pycache__/wkt.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "5d102a0a696698a2904cb599fa4c55c6791fb736cac7667601b67db126f23659",
+        "sha256_in_prefix": "5d102a0a696698a2904cb599fa4c55c6791fb736cac7667601b67db126f23659",
+        "size_in_bytes": 2301
+      },
+      {
+        "_path": "Lib/site-packages/shapely/_buildcfg.py",
+        "path_type": "hardlink",
+        "sha256": "89c60d284b67015a64884dfea7b9ad1ac85897d27bbb5dc8c5c20e59b52379eb",
+        "sha256_in_prefix": "89c60d284b67015a64884dfea7b9ad1ac85897d27bbb5dc8c5c20e59b52379eb",
+        "size_in_bytes": 8427
+      },
+      {
+        "_path": "Lib/site-packages/shapely/_geos.pxi",
+        "path_type": "hardlink",
+        "sha256": "f89239a4ffd49345f80a17c8eda91d36b3074c0089ff71c7c02e09bb6a4cd289",
+        "sha256_in_prefix": "f89239a4ffd49345f80a17c8eda91d36b3074c0089ff71c7c02e09bb6a4cd289",
+        "size_in_bytes": 3592
+      },
+      {
+        "_path": "Lib/site-packages/shapely/affinity.py",
+        "path_type": "hardlink",
+        "sha256": "5606a29f40fd6d5edcc3c3d9b54a121a41ceb23605753503e8e85f5ab40bc1ce",
+        "sha256_in_prefix": "5606a29f40fd6d5edcc3c3d9b54a121a41ceb23605753503e8e85f5ab40bc1ce",
+        "size_in_bytes": 8597
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size_in_bytes": 0
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "5bdc2d8da67f48e9939e3591a319dd376b30bd58c55e60ad9008ff2aeae970c8",
+        "sha256_in_prefix": "5bdc2d8da67f48e9939e3591a319dd376b30bd58c55e60ad9008ff2aeae970c8",
+        "size_in_bytes": 135
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/__pycache__/cga.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f004977e510881a4ea81dd17665dc1deb970a9a96191f18271e21f51573a4bc7",
+        "sha256_in_prefix": "f004977e510881a4ea81dd17665dc1deb970a9a96191f18271e21f51573a4bc7",
+        "size_in_bytes": 986
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/__pycache__/polylabel.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "4da8010ab407154735106518cd177b4b3d5928413a4bd0a896be11d0970374f4",
+        "sha256_in_prefix": "4da8010ab407154735106518cd177b4b3d5928413a4bd0a896be11d0970374f4",
+        "size_in_bytes": 4009
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/cga.py",
+        "path_type": "hardlink",
+        "sha256": "a816a8f0b57047c096e96815f86275907d2e21b983f40ee6caf61d6a6ebc7811",
+        "sha256_in_prefix": "a816a8f0b57047c096e96815f86275907d2e21b983f40ee6caf61d6a6ebc7811",
+        "size_in_bytes": 503
+      },
+      {
+        "_path": "Lib/site-packages/shapely/algorithms/polylabel.py",
+        "path_type": "hardlink",
+        "sha256": "597fdfa5049872301df5a7b2eaca0b4d5ce5dd97bdfc31f574663654b2341f22",
+        "sha256_in_prefix": "597fdfa5049872301df5a7b2eaca0b4d5ce5dd97bdfc31f574663654b2341f22",
+        "size_in_bytes": 4675
+      },
+      {
+        "_path": "Lib/site-packages/shapely/coords.py",
+        "path_type": "hardlink",
+        "sha256": "ce5894acac03992e966421fc93f932b6d6cfb6b84bb3b3170afb21481bc8e11e",
+        "sha256_in_prefix": "ce5894acac03992e966421fc93f932b6d6cfb6b84bb3b3170afb21481bc8e11e",
+        "size_in_bytes": 5521
+      },
+      {
+        "_path": "Lib/site-packages/shapely/ctypes_declarations.py",
+        "path_type": "hardlink",
+        "sha256": "6ba0713f2706861e461b079e0f5e5ca58b7f12081e21f8d8465a91877123695f",
+        "sha256_in_prefix": "6ba0713f2706861e461b079e0f5e5ca58b7f12081e21f8d8465a91877123695f",
+        "size_in_bytes": 18737
+      },
+      {
+        "_path": "Lib/site-packages/shapely/errors.py",
+        "path_type": "hardlink",
+        "sha256": "4d6ebd22c58b45a8c1f3ba5f077f4ebbe5dd0fa8afd07e7fed21fcf17687bc5e",
+        "sha256_in_prefix": "4d6ebd22c58b45a8c1f3ba5f077f4ebbe5dd0fa8afd07e7fed21fcf17687bc5e",
+        "size_in_bytes": 846
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "f875672541f94cb2c4960a94c92ac8b1a9295ec2e0e0a08d58d6fb32f3db47d2",
+        "sha256_in_prefix": "f875672541f94cb2c4960a94c92ac8b1a9295ec2e0e0a08d58d6fb32f3db47d2",
+        "size_in_bytes": 18
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "f4316e531df7c904ae7b2e2ee75f1ab9d1aea70bd084ced2dc483e3580b444c5",
+        "sha256_in_prefix": "f4316e531df7c904ae7b2e2ee75f1ab9d1aea70bd084ced2dc483e3580b444c5",
+        "size_in_bytes": 133
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/__pycache__/dissolve.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "b4a5596ee817d98ee54d422fdb2193ba41d6d83f4a9cc2d402f5f11a71224b99",
+        "sha256_in_prefix": "b4a5596ee817d98ee54d422fdb2193ba41d6d83f4a9cc2d402f5f11a71224b99",
+        "size_in_bytes": 1504
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/__pycache__/geoms.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "2d265a4e36dabb43c1981571daddf98c545d92ee9ae9a373cab630088c72aae0",
+        "sha256_in_prefix": "2d265a4e36dabb43c1981571daddf98c545d92ee9ae9a373cab630088c72aae0",
+        "size_in_bytes": 1715
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/__pycache__/intersect.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "a13f5b381d9d2e773fc1b2875b08c5b68802bac5c2a599be337ac00bd6f50589",
+        "sha256_in_prefix": "a13f5b381d9d2e773fc1b2875b08c5b68802bac5c2a599be337ac00bd6f50589",
+        "size_in_bytes": 2033
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/dissolve.py",
+        "path_type": "hardlink",
+        "sha256": "1fe6602b5291109f44ee849e0a2de4633d2f1eb9e8744b0ed9d4778520526f18",
+        "sha256_in_prefix": "1fe6602b5291109f44ee849e0a2de4633d2f1eb9e8744b0ed9d4778520526f18",
+        "size_in_bytes": 1737
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/geoms.py",
+        "path_type": "hardlink",
+        "sha256": "6c98c2765e1c940617bce7d44bf3d6768cfaf9938081f8331b5ad8eae05f6649",
+        "sha256_in_prefix": "6c98c2765e1c940617bce7d44bf3d6768cfaf9938081f8331b5ad8eae05f6649",
+        "size_in_bytes": 1186
+      },
+      {
+        "_path": "Lib/site-packages/shapely/examples/intersect.py",
+        "path_type": "hardlink",
+        "sha256": "ca906839c6f53184cfe15b3280f15bdc9fe3386cfbc4710e629f5a50e298a313",
+        "sha256_in_prefix": "ca906839c6f53184cfe15b3280f15bdc9fe3386cfbc4710e629f5a50e298a313",
+        "size_in_bytes": 2620
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "47128cf31ce6da7769b5ab8e7782c2e5a6139c60149f23ba6bf86e5848325cff",
+        "sha256_in_prefix": "47128cf31ce6da7769b5ab8e7782c2e5a6139c60149f23ba6bf86e5848325cff",
+        "size_in_bytes": 900
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "acfbdc27ebe5b4e5ea5ae3c0c45423f0ac93c4f3655d302c3c66394e87a1f1e5",
+        "sha256_in_prefix": "acfbdc27ebe5b4e5ea5ae3c0c45423f0ac93c4f3655d302c3c66394e87a1f1e5",
+        "size_in_bytes": 1037
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/base.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "68188fed02fcc64188e6d550b3791e477c3b34b0168646dba22e0b550f5ae428",
+        "sha256_in_prefix": "68188fed02fcc64188e6d550b3791e477c3b34b0168646dba22e0b550f5ae428",
+        "size_in_bytes": 34453
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/collection.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "4923cb943c8c774d43d899f6457fef8f50b4da8a74d4432f4aa9c751289964e7",
+        "sha256_in_prefix": "4923cb943c8c774d43d899f6457fef8f50b4da8a74d4432f4aa9c751289964e7",
+        "size_in_bytes": 2399
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/geo.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "c4a8b0ebbafe71b5182ed712cb9818f224f1227c219d6cb6499b64473a6c6602",
+        "sha256_in_prefix": "c4a8b0ebbafe71b5182ed712cb9818f224f1227c219d6cb6499b64473a6c6602",
+        "size_in_bytes": 5829
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/linestring.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "47f5c86be3d397821b49bc2838528537212a492637f60e9c9433f749588d655f",
+        "sha256_in_prefix": "47f5c86be3d397821b49bc2838528537212a492637f60e9c9433f749588d655f",
+        "size_in_bytes": 8061
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/multilinestring.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "1e0ed0e288abb24266570efe43c1c25dcb5d8eec789c0804976e9c3a14ef8cb9",
+        "sha256_in_prefix": "1e0ed0e288abb24266570efe43c1c25dcb5d8eec789c0804976e9c3a14ef8cb9",
+        "size_in_bytes": 4923
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/multipoint.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "a0fb1b9b2dec56c9125614006f50e5bdb3d9e6c6bcb27d96692ec3b11ece6ca6",
+        "sha256_in_prefix": "a0fb1b9b2dec56c9125614006f50e5bdb3d9e6c6bcb27d96692ec3b11ece6ca6",
+        "size_in_bytes": 5596
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/multipolygon.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "d557f78388c17ac40f7b579ce12cc4b5dc220385f952b3e25c181a3a8446f74c",
+        "sha256_in_prefix": "d557f78388c17ac40f7b579ce12cc4b5dc220385f952b3e25c181a3a8446f74c",
+        "size_in_bytes": 6093
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/point.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "48cfe308fc18841fc03a258277ad997c0e8064f2d3ecc1da5bc20839c86ac202",
+        "sha256_in_prefix": "48cfe308fc18841fc03a258277ad997c0e8064f2d3ecc1da5bc20839c86ac202",
+        "size_in_bytes": 6684
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/polygon.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "879fc69a58f67af4d85f0acc53b3e8241c6bad54f78b7ddba5cc8fa87a01ec5a",
+        "sha256_in_prefix": "879fc69a58f67af4d85f0acc53b3e8241c6bad54f78b7ddba5cc8fa87a01ec5a",
+        "size_in_bytes": 15293
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/__pycache__/proxy.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "e31f735f24b4ccf5fccab8d575d218614047c39acf1143e394ece9c0351efcfb",
+        "sha256_in_prefix": "e31f735f24b4ccf5fccab8d575d218614047c39acf1143e394ece9c0351efcfb",
+        "size_in_bytes": 1916
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/base.py",
+        "path_type": "hardlink",
+        "sha256": "02ac256708e36fe44d9657abcbdf699a3dc5ad1f53c62ab62f2b0f84a4828d77",
+        "sha256_in_prefix": "02ac256708e36fe44d9657abcbdf699a3dc5ad1f53c62ab62f2b0f84a4828d77",
+        "size_in_bytes": 33581
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/collection.py",
+        "path_type": "hardlink",
+        "sha256": "64314157ae37f9944ed2c924f2536f3b12b3f02dcc83e96fcd204b37076cad0e",
+        "sha256_in_prefix": "64314157ae37f9944ed2c924f2536f3b12b3f02dcc83e96fcd204b37076cad0e",
+        "size_in_bytes": 2031
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/geo.py",
+        "path_type": "hardlink",
+        "sha256": "33fb0b91804abe7b933d3a55b165d38c0c43745cb37d22704447893303c01767",
+        "sha256_in_prefix": "33fb0b91804abe7b933d3a55b165d38c0c43745cb37d22704447893303c01767",
+        "size_in_bytes": 6407
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/linestring.py",
+        "path_type": "hardlink",
+        "sha256": "4807dc8ab8cd6fcaca665b71bdb74d4f7793c0e2163260a148e9886747c60ddc",
+        "sha256_in_prefix": "4807dc8ab8cd6fcaca665b71bdb74d4f7793c0e2163260a148e9886747c60ddc",
+        "size_in_bytes": 8386
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/multilinestring.py",
+        "path_type": "hardlink",
+        "sha256": "3f3922af7829f24021f3d02d3c1314a46a5a8555f904eecbc440bae50464bc4a",
+        "sha256_in_prefix": "3f3922af7829f24021f3d02d3c1314a46a5a8555f904eecbc440bae50464bc4a",
+        "size_in_bytes": 4170
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/multipoint.py",
+        "path_type": "hardlink",
+        "sha256": "352be9be526da6fcc2c87e9dcfc22665364406a2a3a7bd37f01e62f0bae66aa2",
+        "sha256_in_prefix": "352be9be526da6fcc2c87e9dcfc22665364406a2a3a7bd37f01e62f0bae66aa2",
+        "size_in_bytes": 5104
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/multipolygon.py",
+        "path_type": "hardlink",
+        "sha256": "f63b6dfb534ca982175c35bd6564b090a562122ae7054957187059d07dc959a4",
+        "sha256_in_prefix": "f63b6dfb534ca982175c35bd6564b090a562122ae7054957187059d07dc959a4",
+        "size_in_bytes": 5885
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/point.py",
+        "path_type": "hardlink",
+        "sha256": "997d99c3eb2f5326f714649808e237adbccdd458ccb38baeffbc088ed083fae6",
+        "sha256_in_prefix": "997d99c3eb2f5326f714649808e237adbccdd458ccb38baeffbc088ed083fae6",
+        "size_in_bytes": 6559
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/polygon.py",
+        "path_type": "hardlink",
+        "sha256": "7b130625a0ec1cef6b558313fae9e43e65f8fd25f341f05638c86037d2b83236",
+        "sha256_in_prefix": "7b130625a0ec1cef6b558313fae9e43e65f8fd25f341f05638c86037d2b83236",
+        "size_in_bytes": 15789
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geometry/proxy.py",
+        "path_type": "hardlink",
+        "sha256": "79eb56f11c6bef0140409b93fed6d51492f22546bb9d6fb895356681ab363991",
+        "sha256_in_prefix": "79eb56f11c6bef0140409b93fed6d51492f22546bb9d6fb895356681ab363991",
+        "size_in_bytes": 1366
+      },
+      {
+        "_path": "Lib/site-packages/shapely/geos.py",
+        "path_type": "hardlink",
+        "sha256": "897a469efaeca460fee4212027d19ae12ed077584e914107151e948057981391",
+        "sha256_in_prefix": "897a469efaeca460fee4212027d19ae12ed077584e914107151e948057981391",
+        "size_in_bytes": 31546
+      },
+      {
+        "_path": "Lib/site-packages/shapely/impl.py",
+        "path_type": "hardlink",
+        "sha256": "bc6be4acdd187e86cb0d705337549bfde4e7f1a55cec0ef37641ffcc8ed1eb5f",
+        "sha256_in_prefix": "bc6be4acdd187e86cb0d705337549bfde4e7f1a55cec0ef37641ffcc8ed1eb5f",
+        "size_in_bytes": 5853
+      },
+      {
+        "_path": "Lib/site-packages/shapely/iterops.py",
+        "path_type": "hardlink",
+        "sha256": "d05e79f5d51217b1bef099b1499acc8bac2db93ef171e81baf7ff793c70b63fe",
+        "sha256_in_prefix": "d05e79f5d51217b1bef099b1499acc8bac2db93ef171e81baf7ff793c70b63fe",
+        "size_in_bytes": 1093
+      },
+      {
+        "_path": "Lib/site-packages/shapely/linref.py",
+        "path_type": "hardlink",
+        "sha256": "cf13a242077a19308171f5a26dc16ce3281153d641799ebcbb754a7667bf35cf",
+        "sha256_in_prefix": "cf13a242077a19308171f5a26dc16ce3281153d641799ebcbb754a7667bf35cf",
+        "size_in_bytes": 677
+      },
+      {
+        "_path": "Lib/site-packages/shapely/ops.py",
+        "path_type": "hardlink",
+        "sha256": "98e80610cb5b11cbf5c774e1f0af7a470ae24d70cd4d201d6af1b0f858e55f41",
+        "sha256_in_prefix": "98e80610cb5b11cbf5c774e1f0af7a470ae24d70cd4d201d6af1b0f858e55f41",
+        "size_in_bytes": 22485
+      },
+      {
+        "_path": "Lib/site-packages/shapely/predicates.py",
+        "path_type": "hardlink",
+        "sha256": "b05981b8189b73014b49cee4aca7e7f14b69405ceb6c2ddf7f30a51f75524e6f",
+        "sha256_in_prefix": "b05981b8189b73014b49cee4aca7e7f14b69405ceb6c2ddf7f30a51f75524e6f",
+        "size_in_bytes": 626
+      },
+      {
+        "_path": "Lib/site-packages/shapely/prepared.py",
+        "path_type": "hardlink",
+        "sha256": "ce00dd330d2b8ace3065fada120cb68ed594412677efd80a9e745d69c1f8d5d3",
+        "sha256_in_prefix": "ce00dd330d2b8ace3065fada120cb68ed594412677efd80a9e745d69c1f8d5d3",
+        "size_in_bytes": 3046
+      },
+      {
+        "_path": "Lib/site-packages/shapely/speedups/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "6776baa122ebd29d2134099a71ada0a8941e0a75926e84473a43134c1b74f91e",
+        "sha256_in_prefix": "6776baa122ebd29d2134099a71ada0a8941e0a75926e84473a43134c1b74f91e",
+        "size_in_bytes": 2944
+      },
+      {
+        "_path": "Lib/site-packages/shapely/speedups/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "7efb91959e4aeedc395d3ca4a435a83d5ab1b03429cc8fe01dea00e952c2db23",
+        "sha256_in_prefix": "7efb91959e4aeedc395d3ca4a435a83d5ab1b03429cc8fe01dea00e952c2db23",
+        "size_in_bytes": 2533
+      },
+      {
+        "_path": "Lib/site-packages/shapely/speedups/_speedups.c",
+        "path_type": "hardlink",
+        "sha256": "fa19a14b2ec2f94a217cd498588eb54721d693adccc97165ba43f7eb5c23ff47",
+        "sha256_in_prefix": "fa19a14b2ec2f94a217cd498588eb54721d693adccc97165ba43f7eb5c23ff47",
+        "size_in_bytes": 595151
+      },
+      {
+        "_path": "Lib/site-packages/shapely/speedups/_speedups.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "22e95a680a06377b2dc7d1052e279db0dc7b0cc016aae72b9926a5072afc69f1",
+        "sha256_in_prefix": "22e95a680a06377b2dc7d1052e279db0dc7b0cc016aae72b9926a5072afc69f1",
+        "size_in_bytes": 120320
+      },
+      {
+        "_path": "Lib/site-packages/shapely/speedups/_speedups.pyx",
+        "path_type": "hardlink",
+        "sha256": "486d00e91cae0e531e47d1ecba213d48de55a3aacc2a6f1f4f1e8c1f70c0b29c",
+        "sha256_in_prefix": "486d00e91cae0e531e47d1ecba213d48de55a3aacc2a6f1f4f1e8c1f70c0b29c",
+        "size_in_bytes": 19150
+      },
+      {
+        "_path": "Lib/site-packages/shapely/strtree.py",
+        "path_type": "hardlink",
+        "sha256": "9791ca1450932d57aeb9bb2bfdc26fcc524bf2a3263ee7dd4b6206814dcdb466",
+        "sha256_in_prefix": "9791ca1450932d57aeb9bb2bfdc26fcc524bf2a3263ee7dd4b6206814dcdb466",
+        "size_in_bytes": 3482
+      },
+      {
+        "_path": "Lib/site-packages/shapely/topology.py",
+        "path_type": "hardlink",
+        "sha256": "4f2206ac359dcb9a0f146d85d077753f4d8e2f14164c612b69df0ea044548915",
+        "sha256_in_prefix": "4f2206ac359dcb9a0f146d85d077753f4d8e2f14164c612b69df0ea044548915",
+        "size_in_bytes": 2257
+      },
+      {
+        "_path": "Lib/site-packages/shapely/validation.py",
+        "path_type": "hardlink",
+        "sha256": "e67335c65d5a6b9cb2834ca8be60dfdf23ef1daf4994184e2020a86d25f6f563",
+        "sha256_in_prefix": "e67335c65d5a6b9cb2834ca8be60dfdf23ef1daf4994184e2020a86d25f6f563",
+        "size_in_bytes": 160
+      },
+      {
+        "_path": "Lib/site-packages/shapely/vectorized/__init__.py",
+        "path_type": "hardlink",
+        "sha256": "ce1bcea79886dda929d90bacfa56a5153cc47e643c3a26de8af16d8e2bde4633",
+        "sha256_in_prefix": "ce1bcea79886dda929d90bacfa56a5153cc47e643c3a26de8af16d8e2bde4633",
+        "size_in_bytes": 119
+      },
+      {
+        "_path": "Lib/site-packages/shapely/vectorized/__pycache__/__init__.cpython-37.pyc",
+        "path_type": "hardlink",
+        "sha256": "d8e7c9480c7605ca8144fc23f680e03302553df7f7393c239edba286db92c9f1",
+        "sha256_in_prefix": "d8e7c9480c7605ca8144fc23f680e03302553df7f7393c239edba286db92c9f1",
+        "size_in_bytes": 280
+      },
+      {
+        "_path": "Lib/site-packages/shapely/vectorized/_vectorized.c",
+        "path_type": "hardlink",
+        "sha256": "bbe23744647f8fc33fb07a72e8d7e265a733efa4716dcadb3dff81ac89af974f",
+        "sha256_in_prefix": "bbe23744647f8fc33fb07a72e8d7e265a733efa4716dcadb3dff81ac89af974f",
+        "size_in_bytes": 1009218
+      },
+      {
+        "_path": "Lib/site-packages/shapely/vectorized/_vectorized.cp37-win_amd64.pyd",
+        "path_type": "hardlink",
+        "sha256": "76ef389a687bde6815e02dade80eca409a9d644c39e8fb5e17b35daf2d1157c8",
+        "sha256_in_prefix": "76ef389a687bde6815e02dade80eca409a9d644c39e8fb5e17b35daf2d1157c8",
+        "size_in_bytes": 155648
+      },
+      {
+        "_path": "Lib/site-packages/shapely/vectorized/_vectorized.pyx",
+        "path_type": "hardlink",
+        "sha256": "89646437c0ca72327cfcc145a5dc07a5bf3910e1e5fdfea46bded15c360bcaee",
+        "sha256_in_prefix": "89646437c0ca72327cfcc145a5dc07a5bf3910e1e5fdfea46bded15c360bcaee",
+        "size_in_bytes": 3988
+      },
+      {
+        "_path": "Lib/site-packages/shapely/wkb.py",
+        "path_type": "hardlink",
+        "sha256": "073e9ffab59ed4322041fa58b630445c8d076a36230491356cc5147d6abd1245",
+        "sha256_in_prefix": "073e9ffab59ed4322041fa58b630445c8d076a36230491356cc5147d6abd1245",
+        "size_in_bytes": 1702
+      },
+      {
+        "_path": "Lib/site-packages/shapely/wkt.py",
+        "path_type": "hardlink",
+        "sha256": "e9cf52b1fe6ac29ca85ad0b65f30edc459c2b3b475b7b52c937b3da9c9c6a683",
+        "sha256_in_prefix": "e9cf52b1fe6ac29ca85ad0b65f30edc459c2b3b475b7b52c937b3da9c9c6a683",
+        "size_in_bytes": 1961
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "4a543f8b95204ca34301d4d540aa9dd4edc5e68a78c5858289dcfbc457148c3f",
+  "size": 425809,
+  "subdir": "win-64",
+  "timestamp": 1611316171301,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/win-64/shapely-1.7.1-py37h9e4ceff_1.tar.bz2",
+  "version": "1.7.1"
+}

@@ -1,0 +1,310 @@
+{
+  "build": "h39d44d4_3",
+  "build_number": 3,
+  "channel": "https://conda.anaconda.org/conda-forge/win-64",
+  "constrains": [],
+  "depends": [
+    "vc >=14.1,<15.0a0",
+    "vs2015_runtime >=14.16.27012"
+  ],
+  "extracted_package_dir": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\libspatialindex-1.9.3-h39d44d4_3",
+  "features": "",
+  "files": [
+    "Library/bin/spatialindex-64.dll",
+    "Library/bin/spatialindex_c-64.dll",
+    "Library/include/spatialindex/LineSegment.h",
+    "Library/include/spatialindex/MVRTree.h",
+    "Library/include/spatialindex/MovingPoint.h",
+    "Library/include/spatialindex/MovingRegion.h",
+    "Library/include/spatialindex/Point.h",
+    "Library/include/spatialindex/RTree.h",
+    "Library/include/spatialindex/Region.h",
+    "Library/include/spatialindex/SpatialIndex.h",
+    "Library/include/spatialindex/TPRTree.h",
+    "Library/include/spatialindex/TimePoint.h",
+    "Library/include/spatialindex/TimeRegion.h",
+    "Library/include/spatialindex/Version.h",
+    "Library/include/spatialindex/capi/BoundsQuery.h",
+    "Library/include/spatialindex/capi/CountVisitor.h",
+    "Library/include/spatialindex/capi/CustomStorage.h",
+    "Library/include/spatialindex/capi/DataStream.h",
+    "Library/include/spatialindex/capi/Error.h",
+    "Library/include/spatialindex/capi/IdVisitor.h",
+    "Library/include/spatialindex/capi/Index.h",
+    "Library/include/spatialindex/capi/LeafQuery.h",
+    "Library/include/spatialindex/capi/ObjVisitor.h",
+    "Library/include/spatialindex/capi/Utility.h",
+    "Library/include/spatialindex/capi/sidx_api.h",
+    "Library/include/spatialindex/capi/sidx_config.h",
+    "Library/include/spatialindex/capi/sidx_export.h",
+    "Library/include/spatialindex/capi/sidx_impl.h",
+    "Library/include/spatialindex/tools/PointerPool.h",
+    "Library/include/spatialindex/tools/PoolPointer.h",
+    "Library/include/spatialindex/tools/Tools.h",
+    "Library/include/spatialindex/tools/rand48.h",
+    "Library/lib/spatialindex-64.lib",
+    "Library/lib/spatialindex_c-64.lib",
+    ".nonadmin"
+  ],
+  "fn": "libspatialindex-1.9.3-h39d44d4_3.tar.bz2",
+  "license": "MIT",
+  "license_family": "MIT",
+  "link": {
+    "source": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\libspatialindex-1.9.3-h39d44d4_3",
+    "type": 1
+  },
+  "md5": "4457595515da59b78a6021d44c04f6e3",
+  "name": "libspatialindex",
+  "package_tarball_full_path": "C:\\Users\\Lewis\\AppData\\Local\\ESRI\\conda\\pkgs\\libspatialindex-1.9.3-h39d44d4_3.tar.bz2",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "Library/bin/spatialindex-64.dll",
+        "path_type": "hardlink",
+        "sha256": "e887f1cca5d71e1c3cc55cb861f25a3ebaf79c3dab734cc4d5c4ccd0758a81f1",
+        "sha256_in_prefix": "e887f1cca5d71e1c3cc55cb861f25a3ebaf79c3dab734cc4d5c4ccd0758a81f1",
+        "size_in_bytes": 1212416
+      },
+      {
+        "_path": "Library/bin/spatialindex_c-64.dll",
+        "path_type": "hardlink",
+        "sha256": "cbb0ee25f749dde9d14e2035c11063e720c519ef49447f38212df306852fdfdd",
+        "sha256_in_prefix": "cbb0ee25f749dde9d14e2035c11063e720c519ef49447f38212df306852fdfdd",
+        "size_in_bytes": 423424
+      },
+      {
+        "_path": "Library/include/spatialindex/LineSegment.h",
+        "path_type": "hardlink",
+        "sha256": "5e3bacf1b361fa543fef9eba0400f3b11fbf595e2c34a28028bb72f39e221f5a",
+        "sha256_in_prefix": "5e3bacf1b361fa543fef9eba0400f3b11fbf595e2c34a28028bb72f39e221f5a",
+        "size_in_bytes": 4194
+      },
+      {
+        "_path": "Library/include/spatialindex/MVRTree.h",
+        "path_type": "hardlink",
+        "sha256": "4a117d72b3a3de14d3561914a0afe203e0025d352067fcb60c19f89b0a323d97",
+        "sha256_in_prefix": "4a117d72b3a3de14d3561914a0afe203e0025d352067fcb60c19f89b0a323d97",
+        "size_in_bytes": 2859
+      },
+      {
+        "_path": "Library/include/spatialindex/MovingPoint.h",
+        "path_type": "hardlink",
+        "sha256": "0ff2ca300b9306ffbce6582e7c4711f723b1ca4901834c99c62044c9f500648b",
+        "sha256_in_prefix": "0ff2ca300b9306ffbce6582e7c4711f723b1ca4901834c99c62044c9f500648b",
+        "size_in_bytes": 3299
+      },
+      {
+        "_path": "Library/include/spatialindex/MovingRegion.h",
+        "path_type": "hardlink",
+        "sha256": "1c20612c8c6aa5354b5cbebe3268dedad81508267f4dc2031f8d3c2c06bce58b",
+        "sha256_in_prefix": "1c20612c8c6aa5354b5cbebe3268dedad81508267f4dc2031f8d3c2c06bce58b",
+        "size_in_bytes": 6884
+      },
+      {
+        "_path": "Library/include/spatialindex/Point.h",
+        "path_type": "hardlink",
+        "sha256": "a87b2885a58e82787642a08cb3b804f10d3673aad94cfcc7dc3f6cce64d0e4ec",
+        "sha256_in_prefix": "a87b2885a58e82787642a08cb3b804f10d3673aad94cfcc7dc3f6cce64d0e4ec",
+        "size_in_bytes": 3071
+      },
+      {
+        "_path": "Library/include/spatialindex/RTree.h",
+        "path_type": "hardlink",
+        "sha256": "22ee0fdda2f302969072ca6d2e25050c7e8f5de0d1689970738d7b189f50ca2f",
+        "sha256_in_prefix": "22ee0fdda2f302969072ca6d2e25050c7e8f5de0d1689970738d7b189f50ca2f",
+        "size_in_bytes": 3330
+      },
+      {
+        "_path": "Library/include/spatialindex/Region.h",
+        "path_type": "hardlink",
+        "sha256": "cf9b7d1f1ce302b3b2e61ba125d4d4c8e88f2d7e57c072fb80796d37a87a1247",
+        "sha256_in_prefix": "cf9b7d1f1ce302b3b2e61ba125d4d4c8e88f2d7e57c072fb80796d37a87a1247",
+        "size_in_bytes": 3985
+      },
+      {
+        "_path": "Library/include/spatialindex/SpatialIndex.h",
+        "path_type": "hardlink",
+        "sha256": "e8764d43970ea8e0ed31c9efb5fab1fe2ff2bc68bb8bb4d7fcc6d4f66c5caee2",
+        "sha256_in_prefix": "e8764d43970ea8e0ed31c9efb5fab1fe2ff2bc68bb8bb4d7fcc6d4f66c5caee2",
+        "size_in_bytes": 9050
+      },
+      {
+        "_path": "Library/include/spatialindex/TPRTree.h",
+        "path_type": "hardlink",
+        "sha256": "5eddea09d4083fab351c4cfe7b85e74ed51aabf3a51caf02a1533161ff51b91f",
+        "sha256_in_prefix": "5eddea09d4083fab351c4cfe7b85e74ed51aabf3a51caf02a1533161ff51b91f",
+        "size_in_bytes": 2840
+      },
+      {
+        "_path": "Library/include/spatialindex/TimePoint.h",
+        "path_type": "hardlink",
+        "sha256": "5e4804c3badd5c430ae54b21013a1b387d7f3f1f0aa6549658d605df8c47a453",
+        "sha256_in_prefix": "5e4804c3badd5c430ae54b21013a1b387d7f3f1f0aa6549658d605df8c47a453",
+        "size_in_bytes": 4003
+      },
+      {
+        "_path": "Library/include/spatialindex/TimeRegion.h",
+        "path_type": "hardlink",
+        "sha256": "7d58ffc50edd8600dbab259f520fbff689c9bf7e0b51050e2e51f30109f2f2bf",
+        "sha256_in_prefix": "7d58ffc50edd8600dbab259f520fbff689c9bf7e0b51050e2e51f30109f2f2bf",
+        "size_in_bytes": 4796
+      },
+      {
+        "_path": "Library/include/spatialindex/Version.h",
+        "path_type": "hardlink",
+        "sha256": "a45a111d707dceca1c43a153bdf5dd49e68088153d1a6a04a4e01749faca5289",
+        "sha256_in_prefix": "a45a111d707dceca1c43a153bdf5dd49e68088153d1a6a04a4e01749faca5289",
+        "size_in_bytes": 1984
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/BoundsQuery.h",
+        "path_type": "hardlink",
+        "sha256": "9a868bbb7846fe483cbbc5a17c3948b1131167343fc6c65870c6a59401c51a89",
+        "sha256_in_prefix": "9a868bbb7846fe483cbbc5a17c3948b1131167343fc6c65870c6a59401c51a89",
+        "size_in_bytes": 2035
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/CountVisitor.h",
+        "path_type": "hardlink",
+        "sha256": "f7156a0f4dbda1decd43024ca974c7cbacd0a137a6002d2b2bd341177338a318",
+        "sha256_in_prefix": "f7156a0f4dbda1decd43024ca974c7cbacd0a137a6002d2b2bd341177338a318",
+        "size_in_bytes": 1969
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/CustomStorage.h",
+        "path_type": "hardlink",
+        "sha256": "34ddde72c30a3ec5554de081b84765275aa8031b416dcd40242f079be8e5a25d",
+        "sha256_in_prefix": "34ddde72c30a3ec5554de081b84765275aa8031b416dcd40242f079be8e5a25d",
+        "size_in_bytes": 3654
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/DataStream.h",
+        "path_type": "hardlink",
+        "sha256": "a618fe419d35bd40d94d095cb5c40c8e68492940dbff608c0a0ce498a1cc217f",
+        "sha256_in_prefix": "a618fe419d35bd40d94d095cb5c40c8e68492940dbff608c0a0ce498a1cc217f",
+        "size_in_bytes": 2226
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/Error.h",
+        "path_type": "hardlink",
+        "sha256": "f41170da254294287b742ca15769d1191a1a412f06462262b0082fdb25b6be97",
+        "sha256_in_prefix": "f41170da254294287b742ca15769d1191a1a412f06462262b0082fdb25b6be97",
+        "size_in_bytes": 2089
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/IdVisitor.h",
+        "path_type": "hardlink",
+        "sha256": "c92dc953f82dd4a52737afa2715febfa5addde90945e26fde3544e5047671329",
+        "sha256_in_prefix": "c92dc953f82dd4a52737afa2715febfa5addde90945e26fde3544e5047671329",
+        "size_in_bytes": 2062
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/Index.h",
+        "path_type": "hardlink",
+        "sha256": "3462d9e696d95cfabe2511351e8741739ea129535930d00c439e97d523da115d",
+        "sha256_in_prefix": "3462d9e696d95cfabe2511351e8741739ea129535930d00c439e97d523da115d",
+        "size_in_bytes": 3078
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/LeafQuery.h",
+        "path_type": "hardlink",
+        "sha256": "0ffd4ddfd24deef080de502a2679be7a926a8546a7bf00fbdef8ca68137c641e",
+        "sha256_in_prefix": "0ffd4ddfd24deef080de502a2679be7a926a8546a7bf00fbdef8ca68137c641e",
+        "size_in_bytes": 2852
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/ObjVisitor.h",
+        "path_type": "hardlink",
+        "sha256": "8f9d58148f20c44f84d5de9f88f7653e1e289cc748da8dc5747d2990b8eca810",
+        "sha256_in_prefix": "8f9d58148f20c44f84d5de9f88f7653e1e289cc748da8dc5747d2990b8eca810",
+        "size_in_bytes": 2092
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/Utility.h",
+        "path_type": "hardlink",
+        "sha256": "f5cf01c6113e6be70cc8ccf998c0d910a8d0c9c9feb8a89c0352cbd20af6afac",
+        "sha256_in_prefix": "f5cf01c6113e6be70cc8ccf998c0d910a8d0c9c9feb8a89c0352cbd20af6afac",
+        "size_in_bytes": 1942
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/sidx_api.h",
+        "path_type": "hardlink",
+        "sha256": "f0162a807ced2ca71d603a9c34c14b23fe062b2a0d826a3794f3307cd33f8a3c",
+        "sha256_in_prefix": "f0162a807ced2ca71d603a9c34c14b23fe062b2a0d826a3794f3307cd33f8a3c",
+        "size_in_bytes": 14648
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/sidx_config.h",
+        "path_type": "hardlink",
+        "sha256": "cb1c8b7de7f85032437a66887d064f07c5d5fd7ee41595de6400d3f89827f594",
+        "sha256_in_prefix": "cb1c8b7de7f85032437a66887d064f07c5d5fd7ee41595de6400d3f89827f594",
+        "size_in_bytes": 2917
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/sidx_export.h",
+        "path_type": "hardlink",
+        "sha256": "ce487ab151245b9a2b07f528146318ddc1354e929423531d5278daa852774d2d",
+        "sha256_in_prefix": "ce487ab151245b9a2b07f528146318ddc1354e929423531d5278daa852774d2d",
+        "size_in_bytes": 1950
+      },
+      {
+        "_path": "Library/include/spatialindex/capi/sidx_impl.h",
+        "path_type": "hardlink",
+        "sha256": "063ebb572bc01f423ff08ce032f8829bceed5f14b8e78620e3b05a04b60e68e1",
+        "sha256_in_prefix": "063ebb572bc01f423ff08ce032f8829bceed5f14b8e78620e3b05a04b60e68e1",
+        "size_in_bytes": 1949
+      },
+      {
+        "_path": "Library/include/spatialindex/tools/PointerPool.h",
+        "path_type": "hardlink",
+        "sha256": "a06863053be270a8c7d1860e92101c8350490c6f0c629609020329a6fbc6f3a6",
+        "sha256_in_prefix": "a06863053be270a8c7d1860e92101c8350490c6f0c629609020329a6fbc6f3a6",
+        "size_in_bytes": 2911
+      },
+      {
+        "_path": "Library/include/spatialindex/tools/PoolPointer.h",
+        "path_type": "hardlink",
+        "sha256": "ae987908fa9368608fda8eb4725b764b23ae5427ba795eef20e0a189a8ccbbf0",
+        "sha256_in_prefix": "ae987908fa9368608fda8eb4725b764b23ae5427ba795eef20e0a189a8ccbbf0",
+        "size_in_bytes": 3141
+      },
+      {
+        "_path": "Library/include/spatialindex/tools/Tools.h",
+        "path_type": "hardlink",
+        "sha256": "1db81d9ba8d781f5f9e8c435a53a045aab0b76ce34b85f43a381fedc68853701",
+        "sha256_in_prefix": "1db81d9ba8d781f5f9e8c435a53a045aab0b76ce34b85f43a381fedc68853701",
+        "size_in_bytes": 13580
+      },
+      {
+        "_path": "Library/include/spatialindex/tools/rand48.h",
+        "path_type": "hardlink",
+        "sha256": "8c3267dce9c28eaa8e9b2092c497306690ee0082ded2015ac536856d8ccbee58",
+        "sha256_in_prefix": "8c3267dce9c28eaa8e9b2092c497306690ee0082ded2015ac536856d8ccbee58",
+        "size_in_bytes": 2969
+      },
+      {
+        "_path": "Library/lib/spatialindex-64.lib",
+        "path_type": "hardlink",
+        "sha256": "ab41bb6620b34282d672f9239b202cd86dfef476064c308f1a623a4cf15f22b7",
+        "sha256_in_prefix": "ab41bb6620b34282d672f9239b202cd86dfef476064c308f1a623a4cf15f22b7",
+        "size_in_bytes": 310672
+      },
+      {
+        "_path": "Library/lib/spatialindex_c-64.lib",
+        "path_type": "hardlink",
+        "sha256": "957d23fef6f0e924c402f41833cea4c81cab728e5e5c2c16360f93a5d3be477b",
+        "sha256_in_prefix": "957d23fef6f0e924c402f41833cea4c81cab728e5e5c2c16360f93a5d3be477b",
+        "size_in_bytes": 126284
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "c9544decf377d1d0ef5536068dc630a643ca931fb0e06f9282fc8b4dee70fb7f",
+  "size": 451745,
+  "subdir": "win-64",
+  "timestamp": 1613226652133,
+  "track_features": "",
+  "url": "https://conda.anaconda.org/conda-forge/win-64/libspatialindex-1.9.3-h39d44d4_3.tar.bz2",
+  "version": "1.9.3"
+}
