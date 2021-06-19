@@ -1,8 +1,10 @@
+# we will use arcgis pro dir
+
 # clone new env in arcgis dir
 conda create --clone arcgispro-py3 --name arcgispro-py3-development
 
 # alternatively, clone to specifc folder
-conda create --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-development
+#conda create --name arcgispro-development --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-development
 
 # activate env
 #activate arcgispro-py3-development
@@ -21,4 +23,5 @@ conda install -c conda-forge rasterio --dry-run
 conda install -c conda-forge rasterio
 
 # install geopandas
-conda install geopandas
+#conda install geopandas
+
