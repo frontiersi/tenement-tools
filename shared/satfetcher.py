@@ -561,8 +561,14 @@ def make_vrt_list(feat_list, band=None):
         # get scene-level epsg src as wkt
         f_srs = CRS.from_epsg(f_props.get('proj:epsg'))
         f_srs = f_srs.wkt
+        #from osgeo.osr import SpatialReference
+        #osr_crs = SpatialReference()
+        #osr_crs.ImportFromEPSG(f_props.get('proj:epsg'))
+        #f_srs = osr_crs.ExportToWkt()
+        
 
         # get scene-level transform
+        #from affine import Affine
         aff = Affine(*f_props.get('proj:transform')[0:6])
         f_transform = ', '.join(str(p) for p in Affine.to_gdal(aff))
 

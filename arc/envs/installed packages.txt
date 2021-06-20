@@ -22,6 +22,9 @@ conda install dask=2.30.0
 conda install -c conda-forge rasterio --dry-run
 conda install -c conda-forge rasterio
 
+# note, in arcgis, you will need to set gdal folder
+os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
+
 # install geopandas
 #conda install geopandas
 

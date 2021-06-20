@@ -1,0 +1,37 @@
+<VRTDataset rasterXSize="7741" rasterYSize="6911">
+  <SRS>PROJCS["WGS 84 / UTM zone 51N",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",123],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AUTHORITY["EPSG","32651"]]</SRS>
+  <GeoTransform>  1.0678500000000000e+05,  3.0000000000000000e+01,  0.0000000000000000e+00, -2.4518850000000000e+06,  0.0000000000000000e+00, -3.0000000000000000e+01</GeoTransform>
+  <VRTRasterBand dataType="Int16" band="1">
+    <NoDataValue>-999</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://data.dea.ga.gov.au/baseline/ga_ls5t_ard_3/111/076/1990/03/22/ga_ls5t_nbart_3-0-0_111076_1990-03-22_final_band01.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="7741" RasterYSize="6911" DataType="Int16" BlockXSize="512" BlockYSize="512" />
+      <SrcRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <DstRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <NODATA>-999</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="Int16" band="2">
+    <NoDataValue>-999</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://data.dea.ga.gov.au/baseline/ga_ls5t_ard_3/111/076/1990/03/22/ga_ls5t_nbart_3-0-0_111076_1990-03-22_final_band02.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="7741" RasterYSize="6911" DataType="Int16" BlockXSize="512" BlockYSize="512" />
+      <SrcRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <DstRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <NODATA>-999</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="Int16" band="3">
+    <NoDataValue>-999</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/vsicurl/https://data.dea.ga.gov.au/baseline/ga_ls5t_ard_3/111/076/1990/03/22/ga_ls5t_nbart_3-0-0_111076_1990-03-22_final_band03.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="7741" RasterYSize="6911" DataType="Int16" BlockXSize="512" BlockYSize="512" />
+      <SrcRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <DstRect xOff="0" yOff="0" xSize="7741" ySize="6911" />
+      <NODATA>-999</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+</VRTDataset>
