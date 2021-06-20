@@ -1,14 +1,17 @@
 # we will use arcgis pro dir
 
+# see envs
+conda env list
+
 # clone new env in arcgis dir
-conda create --clone arcgispro-py3 --name arcgispro-py3-development
+conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool
 
 # alternatively, clone to specifc folder
-#conda create --name arcgispro-development --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-development
+#conda create --name arcgispro-dev --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev
 
 # activate env
-#activate arcgispro-py3-development
-activate C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-development
+activate arcgispro-py3-dev
+#activate C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev
 
 
 # check if dask can be installed
@@ -16,15 +19,17 @@ conda install dask=2.30.0 --dry-run
 conda install dask=2.30.0
 
 # not working? try this
-#conda config --set channel_priority disabled
+#conda config --set channel_priority disabled (or flexible)
 
 # check if rasterio can be installed - try these. cannot install 1.1.6, so ignore ver num
-conda install -c conda-forge rasterio --dry-run
-conda install -c conda-forge rasterio
+conda install -c esri rasterio --dry-run
+conda install -c esri rasterio
 
 # note, in arcgis, you will need to set gdal folder
-os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
+#os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
 
 # install geopandas
 #conda install geopandas
 
+
+install anaconda, check uninstalled libraries from drop down and installr asterio
