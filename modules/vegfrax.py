@@ -1,10 +1,17 @@
 # vegfrax
 '''
-description todo
+VegFrax extracts pixel values in a high resolution classified image 
+that fall within randomlly selected low- to moderate-resolution pixels 
+from another raster (e.g. Landsat or Sentinel) and determines the 
+proportion of each of the different pixel classes within. Simply 
+speaking, if a high-resolution raster has a pixel size of 1m and 
+the moderate image has a pixel size of 10m, each random sample 
+will have a window that captures 100 1m class pixels within - the 
+percentage of each class in that window is calculated. For example, 
+25 forest pixels would = 25% forest.
 
-functions todo
-
-links todo
+See associated Jupyter Notebook vegfrax.ipynb for a basic tutorial on 
+the main functions and order of execution.
 
 Contacts: 
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
@@ -28,70 +35,146 @@ from sklearn.ensemble import RandomForestRegressor
 sys.path.append('../../shared')
 import tools
 
-# todo - metadata
-def get_dataset_classes(ds, nodata_value=-9999):
+def prepare_classified_xr(ds, dtype='int8'):
     """
+    Does basic checks and corrects on a classified
+    raster opened from a local raster. Converts to 
+    integers, renames class var, etc.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset which will be prepared.
+
+    Returns
+    ----------
+    ds : xarray dataset/array with prepared info.
+    """
+    
+    # notify
+    print('Preparing classified dataset.')
+    
+    # check xr type, dims in ds a
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset.')
+        
+    # check if more than one var - reject if so
+    if len(ds) != 1:
+        raise ValueError('More than one variable detected. Ensure raster has one band.')   
+        
+    # rename classified var, if exists
+    temp_vars = [var for var in ds]
+    if len(temp_vars) == 1:
+        ds = ds.rename({temp_vars[0]: 'classes'})
+    else:
+        raise ValueError('No variables in dataset.')
+    
+    # convert to int16
+    ds = ds.astype(dtype)
+    
+    # notify
+    print('Prepared classified dataset successfully.')
+    return ds
+
+
+def reclassify_xr(ds, req_class, nodata_value=-999, inplace=True):
+    """
+    Reclassify classes in dataset so requested classes are kept but
+    all others are transformed to a value of 0. Nodata is also
+    kept as requested.
+
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset holding the low resolution, raw raster bands.
+    req_class : int, list
+        A list of requested classes in dataset. Could be a single class,
+        or could be multiple.
+    nodata_value : int or float
+        A value indicating the NoData values within xarray datatset.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.    
+
+    Returns
+    ----------
+    ds: pxarray dataset/array
+        A reclassified xr dataset/array.
+    """
+    
+    # notify
+    print('Reclassifying classes.')
+    
+    # check xr type, dims in ds a
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset a not an xarray type.')    
+        
+    # check if req classes is list or int, convert to list
+    req_class = req_class if req_class is not None else []
+    req_classes = req_class if isinstance(req_class, list) else [req_class]
+    
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+    
+    # add nodata to required classes
+    classes = req_classes + [nodata_value]
+        
+    # remove unrequested classes
+    ds = ds.where(ds.isin(classes), 0)
+    
+    # notify
+    print('Reclassified dataset successfully.')
+    return ds
+
+
+def get_xr_classes(ds, nodata_value=-9999):
+    """
+    Takes an xarray dataset/array and extracts unique class
+    values from dataset values. Returns a list of class values.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y dims.
+    nodata_value : int or float
+        A value representing the nodata values in dataset.
+
+    Returns
+    ----------
+    np_classes : numpy ndarray.
     """
     
     # notify user
     print('Getting unique classes from dataset.')
 
     # check if dataset
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Dataset is not an xarray dataset type.')
-        
-    # check if we have 3 dims
-    if not len(ds.to_array().shape) == 3:
-        raise ValueError('> Dataset does not have shape of 3 (var, y, x).')
-        
-    # check if x and y dims exist
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('> No x and/or y coordinate dimension in dataset.')
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset is not an xarray dataset or array type.')  
+    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+        raise ValueError('No x or y dimension in dataset.')
+    elif len(ds) != 1:
+        raise ValueError('Dataset can only take one variable (i.e. 1 band).')
 
-    # check if variables exist
-    if len(ds) == 0:
-        raise ValueError('> Dataset has no variables (is empty).')
-
-        
-    # get all unique classes in dataset
+    # get all unique classes in dataset and remove nodata
     np_classes = np.unique(ds.to_array())
-    
-    # remove nodata value from array
     np_classes = np_classes[np_classes != nodata_value]
     
-    # check if something came back 
+    # check if something came back or too much came back
     if len(np_classes) <= 0:
-        raise ValueError('> No classes detected in dataset.')
-        
-    # check if many classes and warn
-    if len(np_classes) > 100:
-        print('> Warning, >= 100 classes detected in dataset. Proceed with caution.')
+        raise ValueError('No classes detected in dataset.')
+    elif len(np_classes) > 100:
+        print('Warning: >= 100 classes detected in dataset. Proceed with caution.')
         
     # notify and return
-    print('> Detected classes in dataset: {0}'.format(', '.join([str(c) for c in np_classes])))
+    str_classes = ', '.join([str(c) for c in np_classes])
+    print('Detected classes in dataset: {}'.format(str_classes))
     return np_classes
 
-# checks, meta, more
-def clip_high_to_low(ds_high, ds_low):
-    """
-    """
-    
-    # checks
-    
-    # get extents from ds low - avoid geobox
-    l = float(ds_low['x'].min().values)
-    r = float(ds_low['x'].max().values)
-    t = float(ds_low['y'].min().values)
-    b = float(ds_low['y'].max().values)
-    
-    # subset ds high to ds low
-    ds_high = ds_high.sel(x=slice(l, r), 
-                          y=slice(b, t))
-    
-    return ds_high
 
-#
-def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_factor=3, nodata_value=-9999):
+def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_factor=3):
     """
     Generates random point locations within dataset mask. These points are used to
     train the random forest classifier. A pandas dataframe of x and y coordinates 
@@ -113,8 +196,6 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
     res_factor : int
         A threshold multiplier used during pixel + point intersection. For example
         if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-    nodata_value : int or float
-        A value indicating the NoData values within xarray datatset.
 
     Returns
     ----------
@@ -234,6 +315,159 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
     print('> Generated random sample points successfully.')
     return df_samples
 
+
+def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=500, 
+                                  snap=True, res_factor=3):
+    """
+    Generates stratified random point locations within dataset classes. These points 
+    are used to train the random forest classifier. A pandas dataframe of x and y coordinates 
+    extracted from the dataset are returned. This is a custom func specifically for 
+    the gdv fractional cover module.
+
+    Parameters
+    ----------
+    ds_raw : xarray dataset
+        A dataset holding the low resolution, raw raster bands.
+    ds_class : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    req_class : int, list
+        A integer or list of class numbers in which to generate
+        random stratified samples within.
+    num_samples: int
+        A int indicating how many points to generated.
+    snap : bool
+        If true, pixel centroids will replace our random sample point x and y values
+        to reduce chance of assigning a random sample point right on the border of 
+        multiple pixels. Default is True.
+    res_factor : int
+        A threshold multiplier used during pixel + point intersection. For example
+        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
+
+    Returns
+    ----------
+    df_samples: pandas dataframe
+        A pandas dataframe containing two columns (x and y) with coordinates.
+    """
+
+    # notify user
+    print('Generating {} stratified randomised sample points.'.format(num_samples))
+
+    # check if raw dataset is xarray dataeset type
+    if not isinstance(ds_raw, (xr.Dataset, xr.DataArray)):
+        raise ValueError('Raw dataset is not an xarray dataset.')
+        
+    # check if class dataset is xarray dataeset type
+    if not isinstance(ds_class, (xr.Dataset, xr.DataArray)):
+        raise ValueError('Classified dataset is not an xarray dataset.')
+    
+    # check if number of absence points is an int
+    if not isinstance(num_samples, int):
+        raise ValueError('Number of points value is not an integer.')
+    elif not isinstance(snap, bool):
+        raise ValueError('Snap must be a boolean (True or False).')
+    elif not isinstance(res_factor, int):
+        raise ValueError('Resolution factor must be an integer.')
+        
+    # check if req classes is list or int, convert to list
+    req_class = req_class if req_class is not None else []
+    req_classes = req_class if isinstance(req_class, list) else [req_class]
+        
+    # get cell resolution for both datasets    
+    res_raw = tools.get_xr_resolution(ds_raw)
+    res_class = tools.get_xr_resolution(ds_class)
+    
+    # check if class res greater than raw
+    if res_class >= res_raw:
+        raise ValueError('Classified raster must be higher resolution than raw raster(s).')
+                
+    # create a dummy grid based on a single slice of raw data
+    if 'variable' in ds_raw.to_array().dims:
+        raw_dummy = xr.ones_like(ds_raw.to_array().isel(variable=0))
+        raw_dummy = raw_dummy.drop('variable', errors='ignore')
+    else:
+        raise AttributeError('> Raw dataset does not contain a variable dim.')
+                       
+    # get extent of class raster
+    class_extent = tools.get_xr_extent(ds=ds_class)
+        
+    # 'clip' raw dataset to class image bounds incase it is small subsection
+    raw_dummy = raw_dummy.sel(x=slice(class_extent.get('l'), class_extent.get('r')), 
+                              y=slice(class_extent.get('t'), class_extent.get('b')))   
+
+    # get 5% of x, y size, use to trim 5% off extent bounds, subset dummy with it
+    x_slice, y_slice = round(raw_dummy['x'].size * 0.05), round(raw_dummy['y'].size * 0.05)
+    raw_dummy = raw_dummy.isel(x=slice(x_slice, -x_slice), y=slice(y_slice, -y_slice))
+    
+    # check if raw dummy has pixels still
+    if raw_dummy.size <= 0:
+        raise ValueError('No pixels exist when raw and classified rasters clipped. Do they overlap?')
+            
+    # ensure enough pixels in final dummy to handle num of random samples
+    num_cells = raw_dummy['x'].size * raw_dummy['y'].size
+    if num_samples > num_cells:
+        print('Too many random samples requested - reducing to: {}.'.format(num_cells))
+        num_samples = num_cells
+        
+    # get bounds of final dummy
+    dummy_extent = tools.get_xr_extent(ds=raw_dummy)  
+
+    # notify
+    print('Generating stratified random points.')
+    
+    coords = []
+    for req_class in req_classes:
+        
+        # notify
+        print('Preparing samples for class: {}'.format(req_class))
+
+        # convert to pandas
+        df_mask = xr.where(ds_class == req_class, True, False).to_dataframe()
+        df_mask = df_mask.loc[df_mask['classes'] == True].sample(5000)
+        df_mask = df_mask.drop('classes', axis='columns')
+
+        # create random points and fill a list with x and y
+        counter = 0
+        while counter < num_samples:
+
+            # get a single, random row
+            xy = df_mask.sample(1)
+            xy = xy.index.to_list()[0]
+            x, y = xy[0], xy[1]
+
+            try:
+                # get pixel value from low res ds
+                pixel = raw_dummy.sel(x=x, y=y, 
+                                      method='nearest', 
+                                      tolerance=res_raw * res_factor)
+
+                if snap:
+                    coords.append([float(pixel['x']), 
+                                   float(pixel['y'])])
+                else:
+                    coords.append([float(x), 
+                                   float(y)])
+                
+                # up the counter
+                counter += 1
+
+            except:
+                continue
+      
+    # check if list is populated
+    if not coords:
+        raise ValueError('No coordinates in coordinate list.')
+
+    # convert coord array into dataframe
+    df_samples = pd.DataFrame(coords, columns=['x', 'y'])
+
+    # drop variables
+    raw_dummy = None
+
+    # notify and return
+    print('Generated stratified random sample points successfully.')
+    return df_samples
+
+
 # fix up meta and checks, reduce code
 def create_frequency_windows(ds_raw, ds_class, df_records):
     """
@@ -244,11 +478,11 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # check if xarray dataset
     if not isinstance(ds_raw, xr.Dataset):
-        raise TypeError('> Not a xarray dataset type.')
+        raise TypeError('Not a xarray dataset type.')
 
     # check if pandas array
     if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Not a pandas dataframe type.')
+        raise TypeError('Not a pandas dataframe type.')
 
     # check if no data value is correct
     #if type(nodata_value) not in [int, float]:
@@ -299,10 +533,10 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # check if anything returned
     if len(window_list) == 0:
-        raise ValueError('> No windows were returned. Cannot proceed. Please check your data.')
+        raise ValueError('No windows were returned. Cannot proceed. Please check your data.')
 
     # notify user
-    print('> Computing windows into memory, this can take awhile. Please wait.')
+    print('Computing windows into memory, this can take awhile. Please wait.')
 
     # get original data type and compute
     np_windows = dask_array.concatenate(window_list).compute()
@@ -312,7 +546,7 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # check if data sizes match - they must
     if len(df_windows) != len(np_windows):
-        raise ValueError('> Number of points and window arrays do not match.')
+        raise ValueError('Number of points and window arrays do not match.')
           
     # iter rows and add 1d window values to each point
     for i, r in df_windows.iterrows():
@@ -323,9 +557,9 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # notify user
     if skip_count == 0:
-        print('> {0} windows generated successfully.'.format(len(df_records)))
+        print('{0} windows generated successfully.'.format(len(df_records)))
     else:
-        print('> {0} windows generated successfully. {1} omitted.'.format(len(df_records) - skip_count, skip_count))
+        print('{0} windows generated successfully. {1} omitted.'.format(len(df_records) - skip_count, skip_count))
 
     # return
     return df_windows
@@ -378,7 +612,7 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
             df_windows.at[i, 'class_frqs'] = np.nan
             
     # notify user
-    print('> Checking for empty rows and dropping if exist.')
+    print('Checking for empty rows and dropping if exist.')
             
     # count nan values for labels and freqs
     lbls_nan_count = df_windows['class_lbls'].isna().sum()
@@ -386,7 +620,7 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
 
     # if nan, tell user and remove rows
     if lbls_nan_count > 0 or frqs_nan_count > 0:
-        print('> Empty rows detected. Dropping {0} rows.'.format(np.max(lbls_nan_count, frqs_nan_count)))
+        print('Empty rows detected. Dropping {0} rows.'.format(np.max(lbls_nan_count, frqs_nan_count)))
         df_windows.dropna(subset=['class_lbls', 'class_frqs'])
         
     # drop unneeded boundary cols
@@ -397,9 +631,9 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
     
     # notify user
     if len(df_windows) > 0:
-        print('> {0} windows transformed to frequencies successfully.'.format(len(df_windows)))
+        print('{0} windows transformed to frequencies successfully.'.format(len(df_windows)))
     else:
-        raise ValueError('> No frequencies were calculated. Aborting.')
+        raise ValueError('No frequencies were calculated. Aborting.')
            
     # return
     return df_windows
