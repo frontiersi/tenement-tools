@@ -560,3 +560,116 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05):
     # notify and return
     print('Standardised using invariant targets successfully.')
     return ds
+
+# old validate rasters method. now implemented in load_nc
+def validate_rasters(rast_path_list):
+    """
+    Compare all input rasters and ensure geo transformations, coordinate systems,
+    size of dimensions (x and y) number of features, and nodata values all match. 
+    Takes a list of paths to raster layers to be used in analysis.
+
+    Parameters
+    ----------
+    rast_path_list : string
+        A single list of strings with full path and filename of input rasters.
+    """
+
+    # notify user
+    print('Checking raster spatial information to check for inconsistencies.')
+
+    # check if shapefile and raster paths exists
+    if not rast_path_list:
+        raise ValueError('> No raster path list provided.')
+
+    # check if list types, if not bail
+    if not isinstance(rast_path_list, list):
+        raise ValueError('> Raster path list must be a list.')
+
+    # ensure raster paths in list exist and are strings
+    for path in rast_path_list:
+
+        # check if string, if not bail
+        if not isinstance(path, str):
+            raise ValueError('> Raster paths must be a string.')
+
+        # check if shapefile or raster exists
+        if not os.path.exists(path):
+            raise OSError('> Unable to read raster, file not found.')
+
+    # notify
+    print('> Extracting raster spatial information.')
+
+    # loop through each rast, extract info, store in list
+    rast_dict_list = []
+    for rast_path in rast_path_list:
+        rast_dict = extract_rast_info(rast_path)
+        rast_dict_list.append(rast_dict)
+
+    # check if anything in output lists
+    if not rast_dict_list:
+        raise ValueError('> No Raster spatial information in outputs.')
+
+    # epsg - get values and invalid layers
+    epsg_list, no_epsg_list = [], []
+    for info_dict in rast_dict_list:
+        epsg_list.append(info_dict.get('epsg'))
+        if not info_dict.get('epsg'):
+            no_epsg_list.append(info_dict.get('layer'))
+
+    # is_projected - get values and invalid layers
+    is_proj_list, no_proj_list = [], []
+    for info_dict in rast_dict_list:
+        is_proj_list.append(info_dict.get('is_projected'))
+        if not info_dict.get('is_projected'):
+            no_proj_list.append(info_dict.get('layer'))
+
+    # x_dim - get values and invalid layers
+    x_dim_list, no_x_dim = [], []
+    for info_dict in rast_dict_list:
+        x_dim_list.append(info_dict.get('x_dim'))
+        if not info_dict.get('x_dim') > 0:
+            no_x_dim.append(info_dict.get('layer'))        
+
+    # y_dim - get values and invalid layers
+    y_dim_list, no_y_dim = [], []
+    for info_dict in rast_dict_list:
+        y_dim_list.append(info_dict.get('y_dim'))
+        if not info_dict.get('y_dim') > 0:
+            no_y_dim.append(info_dict.get('layer'))
+
+    # nodata_val - get values and invalid layers
+    nodata_list = []
+    for info_dict in rast_dict_list:
+        nodata_list.append(info_dict.get('nodata_val'))
+
+    # notify - layers where epsg code missing 
+    if no_epsg_list:
+        print('> These layers have an unknown coordinate system: {0}.'.format(', '.join(no_epsg_list)))
+    if not all([e == epsg_list[0] for e in epsg_list]):
+        print('> Inconsistent coordinate systems between layers. Could cause errors.')
+
+    # notify - layers where not projected
+    if no_proj_list:
+        print('> These layers are not projected: {0}. Must be projected.'.format(', '.join(no_proj_list)))
+    if not all([e == is_proj_list[0] for e in is_proj_list]):
+        print('> Not all layers projected. All layers must have a projection system.')
+
+    # notify - layers where not x_dim
+    if no_x_dim:
+        print('> These layers have no x dimension: {0}. Must have.'.format(', '.join(no_x_dim)))
+    if not all([e == x_dim_list[0] for e in x_dim_list]):
+        print('> Inconsistent x dimensions between layers. Must be consistent.')    
+
+    # notify - layers where not y_dim
+    if no_y_dim:
+        print('> These layers have no y dimension: {0}. Must have.'.format(', '.join(no_y_dim)))
+    if not all([e == y_dim_list[0] for e in y_dim_list]):
+        print('> Inconsistent y dimensions between layers. Must be consistent.')      
+
+    # notify - layers where nodata
+    if not all([e == nodata_list[0] for e in nodata_list]):
+        print('> Inconsistent NoData values between layers. Could cause errors.'.format(', '.join(no_feat_count_list)))
+
+    # raise error if any vital errors detected
+    if no_epsg_list or no_proj_list or no_x_dim or no_y_dim:
+        raise ValueError('> Errors found in layers (read above). Please fix and re-run the tool.')
