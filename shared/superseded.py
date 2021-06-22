@@ -673,3 +673,272 @@ def validate_rasters(rast_path_list):
     # raise error if any vital errors detected
     if no_epsg_list or no_proj_list or no_x_dim or no_y_dim:
         raise ValueError('> Errors found in layers (read above). Please fix and re-run the tool.')
+
+# retired
+def perform_optimised_fit(estimator, X, y, parameters, cv=10):
+    """
+    Takes an estimator, values (independent vars) with response
+    (y), as well as gridcv parameters. Output is a fit, optimal
+    model.
+
+    Parameters
+    ----------
+    estimator : sklearn estimastor object
+        A sklearn estimator.
+    X : numpy ndarray
+        A numpy array of dependent values.
+    y : numpy ndarray
+        A numpy array of response values.
+    parameters : list
+        Parameters for use in GridSearchCV.
+    cv : int
+        The number of cross-validations.
+
+    Returns
+    ----------
+    gsc_result: numpy ndarray
+        Output from GridSearchCV of fit values.
+    """
+    
+    # imports
+    from sklearn.model_selection import GridSearchCV
+    
+    # check for tyoe
+    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
+        raise TypeError('X and/or y inputs must be numpy arrays.')
+    elif not len(X.shape) == 2 or not len(y.shape) == 1:
+        raise ValueError('X and/or y inputs are of incorrect size.')
+                
+    # check parameters
+    if not isinstance(parameters, dict):
+        raise TypeError('Parameters must be in a dictionary type.')
+        
+    # check entered parameters
+    allowed_parameters = ['max_features', 'max_depth', 'n_estimators']
+    for k, p in parameters.items():
+        if k not in allowed_parameters:
+            raise ValueError('Parameter: {0} not supported.'.format(k))
+            
+    # check cv
+    if cv <= 0:
+        raise ValueError('> CV (cross-validation) must be > 0.')
+        
+    # create grid search cv and fit it
+    gsc = GridSearchCV(estimator, parameters, cv=cv, n_jobs=-1, scoring='max_error')
+    gsc_result = gsc.fit(X, y)
+        
+    return gsc_result
+
+# retired
+def perform_prediction(ds_input, estimator):  
+    """
+    Uses dask (if available) to run sklearn predict in parallel.
+    Useful for quickly performing analysis.
+
+    Parameters
+    ----------
+    ds_input : xarray dataset or array. 
+             Dataset containing independent variables(i.e. low res image). Must 
+             have dimensions 'x' and 'y'.
+    estimator : sklearn estimator object
+             A pre-defined RandomForestRegressor scikit-learn estimator model. 
+
+    Returns
+    ----------
+    ds_out : xarray dataset
+             An xarray dataset containing the probabilities of the random forest model.
+    """
+    
+    # imports
+    import dask.array as dask_array
+    from sklearn.ensemble import RandomForestRegressor
+    from dask_ml.wrappers import ParallelPostFit
+    import joblib
+    
+    # check ds in dataset or dataarray
+    if not isinstance(ds_input, (xr.Dataset, xr.DataArray)):
+        raise TypeError('> Input dataset is not xarray dataset or data array type.')
+    
+    # check if x and y dims exist
+    if 'x' not in list(ds_input.dims) and 'y' not in list(ds_input.dims):
+        raise ValueError('> No x and/or y coordinate dimension in dataset.')
+    
+    # if input_xr isn't dask, coerce it
+    is_dask = True
+    if not bool(ds_input.chunks):
+        is_dask = False
+        ds_input = ds_input.chunk({'x': len(ds_input.x), 'y': len(ds_input.y)})
+
+    #get chunk size
+    chunk_size = int(ds_input.chunks['x'][0]) * int(ds_input.chunks['y'][0])
+
+    # set up function for random forest prediction
+    def predict(ds_input, estimator):
+
+        # get x, y dims
+        x, y, = ds_input['x'], ds_input['y']
+
+        # get crs if exists
+        try:
+            attributes = ds_input.attrs
+        except:
+            print('No attributes available. Skipping.')
+            attributes = None
+
+        # seperate each var (image bands) and store in list
+        input_data_list = []
+        for var_name in ds_input.data_vars:
+            input_data_list.append(ds_input[var_name])
+
+        # flatten and chunk each dim array and add to flatten list
+        input_data_flat = []
+        for da in input_data_list:
+            data = da.data.flatten().rechunk(chunk_size)
+            input_data_flat.append(data)
+
+        # reshape for prediction via dask array type (dda)
+        input_data_flat = dask_array.array(input_data_flat).transpose()
+
+        # perform the prediction
+        preds = estimator.predict(input_data_flat)     
+                
+        # reshape for output
+        preds = preds.reshape(len(y), len(x))
+
+        # recreate dataset
+        ds_out = xr.DataArray(preds, coords={'x': x, 'y': y}, dims=['y', 'x'])
+        ds_out = ds_out.to_dataset(name='result')
+
+        # add attributes back on
+        if attributes:
+            ds_out.attrs.update(attributes)
+
+        return ds_out
+
+    # predict via parallel, or if missing, regular compute
+    if is_dask == True:
+        estimator = ParallelPostFit(estimator)
+        with joblib.parallel_backend('dask'):
+            ds_out = predict(ds_input, estimator)
+    else:
+        ds_out = predict(ds_input, estimator).compute()
+
+    # return
+    return ds_out
+
+# retired
+def perform_optimised_validation(estimator, X, y, n_validations=50, split_ratio=0.10):
+    """
+    
+    """
+    
+    # imports
+    from sklearn.model_selection import train_test_split
+    
+    # check for tyoe
+    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
+        raise TypeError('X and/or y inputs must be numpy arrays.')
+    elif not len(X.shape) == 2 or not len(y.shape) == 1:
+        raise ValueError('X and/or y inputs are of incorrect size.')
+        
+    # check validations, split
+    if n_validations < 1:
+        raise ValueError('Number of validations must be > 0.')
+    elif split_ratio < 0 or split_ratio > 1:
+        raise ValueError('SPlit ratio must be between 0 and 1.')
+        
+    # create array to hold validation results
+    r2_list = []
+    
+    # iterate n validations
+    for i in range(0, n_validations):
+        
+        # split X and y data into train and test
+        X_train, X_test, y_train, y_test = train_test_split(X, y, 
+                                                            test_size=split_ratio, 
+                                                            random_state=100, 
+                                                            shuffle=True)
+        
+        # fit model using pre-optimised estimator
+        model = estimator.fit(X_train, y_train)
+        
+        # calc score and append 
+        score = model.score(X_test, y_test)
+        r2_list.append(score)
+        
+        
+    # calc mean r2
+    r2 = np.array(r2_list).mean()
+    r2 = abs(round(r2, 2)) 
+    
+    # reset if model outside 0 - 1 (highly inaccurate)
+    if r2 > 1:
+        r2 = 0.0
+    
+    # return
+    return r2
+    
+# retired
+def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, grid_params, validation_iters, nodata_value=-9999):
+    """
+    """
+    
+    # imports
+    from sklearn.ensemble import RandomForestRegressor
+    
+    # notify
+    print('Beginning fractional cover analysis (FCA). ')
+    
+    # do checks
+
+    # get original class raster dtype
+    class_dtype = ds_class.to_array().dtype
+
+    # remove x, y and include columns and get numpy array
+    df_cols = df_data.drop(columns=['x', 'y', 'include']).columns
+
+    # convert classes from dataframe to numpy
+    np_classes = np.array(df_cols, dtype=class_dtype)
+
+    # loop each class, fit model, predict onto raster, give accuraccy assessment
+    pred_list = []
+    for c in np_classes:
+
+        # notify
+        print('> Fitting and predicting model for class: {0}'.format(c))
+
+        # exclude flagged rows from analysis
+        df_data_sub = df_data.loc[df_data['include'] == True]
+
+        # combine dataframes to align samples
+        df_merged = pd.merge(df_data_sub, df_extract_clean, on=['x', 'y'])
+
+        # get independent vars out, excluding x and y, convert to numpy
+        indep_cols = df_extract_clean.drop(columns=['x', 'y']).columns
+        X = df_merged[indep_cols].to_numpy()
+
+        # get dependent var (class col), convert to flatten 1d numpy
+        y = df_merged[[c]].to_numpy().flatten()
+
+        # create a new random forest regressor
+        estimator = RandomForestRegressor()
+
+        # do optimised fit, get best estimator, make unfitted copy for validation
+        grid = perform_optimised_fit(estimator, X, y, grid_params)
+        estimator = grid.best_estimator_
+        
+        # predict onto raw dataset, rename and append
+        ds_pred = perform_prediction(ds_raw, estimator)
+        ds_pred = ds_pred.rename({'result': str(c)})
+        pred_list.append(ds_pred)
+
+        # cross validate model for mean r2
+        r2 = perform_optimised_validation(estimator, X, y, validation_iters)
+        print('> Mean r-squared for model: {0}.'.format(r2))
+
+    # merge result together
+    ds_preds = xr.merge(pred_list)   
+
+    # notify and return
+    print('Fractional cover analysis (FCA) completed successfully.')
+    return ds_preds
