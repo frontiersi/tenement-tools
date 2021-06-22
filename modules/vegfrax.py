@@ -22,15 +22,8 @@ import os
 import sys
 import random
 import xarray as xr
-import dask.array as dask_array
 import numpy as np
 import pandas as pd
-import joblib
-from osgeo import ogr, osr
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import train_test_split
-from dask_ml.wrappers import ParallelPostFit
-from sklearn.ensemble import RandomForestRegressor
 
 sys.path.append('../../shared')
 import tools
@@ -202,6 +195,9 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
     df_samples: pandas dataframe
         A pandas dataframe containing two columns (x and y) with coordinates.
     """
+    
+    # imports
+    from osgeo import ogr
 
     # notify user
     print('Generating {0} randomised sample points.'.format(num_samples))
@@ -439,6 +435,8 @@ def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=
                 pixel = raw_dummy.sel(x=x, y=y, 
                                       method='nearest', 
                                       tolerance=res_raw * res_factor)
+                
+                # removed check for valid (i.e., val = 1)
 
                 if snap:
                     coords.append([float(pixel['x']), 
@@ -468,25 +466,45 @@ def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=
     return df_samples
 
 
-# fix up meta and checks, reduce code
 def create_frequency_windows(ds_raw, ds_class, df_records):
     """
+    Generates "windows" of pixels captured from the classified
+    dataset that fall within each raw dataset pixels that intersect 
+    the random sample point coordinates. These windows represent this
+    data as a 1d array of classes that fall within each window.
+    These windows should then be passed to the create frequency
+    windows function to convert into actual fractions.
+
+    Parameters
+    ----------
+    ds_raw : xarray dataset
+        A dataset holding the low resolution, raw raster bands.
+    ds_class : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    df_records : pandas dataframe
+        A integer or list of class numbers in which random
+        sample coordinates exist.
+
+    Returns
+    ----------
+    df_windows: pandas dataframe
+        A pandas dataframe containing class values captured
+        within "windows" of low resolution pixels.
     """
+    
+    # imports
+    import dask.array as dask_array
 
     # notify user
     print('Creating frequency focal windows from random sample points.')
 
     # check if xarray dataset
     if not isinstance(ds_raw, xr.Dataset):
-        raise TypeError('Not a xarray dataset type.')
-
-    # check if pandas array
-    if not isinstance(df_records, pd.DataFrame):
+        raise TypeError('Raw dataset not a xarray dataset type.')
+    elif not isinstance(ds_class, xr.Dataset):
+        raise TypeError('Classified dataset not a xarray dataset type.')
+    elif not isinstance(df_records, pd.DataFrame):
         raise TypeError('Not a pandas dataframe type.')
-
-    # check if no data value is correct
-    #if type(nodata_value) not in [int, float]:
-        #raise TypeError('> NoData value is not an int or float.')
 
     # get cell resolution of raw rasters
     res_raw = tools.get_xr_resolution(ds=ds_raw)
@@ -526,7 +544,6 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
         if window.size == expected_win_size:
             window = dask_array.array(window)
             window_list.append(window)
-
         else:
             df_windows = df_windows.drop(i)
             skip_count += 1
@@ -538,10 +555,8 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
     # notify user
     print('Computing windows into memory, this can take awhile. Please wait.')
 
-    # get original data type and compute
+    # get original data type and compute, reset index incase rows removed
     np_windows = dask_array.concatenate(window_list).compute()
-
-    # reset index in case rows removed
     df_windows = df_windows.reset_index(drop=True)
 
     # check if data sizes match - they must
@@ -557,45 +572,67 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
 
     # notify user
     if skip_count == 0:
-        print('{0} windows generated successfully.'.format(len(df_records)))
+        print('{} windows generated successfully.'.format(len(df_records)))
     else:
-        print('{0} windows generated successfully. {1} omitted.'.format(len(df_records) - skip_count, skip_count))
+        print('{0} windows generated successfully. {} omitted.'.format(len(df_records) - skip_count, skip_count))
 
     # return
     return df_windows
 
-# todo metatdat and checks - is -9999 order important? maybe move to front
+
 def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
     """
-    Take an datframe of pixels in windows, count the classes and counts in each,
-    and transform them into numpy classes and frequencies (or proportions) within
-    each window.
+    Convert a pandas dataframe of raw class counts within
+    sample windows into actual frequencies (0-100%). Currently
+    transforms data to float to handle potential nan. 
+
+    Parameters
+    ----------
+    df_windows : pandas dataframe
+        A pandas dataframe holding raw class counts
+        within each sample window.
+    nodata_value : int or float
+        A value representing the nodata values in dataset.
+
+    Returns
+    ----------
+    df_freq: pandas dataframe
+        A pandas dataframe containing class frequencies
+        captured within "windows" of low resolution pixels.
     """
     
     # notify user
-    print('Generating arrays of unique classes and their occurrence frequencies from window pixels.')
+    print('Generating class frequencies from window pixels.')
     
-    # checks
-    # check if column called win_vals exists
+    # copy dataframe
+    df_freq = df_windows.copy(deep=True)
     
-    # create empty class label and freqs columns
-    df_windows['class_lbls'], df_windows['class_frqs'] = '', ''
+    # get datatype of arrays in win vals
+    win_dtype = df_freq['win_vals'][0].dtype
+    
+    # create empty class label and freqs columns, update dtypes
+    df_freq['class_lbls'], df_freq['class_frqs'] = '', ''
 
     # iter each row and calc unique classes, counts and freqs
-    for i, r in df_windows.iterrows():
-        
+    for i, r in df_freq.iterrows():
+                
         # if valid...
         if isinstance(r['win_vals'], np.ndarray) and len(r['win_vals']) > 0:
-            
+                        
             # get dtype of classes (labels)
             lbl_dtype = r['win_vals'].dtype
-
+            if lbl_dtype not in ['float16', 'float32', 'float64']:
+                lbl_dtype = 'float16' # handle nan
+                
             # get size of window
             win_size = len(r['win_vals'])
 
             # get unique classes, counts, frequencies
             lbls, cnts = np.unique(r['win_vals'], return_counts=True)
             frqs = cnts / win_size
+            
+            # update lbls datatype
+            lbls = lbls.astype(lbl_dtype)
 
             # append nodata class and freq if missing
             if nodata_value not in lbls:
@@ -603,60 +640,80 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
                 frqs = np.insert(frqs, 0, 0.0)
 
             # add each numpy array to current row
-            df_windows.at[i, 'class_lbls'] = lbls.astype(lbl_dtype)
-            df_windows.at[i, 'class_frqs'] = frqs.astype(np.float32)
+            df_freq.at[i, 'class_lbls'] = lbls.astype(lbl_dtype)
+            df_freq.at[i, 'class_frqs'] = frqs.astype(lbl_dtype)
 
         else:
             # reset values to nan for easy drop later on
-            df_windows.at[i, 'class_lbls'] = np.nan
-            df_windows.at[i, 'class_frqs'] = np.nan
+            df_freq.at[i, 'class_lbls'] = np.nan
+            df_freq.at[i, 'class_frqs'] = np.nan
             
     # notify user
     print('Checking for empty rows and dropping if exist.')
             
     # count nan values for labels and freqs
-    lbls_nan_count = df_windows['class_lbls'].isna().sum()
-    frqs_nan_count = df_windows['class_frqs'].isna().sum()
+    lbls_nan_count = df_freq['class_lbls'].isna().sum()
+    frqs_nan_count = df_freq['class_frqs'].isna().sum()
 
     # if nan, tell user and remove rows
     if lbls_nan_count > 0 or frqs_nan_count > 0:
         print('Empty rows detected. Dropping {0} rows.'.format(np.max(lbls_nan_count, frqs_nan_count)))
-        df_windows.dropna(subset=['class_lbls', 'class_frqs'])
+        df_freq.dropna(subset=['class_lbls', 'class_frqs'])
         
     # drop unneeded boundary cols
-    df_windows = df_windows.drop(columns=['win_vals'])
+    df_freq = df_freq.drop(columns=['win_vals'])
     
     # reset index in case rows removed
-    df_windows = df_windows.reset_index(drop=True)
+    df_freq = df_freq.reset_index(drop=True)
     
     # notify user
-    if len(df_windows) > 0:
-        print('{0} windows transformed to frequencies successfully.'.format(len(df_windows)))
+    if len(df_freq) > 0:
+        print('{0} windows transformed to frequencies successfully.'.format(len(df_freq)))
     else:
         raise ValueError('No frequencies were calculated. Aborting.')
            
     # return
-    return df_windows
+    return df_freq
 
-# metadata, - weird function. can it go to another?
+
 def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], nodata_value=-9999):
     """
-    This function takes a dataset with classified pixels and determines if 
-    samples taken from it within a pandas dataframe column are missing (i.e. 
-    were not sampled.) Can warn or thrown an error if missing classes in samples
-    is detected.
+    Takes a dataframe with class frequencuies obtained from
+    within classified windows and prepares for analysis. This mostly
+    involves checking nodata frequency and removing from window
+    if exists. This flags rows to include or exclude from final
+    analysis, essentially.
+
+    Parameters
+    ----------
+    ds_raw : xarray dataset
+        A xr dataset with raw bands or indices as vars.
+    ds_class : xarray dataset
+        A xr dataset with a classified variable.
+    df_freqs : pandas dataframe
+        A pandas dataframe holding frequencies of class
+        within each sample window.
+    override_classes : list
+        List of 1 or more classes to perform analysis
+        on. Useful to limit classes to several instead
+        of all.
+    nodata_value : int or float
+        A value representing the nodata values in dataset.
+
+    Returns
+    ----------
+    df_data: pandas dataframe
+        A pandas dataframe containing analysis ready frequencies
+        captured within "windows" of low resolution pixels.
     """
 
     # notify user
     print('Converting dataset to sklearn analysis-ready format.')
 
-    # checks
-
-    # notify 
-    print('> Checking classified raster and sampled classes match.')
-
     # get class datatype
     class_dtype = ds_class.to_array().dtype
+    
+    # set up override int to list etc
 
     # prepare classes we want for analysis dataframe - override or from dataset
     if len(override_classes) > 0:
@@ -710,14 +767,14 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
         df_data = df_data.append(row, ignore_index=True)
 
     # notify
-    print('> Normalising rows with regards to subset classes and NoData values.')
+    print('Normalising rows with regards to subset classes and NoData values.')
 
     # normalise frequencies within row
     for i, r in df_data.iterrows():
         df_data.at[i] = r / (1 - r[nodata_value])
 
     # notify
-    print('> Creating NoData mask.')
+    print('Creating NoData mask.')
 
     # we create an include column and base it on value in nodata value col
     df_data['include'] = df_data[nodata_value] <= 0
@@ -733,31 +790,53 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
     df_data = pd.concat([df_coords, df_data], axis=1)
 
     # notify and return
-    print('> Data successfully prepared for analysis.')
+    print('Data successfully prepared for analysis.')
     return df_data
 
-# needs meta
+
 def perform_optimised_fit(estimator, X, y, parameters, cv=10):
     """
+    Takes an estimator, values (independent vars) with response
+    (y), as well as gridcv parameters. Output is a fit, optimal
+    model.
+
+    Parameters
+    ----------
+    estimator : sklearn estimastor object
+        A sklearn estimator.
+    X : numpy ndarray
+        A numpy array of dependent values.
+    y : numpy ndarray
+        A numpy array of response values.
+    parameters : list
+        Parameters for use in GridSearchCV.
+    cv : int
+        The number of cross-validations.
+
+    Returns
+    ----------
+    gsc_result: numpy ndarray
+        Output from GridSearchCV of fit values.
     """
+    
+    # imports
+    from sklearn.model_selection import GridSearchCV
     
     # check for tyoe
     if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
-        raise TypeError('> X and/or y inputs must be numpy arrays.')
-    
-    # check structure
-    if not len(X.shape) == 2 or not len(y.shape) == 1:
-        raise ValueError('> X and/or y inputs are of incorrect size.')
+        raise TypeError('X and/or y inputs must be numpy arrays.')
+    elif not len(X.shape) == 2 or not len(y.shape) == 1:
+        raise ValueError('X and/or y inputs are of incorrect size.')
                 
     # check parameters
     if not isinstance(parameters, dict):
-        raise TypeError('> Parameters must be in a dictionary type.')
+        raise TypeError('Parameters must be in a dictionary type.')
         
     # check entered parameters
     allowed_parameters = ['max_features', 'max_depth', 'n_estimators']
     for k, p in parameters.items():
         if k not in allowed_parameters:
-            raise ValueError('> Parameter: {0} not supported.'.format(k))
+            raise ValueError('Parameter: {0} not supported.'.format(k))
             
     # check cv
     if cv <= 0:
@@ -769,8 +848,8 @@ def perform_optimised_fit(estimator, X, y, parameters, cv=10):
         
     return gsc_result
 
-# do checks
-def perform_prediction(ds_input, estimator):
+
+def perform_prediction(ds_input, estimator):  
     """
     Uses dask (if available) to run sklearn predict in parallel.
     Useful for quickly performing analysis.
@@ -788,6 +867,12 @@ def perform_prediction(ds_input, estimator):
     ds_out : xarray dataset
              An xarray dataset containing the probabilities of the random forest model.
     """
+    
+    # imports
+    import dask.array as dask_array
+    from sklearn.ensemble import RandomForestRegressor
+    from dask_ml.wrappers import ParallelPostFit
+    import joblib
     
     # check ds in dataset or dataarray
     if not isinstance(ds_input, (xr.Dataset, xr.DataArray)):
@@ -816,7 +901,7 @@ def perform_prediction(ds_input, estimator):
         try:
             attributes = ds_input.attrs
         except:
-            print('> No attributes available. Skipping.')
+            print('No attributes available. Skipping.')
             attributes = None
 
         # seperate each var (image bands) and store in list
@@ -835,7 +920,7 @@ def perform_prediction(ds_input, estimator):
 
         # perform the prediction
         preds = estimator.predict(input_data_flat)     
-
+                
         # reshape for output
         preds = preds.reshape(len(y), len(x))
 
@@ -861,44 +946,74 @@ def perform_prediction(ds_input, estimator):
     return ds_out
 
 # needs meta, checks
-def perform_optimised_validation(estimator, X, y, n_validations=10, split_ratio=0.25):
+def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split_ratio=0.10):
+    """
+    
+    """
+    
+    # imports
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn import metrics
+    
+    # check for tyoe
+    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
+        raise TypeError('X and/or y inputs must be numpy arrays.')
+    elif not len(X.shape) == 2 or not len(y.shape) == 1:
+        raise ValueError('X and/or y inputs are of incorrect size.')
+        
+    # check validations, split
+    if n_validations < 1:
+        raise ValueError('Number of validations must be > 0.')
+    elif split_ratio < 0 or split_ratio > 1:
+        raise ValueError('SPlit ratio must be between 0 and 1.')
+        
+    # create a new random forest regressor
+    estimator = RandomForestRegressor(n_estimators=100,
+                                      max_features='sqrt',
+                                      oob_score=True)
+
+    result_list = []
+    for i in range(n_validations):
+
+        # split train, test
+        X_train, X_test, y_train, y_test = train_test_split(X, y, 
+                                                            test_size=split_ratio, 
+                                                            random_state=None, 
+                                                            shuffle=True)     
+
+        # fit, predict model
+        estimator.fit(X_train, y_train)
+        pred = estimator.predict(X_test)
+
+        # get accuracy measurements
+        result_dict = {}
+        result_dict['oob'] = estimator.oob_score_
+        result_dict['mae'] = metrics.mean_absolute_error(y_test, pred)
+        result_dict['rmse'] = metrics.mean_squared_error(y_test, pred, squared=False)
+        result_dict['r2'] = metrics.r2_score(y_test, pred)
+            
+        # add to list
+        result_list.append(result_dict)
+        
+    # unpack mean measures
+    oob =    round(np.mean([r['oob'] for r in result_list]),  2)
+    mae =    round(np.mean([r['mae'] for r in result_list]),  2)
+    rmse =   round(np.mean([r['rmse'] for r in result_list]), 2)
+    r2 =     round(np.mean([r['r2'] for r in result_list]),   2)
+    max_r2 = round(np.max([r['r2'] for r in result_list]),  2)
+    
+    # notify and return
+    msg = 'Mean OOB: {}. Mean MAE: {}. Mean RMSE: {}. Mean R-squared: {}. Best R-squared: {}'
+    print(msg.format(oob, mae, rmse, r2, max_r2))
+    return estimator
+ 
+    
+# metadata, n_estimators, 
+def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n_validations=10, nodata_value=-9999):
     """
     """
-    
-    # do checks
-    
-    # create array to hold validation results
-    r2_list = []
-    
-    # iterate n validations
-    for i in range(0, n_validations):
         
-        # split X and y data into train and test
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=split_ratio, 
-                                                            random_state=0, shuffle=True)
-        
-        # fit model using pre-optimised estimator
-        model = estimator.fit(X_train, y_train)
-        
-        # calc score and append 
-        score = model.score(X_test, y_test)
-        r2_list.append(score)
-        
-    # calc mean r2
-    r2 = np.array(r2_list).mean()
-    r2 = abs(round(r2, 2)) 
-    
-    # reset if model outside 0 - 1 (highly inaccurate)
-    if r2 > 1:
-        r2 = 0.0
-    
-    # return
-    return r2
-    
-# metadata
-def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, grid_params, validation_iters, nodata_value=-9999):
-    """
-    """
     # notify
     print('Beginning fractional cover analysis (FCA). ')
     
@@ -918,7 +1033,7 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, grid_params, valida
     for c in np_classes:
 
         # notify
-        print('> Fitting and predicting model for class: {0}'.format(c))
+        print('Fitting and predicting model for class: {0}'.format(c))
 
         # exclude flagged rows from analysis
         df_data_sub = df_data.loc[df_data['include'] == True]
@@ -933,21 +1048,17 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, grid_params, valida
         # get dependent var (class col), convert to flatten 1d numpy
         y = df_merged[[c]].to_numpy().flatten()
 
-        # create a new random forest regressor
-        estimator = RandomForestRegressor()
+        # optimise validation
+        estimator = perform_optimised_validation(X=X, y=y, 
+                                                 n_estimators=n_estimators, 
+                                                 n_validations=n_validations, 
+                                                 split_ratio=0.10)
+            
 
-        # do optimised fit, get best estimator, make unfitted copy for validation
-        grid = perform_optimised_fit(estimator, X, y, grid_params)
-        estimator = grid.best_estimator_
-        
         # predict onto raw dataset, rename and append
         ds_pred = perform_prediction(ds_raw, estimator)
         ds_pred = ds_pred.rename({'result': str(c)})
         pred_list.append(ds_pred)
-
-        # cross validate model for mean r2
-        r2 = perform_optimised_validation(estimator, X, y, validation_iters)
-        print('> Mean r-squared for model: {0}.'.format(r2))
 
     # merge result together
     ds_preds = xr.merge(pred_list)   
