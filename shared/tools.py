@@ -259,7 +259,6 @@ def get_linear_orpol_contrasts(levels=3):
     return coeffs, ss, const
 
 
-
 # meta
 def read_shapefile(shp_path=None):
     """
@@ -903,9 +902,6 @@ def clip_xr_to_xr(ds_a, ds_b, inplace=True):
     return ds_a
 
 
-
-
-
 # meta
 def export_xr_as_nc(ds, filename):
     """
@@ -943,8 +939,6 @@ def export_xr_as_nc(ds, filename):
         
     # notify
     print('Exported xarray as netcdf successfully.')
-    
-    
     
     
 # vegfrax, older
@@ -1024,10 +1018,7 @@ def extract_rast_info(rast_path):
         raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
 
     return rast_info_dict
-
-
-
-        
+     
 # 
 def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-9999):
     """
@@ -1095,7 +1086,10 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
     for i, row in coords.iterrows():
         try:            
             # get values from vars at current pixel
-            pixel = ds.sel(x=row.get('x'), y=row.get('y'), method='nearest', tolerance=res * res_factor)
+            pixel = ds.sel(x=row.get('x'), 
+                           y=row.get('y'), 
+                           method='nearest', 
+                           tolerance=res * res_factor)
             pixel = pixel.to_array().values
             pixel = list(pixel)
             
@@ -1134,7 +1128,7 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
         raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
 
     # notify user and return
-    print('> Extracted xarray dataset values successfully.')
+    print('Extracted xarray dataset values successfully.')
     return df_samples 
 
 
