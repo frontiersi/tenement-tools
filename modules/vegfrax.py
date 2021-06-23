@@ -794,61 +794,6 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
     return df_data
 
 
-def perform_optimised_fit(estimator, X, y, parameters, cv=10):
-    """
-    Takes an estimator, values (independent vars) with response
-    (y), as well as gridcv parameters. Output is a fit, optimal
-    model.
-
-    Parameters
-    ----------
-    estimator : sklearn estimastor object
-        A sklearn estimator.
-    X : numpy ndarray
-        A numpy array of dependent values.
-    y : numpy ndarray
-        A numpy array of response values.
-    parameters : list
-        Parameters for use in GridSearchCV.
-    cv : int
-        The number of cross-validations.
-
-    Returns
-    ----------
-    gsc_result: numpy ndarray
-        Output from GridSearchCV of fit values.
-    """
-    
-    # imports
-    from sklearn.model_selection import GridSearchCV
-    
-    # check for tyoe
-    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
-        raise TypeError('X and/or y inputs must be numpy arrays.')
-    elif not len(X.shape) == 2 or not len(y.shape) == 1:
-        raise ValueError('X and/or y inputs are of incorrect size.')
-                
-    # check parameters
-    if not isinstance(parameters, dict):
-        raise TypeError('Parameters must be in a dictionary type.')
-        
-    # check entered parameters
-    allowed_parameters = ['max_features', 'max_depth', 'n_estimators']
-    for k, p in parameters.items():
-        if k not in allowed_parameters:
-            raise ValueError('Parameter: {0} not supported.'.format(k))
-            
-    # check cv
-    if cv <= 0:
-        raise ValueError('> CV (cross-validation) must be > 0.')
-        
-    # create grid search cv and fit it
-    gsc = GridSearchCV(estimator, parameters, cv=cv, n_jobs=-1, scoring='max_error')
-    gsc_result = gsc.fit(X, y)
-        
-    return gsc_result
-
-
 def perform_prediction(ds_input, estimator):  
     """
     Uses dask (if available) to run sklearn predict in parallel.
@@ -945,10 +890,32 @@ def perform_prediction(ds_input, estimator):
     # return
     return ds_out
 
-# needs meta, checks
+
 def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split_ratio=0.10):
     """
-    
+    Perform model fit with a set number of estimators and validations. Model
+    is fit using randomlly selected training and testing set. Provides
+    mean metric of MAE, MSE, RMSE, R-squared. Produces an random
+    forest estimator.
+
+    Parameters
+    ----------
+    X : numpy ndarray
+        A numpy array of dependent values.
+    y : numpy ndarray
+        A numpy array of response values.
+    n_estimators : int
+        Number of random forest estimators.
+    n_validations : int
+        Number of cross-validations for accuracy metrics.
+    split_ratio : float
+        Percentage of which ti split data into training and
+        testing sets.
+
+    Returns
+    ----------
+    estimator : xarray dataset
+             An xarray dataset containing the probabilities of the random forest model.
     """
     
     # imports
@@ -963,13 +930,15 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
         raise ValueError('X and/or y inputs are of incorrect size.')
         
     # check validations, split
-    if n_validations < 1:
-        raise ValueError('Number of validations must be > 0.')
+    if n_estimators < 1:
+        raise ValueError('Number of estimators must be > 0.')
+    elif n_validations < 0 or n_validations > 1:
+        raise ValueError('Number of validations must be betwen 0 and 1.')
     elif split_ratio < 0 or split_ratio > 1:
-        raise ValueError('SPlit ratio must be between 0 and 1.')
+        raise ValueError('Split ratio must be between 0 and 1.')
         
     # create a new random forest regressor
-    estimator = RandomForestRegressor(n_estimators=100,
+    estimator = RandomForestRegressor(n_estimators=n_estimators,
                                       max_features='sqrt',
                                       oob_score=True)
 
@@ -1009,13 +978,41 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
     return estimator
  
     
-# metadata, n_estimators, 
-def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n_validations=10, nodata_value=-9999):
+def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n_validations=10, split_ratio=0.10):
     """
+    Perform model fit with a set number of estimators and validations. Model
+    is fit using randomlly selected training and testing set. Provides
+    mean metric of MAE, MSE, RMSE, R-squared. Produces an random
+    forest estimator.
+
+    Parameters
+    ----------
+    ds_raw : xarray dataset
+        A dataset holding the low resolution, raw raster bands.
+    ds_class : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    df_data : pandas dataframe
+        A pandas dataframe holding analysis ready class frequencies
+        within each sample window. i.e., dependent variable.
+    df_extract_clean : pandas dataframe
+        A pandas dataframe holding analysis ready low resolution
+        independent variables (i.e. spectral bands).
+    n_estimators : int
+        Number of random forest estimators.
+    n_validations : int
+        Number of cross-validations for accuracy metrics.
+    split_ratio : float
+        Percentage of which ti split data into training and
+        testing sets.
+
+    Returns
+    ----------
+    ds_preds : xarray dataset
+        An xarray dataset containing the probabilities of the random forest model.
     """
         
     # notify
-    print('Beginning fractional cover analysis (FCA). ')
+    print('Beginning fractional cover analysis (FCA).')
     
     # do checks
 
