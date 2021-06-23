@@ -942,3 +942,4 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, grid_params, valida
     # notify and return
     print('Fractional cover analysis (FCA) completed successfully.')
     return ds_preds
+
