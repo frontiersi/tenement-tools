@@ -23,8 +23,6 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
 
         sys.path.append('../../Scripts')
         from dea_datahandling import load_ard
-        from dea_dask import create_local_dask_cluster
-        from dea_plotting import display_map, rgb
         
     except:
         raise ImportError('Could not import DEA ODC.')
@@ -119,6 +117,53 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
   
     # notify user, return
     print('Satellite imagery fetched successfully.')
+    return ds
+
+# todo - metadata, checks
+def load_dea_dem(x_extent=None, y_extent=None, resolution=30, use_dask=False):
+    """
+    """
+    try:
+        # imports
+        import datacube
+        
+    except:
+        raise ImportError('Could not import DEA ODC.')
+
+    # notify user
+    print('Loading DEA ODC ARD satellite data.')   
+    
+    # checks
+    
+    # check lon extent, lat extent
+              
+    # build query
+    query = {
+        'product': 'ga_srtm_dem1sv1_0',
+        'measurements': ['dem'],
+        'x': x_extent,
+        'y': y_extent,
+        'output_crs': 'EPSG:3577',
+        'resolution': (resolution, resolution * -1),
+        'group_by': 'solar_day'
+    }
+            
+    # if dask, add chunks
+    if use_dask:
+        query.update({'dask_chunks': {'time': 1}})
+            
+    # fetch data from dea cube
+    if query:
+            dc = datacube.Datacube(app='dem')
+            ds = dc.load(**query)
+            
+            # add nodata value attribute
+            ds.attrs.update({'nodatavals': np.nan})
+    else:
+        raise ValueError('Query could not be created.')
+  
+    # notify user, return
+    print('SRTM Digital Elevation Model fetched successfully.')
     return ds
 
 
