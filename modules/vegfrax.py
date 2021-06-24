@@ -72,7 +72,72 @@ def prepare_classified_xr(ds, dtype='int8'):
     return ds
 
 
-def reclassify_xr(ds, req_class, nodata_value=-999, inplace=True):
+def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
+    """
+    Does basic checks and corrects on a raw
+    raster opened from a load ard. Converts to 
+    median all-time and masks nodata value.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset which will be prepared.
+    dtype: string
+        Data type of output dataset.
+    conform_nodata_to : int or float
+        Convert all detected nodata values
+        to this value.
+
+    Returns
+    ----------
+    ds : xarray dataset/array with prepared info.
+    """
+    
+    # notify
+    print('Preparing raw dataset.')
+    
+    # check xr type, dims in ds a
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset.')
+                
+    # convert to requested dtype
+    ds = ds.astype(dtype)
+        
+    # check if no data val attributes exist, replace with nan
+    if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
+
+        # check if nodata values a iterable, if not force it
+        nds = ds.nodatavals
+        if not isinstance(nds, (list, tuple)):
+            nds = [nds]
+
+        # mask nan for nodata values
+        for nd in nds:
+            ds = ds.where(ds != nd, conform_nodata_to)
+
+        # update xr attributes to new nodata val
+        if hasattr(ds, 'attrs'):
+            ds.attrs.update({'nodatavals': conform_nodata_to})
+
+        # convert from float64 to float32 if nan is nodata
+        if conform_nodata_to is np.nan:
+            ds = ds.astype(np.float32)
+
+    else:
+        # mask via provided nodata
+        print('No NoData values found in raster.')
+        ds.attrs.update({'nodatavals': 'unknown'})
+
+    # notify
+    print('Prepared raw dataset successfully.')
+    return ds
+
+
+def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
     """
     Reclassify classes in dataset so requested classes are kept but
     all others are transformed to a value of 0. Nodata is also
@@ -85,15 +150,16 @@ def reclassify_xr(ds, req_class, nodata_value=-999, inplace=True):
     req_class : int, list
         A list of requested classes in dataset. Could be a single class,
         or could be multiple.
-    nodata_value : int or float
-        A value indicating the NoData values within xarray datatset.
+    merge_classes: bool
+        Merge all classes provided into 1, everything else 0. In other
+        words, make a binary class.
     inplace : bool
         Create a copy of the dataset in memory to preserve original
         outside of function. Default is True.    
 
     Returns
     ----------
-    ds: pxarray dataset/array
+    ds: xarray dataset/array
         A reclassified xr dataset/array.
     """
     
@@ -102,7 +168,13 @@ def reclassify_xr(ds, req_class, nodata_value=-999, inplace=True):
     
     # check xr type, dims in ds a
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset a not an xarray type.')    
+        raise TypeError('Dataset a not an xarray type.')
+        
+    # check if xr has nodatavals
+    if not hasattr(ds, 'nodatavals'):
+        raise ValueError('Dataset does not have nodata value attribute.')
+    elif ds.nodatavals == 'unknown':
+        raise ValueError('Dataset nodata value is unknown.')
         
     # check if req classes is list or int, convert to list
     req_class = req_class if req_class is not None else []
@@ -111,19 +183,25 @@ def reclassify_xr(ds, req_class, nodata_value=-999, inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
+                    
     # add nodata to required classes
-    classes = req_classes + [nodata_value]
+    classes = req_classes + [ds.nodatavals]
         
     # remove unrequested classes
     ds = ds.where(ds.isin(classes), 0)
+    
+    # if merge, merge
+    if merge_classes:
+
+        # merge classes other than 0 and nan
+        ds = ds.where(ds.isin([0, ds.nodatavals]), 1)
     
     # notify
     print('Reclassified dataset successfully.')
     return ds
 
 
-def get_xr_classes(ds, nodata_value=-9999):
+def get_xr_classes(ds):
     """
     Takes an xarray dataset/array and extracts unique class
     values from dataset values. Returns a list of class values.
@@ -132,12 +210,11 @@ def get_xr_classes(ds, nodata_value=-9999):
     ----------
     ds: xarray dataset/array
         A dataset with x, y dims.
-    nodata_value : int or float
-        A value representing the nodata values in dataset.
 
     Returns
     ----------
-    np_classes : numpy ndarray.
+    classes : list
+        List of unique classes.
     """
     
     # notify user
@@ -150,11 +227,17 @@ def get_xr_classes(ds, nodata_value=-9999):
         raise ValueError('No x or y dimension in dataset.')
     elif len(ds) != 1:
         raise ValueError('Dataset can only take one variable (i.e. 1 band).')
+        
+    # check if xr has nodatavals
+    if not hasattr(ds, 'nodatavals'):
+        raise ValueError('Dataset does not have nodata value attribute.')
+    elif ds.nodatavals == 'unknown':
+        raise ValueError('Dataset nodata value is unknown.')
 
     # get all unique classes in dataset and remove nodata
     np_classes = np.unique(ds.to_array())
-    np_classes = np_classes[np_classes != nodata_value]
-    
+    np_classes = np_classes[np_classes != ds.nodatavals]
+
     # check if something came back or too much came back
     if len(np_classes) <= 0:
         raise ValueError('No classes detected in dataset.')
@@ -164,7 +247,9 @@ def get_xr_classes(ds, nodata_value=-9999):
     # notify and return
     str_classes = ', '.join([str(c) for c in np_classes])
     print('Detected classes in dataset: {}'.format(str_classes))
-    return np_classes
+    
+    # convert to list
+    return np_classes.tolist()
 
 
 def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_factor=3):
@@ -676,7 +761,7 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
     return df_freq
 
 
-def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], nodata_value=-9999):
+def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[]):
     """
     Takes a dataframe with class frequencuies obtained from
     within classified windows and prepares for analysis. This mostly
@@ -697,8 +782,6 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
         List of 1 or more classes to perform analysis
         on. Useful to limit classes to several instead
         of all.
-    nodata_value : int or float
-        A value representing the nodata values in dataset.
 
     Returns
     ----------
@@ -714,6 +797,15 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
     class_dtype = ds_class.to_array().dtype
     
     # set up override int to list etc
+    # 
+    
+    
+    # check if xr has nodatavals
+    if not hasattr(ds_class, 'nodatavals'):
+        raise ValueError('Dataset does not have nodata value attribute.')
+    elif ds_class.nodatavals == 'unknown':
+        raise ValueError('Dataset nodata value is unknown.')
+    
 
     # prepare classes we want for analysis dataframe - override or from dataset
     if len(override_classes) > 0:
@@ -722,8 +814,8 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
         np_dataset_classes = np.unique(ds_class.to_array())
 
     # check if no data col exists, if not, add it
-    if nodata_value not in np_dataset_classes:
-        np_dataset_classes = np.insert(np_dataset_classes, 0, nodata_value)
+    if ds_class.nodatavals not in np_dataset_classes:
+        np_dataset_classes = np.insert(np_dataset_classes, 0, ds_class.nodatavals)
 
     # get unique class values sampled from windows
     np_sampled_classes = np.unique(np.concatenate(df_freqs['class_lbls']))
@@ -733,10 +825,10 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
 
     # check if anything exists, throw error if so
     if len(np_missing) > 0:
-        raise ValueError('> One or more requested classes not captured within windows.')
+        raise ValueError('One or more requested classes not captured within windows.')
 
     # notify 
-    print('> Converting classes and frequencies into analysis-ready format.')
+    print('Converting classes and frequencies into analysis-ready format.')
 
     # create new dataframe where columns are class labels
     df_coords = pd.DataFrame(columns=['x', 'y'], dtype=np.dtype('float64'))
@@ -771,16 +863,16 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[], 
 
     # normalise frequencies within row
     for i, r in df_data.iterrows():
-        df_data.at[i] = r / (1 - r[nodata_value])
+        df_data.at[i] = r / (1 - r[ds_class.nodatavals])
 
     # notify
     print('Creating NoData mask.')
 
     # we create an include column and base it on value in nodata value col
-    df_data['include'] = df_data[nodata_value] <= 0
+    df_data['include'] = df_data[ds_class.nodatavals] <= 0
 
     # drop nodata col
-    df_data = df_data.drop(columns=[nodata_value])
+    df_data = df_data.drop(columns=[ds_class.nodatavals])
     
     # ensure dataframes not empty
     if df_data.isnull().values.all() or df_coords.isnull().values.all():
@@ -932,7 +1024,7 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
     # check validations, split
     if n_estimators < 1:
         raise ValueError('Number of estimators must be > 0.')
-    elif n_validations < 0 or n_validations > 1:
+    elif n_validations < 0:
         raise ValueError('Number of validations must be betwen 0 and 1.')
     elif split_ratio < 0 or split_ratio > 1:
         raise ValueError('Split ratio must be between 0 and 1.')

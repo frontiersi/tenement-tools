@@ -1038,6 +1038,7 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
         if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
     nodata_value : int or float
         A int or float indicating the no dat avalue expected. Default is -9999.
+        Deprecated.
 
     Returns
     ----------
@@ -1070,6 +1071,12 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
     # check dimensionality of numpy array. xy only
     if not res_factor >= 1:
         raise ValueError('Resolution factor must be value of 1 or greater.')
+        
+    # check if xr has nodatavals
+    if not hasattr(ds, 'nodatavals'):
+        raise ValueError('Dataset does not have nodata value attribute.')
+    elif ds.nodatavals == 'unknown':
+        raise ValueError('Dataset nodata value is unknown.')    
 
     # get cell resolution from dataset
     res = get_xr_resolution(ds)
@@ -1092,10 +1099,10 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
                            tolerance=res * res_factor)
             pixel = pixel.to_array().values
             pixel = list(pixel)
-            
+
         except:
             # fill with list of nan equal to data var size
-            pixel = [nodata_value] * len(ds.data_vars)
+            pixel = [ds.nodatavals] * len(ds.data_vars)
             
         # add current point x and y columns if wanted
         if keep_xy:
