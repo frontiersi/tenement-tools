@@ -724,16 +724,20 @@ def build_vrt_file(vrt_list):
     elif not len(vrt_list) > 0:
         raise ValueError('No VRT xml objects provided.')
     
-    # build vrt
+    # build vrt    
     with tempfile.NamedTemporaryFile() as tmp:
 
         # append vrt extension to temp file
         f = tmp.name + '.vrt'
+        
+        #f = './hey5.vrt'
 
         # create vrt options
-        opts = gdal.BuildVRTOptions(separate=True,
-                                    bandList=[1])
-        #outputBounds=boundingbox,
+        #bb = (602485.0, -2522685.0, 632495.0, -2507775.0)
+        opts = gdal.BuildVRTOptions(separate=True)
+                                    #bandList=[1],
+                                    #outputBounds=bb)
+        
         #resampleAlg='bilinear',
         #resolution='user',
         #xRes=30.0,
@@ -749,7 +753,7 @@ def build_vrt_file(vrt_list):
         vrt.FlushCache()
         
         # decode ytf-8?
-        
+                
         return f
 
 # meta, checks
