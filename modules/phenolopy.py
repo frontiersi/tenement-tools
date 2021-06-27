@@ -2110,7 +2110,7 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
                        'los', 'ros', 'rod', 'lios', 'sios', 'liot', 'siot']
     
     # check metric provided
-    if metric is None:
+    if metric is None or len(metric) == 0:
         print('No metric requested, generating all.')   
         metric = allowed_metrics
            
