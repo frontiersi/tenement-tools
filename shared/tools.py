@@ -713,8 +713,7 @@ def get_xr_resolution(ds):
     if not res:
         raise ValueError('Could not extract cell resolution from dataset.')
 
-    # notify user and return
-    print('Resolution extracted successfully from dataset.')
+    # return
     return res
 
 

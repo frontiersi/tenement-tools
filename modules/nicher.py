@@ -52,6 +52,43 @@ from sklearn.metrics import cohen_kappa_score
 from scipy.stats import pointbiserialr
 
 
+def get_files_from_path(folder_path, file_type='.tif'):
+    """
+    Quick helper to read folder and 
+    obtain list of files with a specific extension.
+    
+    Parameters
+    ----------
+    folder_path: str
+        A single string with full path to folder of files.
+    file_type : str
+        A single string of requested file type.
+
+    Returns
+    ----------
+    file_list : list
+        List of file paths and names.
+    """
+    
+    # check if folder path given and exists
+    if folder_path is None:
+        raise ValueError('Must provide a folder path.')
+    elif not os.path.isdir(folder_path):
+        raise TypeError('Folder path does not exist or incorrect.')
+        
+    # get files from path
+    file_list = []
+    for fn in os.listdir(path=folder_path):
+        if fn.endswith(file_type):
+            print('Found: {}'.format(fn))
+            file_list.append(os.path.join(folder_path, fn))
+            
+    # return
+    return file_list
+    
+    
+
+
 def extract_shp_info(shp_path):
     """
     Read a vector (e.g. shapefile) and extract geo-transformation, coordinate 
