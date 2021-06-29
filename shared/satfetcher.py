@@ -717,6 +717,7 @@ def build_vrt_file(vrt_list):
     # imports
     import tempfile
     import gdal
+    from rasterio.crs import CRS
         
     # check features type, length
     if not isinstance(vrt_list, list):
@@ -729,17 +730,17 @@ def build_vrt_file(vrt_list):
 
         # append vrt extension to temp file
         f = tmp.name + '.vrt'
-        
-        #f = './hey5.vrt'
 
         # create vrt options
         #bb = (602485.0, -2522685.0, 632495.0, -2507775.0)
+        #out_crs = CRS.from_epsg(3577).wkt
         opts = gdal.BuildVRTOptions(separate=True)
+                                    #outputSRS=out_crs)
                                     #bandList=[1],
                                     #outputBounds=bb)
         
         #resampleAlg='bilinear',
-        #resolution='user',
+        #resolution='highest',
         #xRes=30.0,
         #yRes=30.0,
         #outputSRS=rasterio.crs.CRS.from_epsg(3577).wkt
@@ -906,7 +907,7 @@ def build_xr_datasets(vrt_dict):
     # imports
     import xarray as xr
     from dateutil.parser import parse
-
+   
     # notify
     print('Building an xarray dataset from vrt files and datetimes.')
 
@@ -965,3 +966,46 @@ def build_xr_datasets(vrt_dict):
     # notify and return
     print('Built an xarray dataset successfully.')
     return ds # change back to ds
+
+
+# checks, meta, check classes good, check method good
+def remove_oa_data(ds, oa_classes=[1, 4, 5], max_cloud=10, remove=False):
+    """
+    """
+    
+    # checks
+        
+    
+    # notify
+    print('Removing times where oa pixels too numerous.')
+    
+    # compute mask layer
+    mask = ds['oa_fmask'].astype('int8')
+    
+    # notify, compute
+    print('Computing mask layer, this can take awhile. Please wait.')
+    mask = mask.compute()
+    
+    # convert requested classes into binary 1, 0
+    mask = xr.where(mask.isin(oa_classes), 1, 0)
+    
+    # calc percentage of errors within each date
+    mask = (100 - (mask.sum(['x', 'y']) / mask.count(['x', 'y'])) * 100)
+    
+    # get list of datetimes where oa low
+    np_dts = mask['time'].where(mask <= max_cloud, drop=True)
+    
+    # keep good oa times, drop rest
+    ds = ds.where(ds['time'].isin(np_dts), drop=True)
+    
+    # if remove, drop from dataset
+    if remove:
+        ds = ds.drop_vars('oa_fmask')
+        
+    # check if dask, rechunk
+    if bool(ds.chunks):
+        ds = ds.chunk(-1)
+    
+    # notify and return
+    print('Removed times successfully.')
+    return ds
