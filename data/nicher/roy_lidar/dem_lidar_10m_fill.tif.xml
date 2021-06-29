@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20210624</CreaDate><CreaTime>16530700</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files\arcgis\pro\Resources\ArcToolbox\toolboxes\Spatial Analyst Tools.tbx\Fill" Date="20210624" Time="165307">Fill dem_lidar_10m.tif "C:\Users\Lewis\Curtin\GDVII - General\Work Package 1\Dempster\royhill\nicher\lidar\dem_lidar_10m_fill.tif" #</Process></lineage></DataProperties></Esri></metadata>
