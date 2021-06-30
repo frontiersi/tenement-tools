@@ -51,11 +51,14 @@ from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics import cohen_kappa_score
 from scipy.stats import pointbiserialr
 
+sys.path.append('../../shared')
+import tools
+
 
 def get_files_from_path(folder_path, file_type='.tif'):
     """
-    Quick helper to read folder and 
-    obtain list of files with a specific extension.
+    Quick helper to read folder and obtain list of files with 
+    a specific extension.
     
     Parameters
     ----------
@@ -85,10 +88,408 @@ def get_files_from_path(folder_path, file_type='.tif'):
             
     # return
     return file_list
-    
-    
 
 
+def generate_absences(ds, num_abse=1000, occur_shp_path=None, buff_m=100, res_factor=3):
+    """
+    Generates pseudo-absence (random or pseudo-random) locations within dataset mask. 
+    Pseudo-absence points are key in sdm work. A dataset, value for number
+    of pseudo-absence points, and NoData value to generate is required. Optionally, if 
+    user provides an occurrence shapefile path and buffer length (in metres), proximity 
+    buffers can be also created around species occurrences - another often used function 
+    in sdm work.
+
+    Parameters
+    ----------
+    ds : xarray dataset
+        A dataset holding at least one variable.
+    num_abse: int
+        A int indicating how many pseudo-absence points to generated.
+    occur_shp_path : string (optional)
+        A single string with full path and filename of shapefile of occurrence records.
+    buff_m : int (optional)
+        A int indicating radius of buffers (proximity zones) around occurrence points (in metres).
+    res_factor : int
+        A threshold multiplier used during pixel + point intersection. For example
+        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
+
+    Returns
+    ----------
+    df_absence: pandas dataframe
+        A pandas dataframe containing two columns (x and y) with coordinates.
+    """
+
+    # notify user
+    print('Generating {0} randomised psuedo-absence locations.'.format(num_abse))
+
+    # do various checks
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise ValueError('Dataset is not an xarray dataset or dataarray.')
+    elif not num_abse > 0:
+        raise ValueError('Num of absence points must be > 0.')  
+    elif not hasattr(ds, 'nodatavals'):
+        raise ValueError('No NoData attribute in dataset.')
+        
+    # make mask array, flag any pixel where nan exists
+    da_mask = xr.where(ds != ds.nodatavals, 1, 0)
+    da_mask = da_mask.to_array(dim='mask').min('mask')
+
+    # check if any mask pixels (i.e. 1s) were returned
+    if not bool(da_mask.any()):
+        raise ValueError('No non-data pixels found - check your rasters.')
+
+    # erase proximities from mask if user provides values for it
+    buff_geom = None
+    if occur_shp_path and buff_m:
+        print('Generating buffer areas from occurrence points.')
+
+        # read proximity buffer geoms
+        buff_geom = generate_proximity_areas(occur_shp_path, buff_m)
+
+        # check if proximity buffer geom exists
+        if not buff_geom or not buff_geom.GetGeometryCount() > 0:
+            raise ValueError('No proximity buffers generated in dissolved mask.')
+
+    # notify
+    print('Randomising absence points within mask area.')
+    
+    # get cell resolution from dataset
+    res = tools.get_xr_resolution(ds)
+
+    # get bounds of mask  # todo update this to gdv_tools.get_dataset_extent
+    bb = tools.get_xr_extent(ds)
+    x_min, x_max = bb['l'], bb['r']
+    y_min, y_max = bb['b'], bb['t']
+
+    # create random points and fill a list with x and y
+    counter = 0
+    coords = []
+    for i in range(num_abse):
+        while counter < num_abse:
+
+            # get random x and y coord
+            rand_x = random.uniform(x_min, x_max)
+            rand_y = random.uniform(y_min, y_max)
+
+            # create point and add x and y to it
+            pnt = ogr.Geometry(ogr.wkbPoint)
+            pnt.AddPoint(rand_x, rand_y)
+            
+            try:
+                pixel = int(da_mask.sel(x=rand_x, y=rand_y, 
+                                        method='nearest', 
+                                        tolerance=res * res_factor))
+                
+                # if within pixel and buffer areas, else just pixel
+                if pixel == 1 and buff_geom:
+                    if not pnt.Within(buff_geom):
+                        coords.append([pnt.GetX(), pnt.GetY()])
+                        counter += 1
+                        
+                elif pixel == 1:
+                    coords.append([pnt.GetX(), pnt.GetY()])
+                    counter += 1
+                    
+            except:
+                continue
+
+    # check if list is populated
+    if not coords:
+        raise ValueError('> No coordinates in coordinate list.')
+
+    # convert coord array into dataframe
+    df_absence = pd.DataFrame(coords, columns=['x', 'y'])
+
+    # drop variables
+    da_mask, buff_geom = None, None
+
+    # notify and return
+    print('Generated pseudo-absence points successfully.')
+    return df_absence
+
+
+def generate_proximity_areas(shp_path, buff_m=100):
+    """
+    Read species point locations from a projected ESRI Shapefile and buffer them to a user 
+    defined number of metres. This must be a point geometry-type shapefile and it must be 
+    projected. The resulting buffer areas can be used to eliminate pseudo-absences.
+    
+    Parameters
+    ----------
+    shp_path : string
+        A single string with full path and filename of shapefile.
+    buff_m : int
+        A numeric value in which points a buffered by. Must be metres. Default 100m.
+
+    Returns
+    ----------
+    buff_geom : ogr vector geometry
+        An ogr vector of type multipolygon geometry with a single feature (dissolved).
+    """
+    
+    # imports check
+    try:
+        from osgeo import ogr
+    except:
+        raise ImportError('Could not import osgeo.')
+
+    # notify user
+    print('Generating proximity buffers around species point locations.')
+
+    # check inputs
+    if not isinstance(shp_path, str):
+        raise ValueError('Shapefile path must be a string.')
+    elif not os.path.exists(shp_path):
+        raise OSError('Unable to read species point locations, file not found.')
+    elif not buff_m > 0:
+        raise ValueError('Buffer length must be > 0.')    
+
+    try:
+        # read shapefile as layer
+        shp = ogr.Open(shp_path, 0)
+        lyr = shp.GetLayer()
+
+        # get epsg code
+        epsg = int(lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1))
+
+        # get num feats
+        num_feats = lyr.GetFeatureCount()
+
+    except Exception:
+        raise TypeError('> Could not read species point locations. Is the file corrupt?')
+        
+    # check shapefile parameters
+    if epsg != 3577:
+        raise ValueError('Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
+    elif lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
+        raise ValueError('Shapefile is not a point/multi-point type.')
+    elif num_feats == 0:
+        raise ValueError('Shapefile has no features in it. Please check.')
+
+    # loop feats
+    buff_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+    for feat in lyr:
+        geom = feat.GetGeometryRef()
+
+        # add geom if individual polygon type
+        if geom.GetGeometryName() == 'POINT':
+            geom = geom.Buffer(buff_m)
+            buff_geom.AddGeometry(geom)
+
+        # add geom if multi-polygon type
+        elif geom.GetGeometryName() == 'MULTIPOINT':
+            for i in range(geom.GetGeometryCount()):
+                sub_geom = geom.GetGeometryRef(i)
+                sub_geom = sub_geom.Buffer(buff_m)
+                buff_geom.AddGeometry(sub_geom)
+
+        # error, a non-polygon type exists
+        else:
+            raise TypeError('Unable to read point, geometry is invalid.')
+
+    # union all features together (dissolve)
+    buff_geom = buff_geom.UnionCascaded()
+
+    # check if buffer geom is populated
+    if not buff_geom or not buff_geom.GetGeometryCount() > 0:
+        raise ValueError('No features exist in proximity buffer. Check point shapefile.')
+
+    # drop variables
+    shp, lyr = None, None
+
+    # notify user and return
+    print('Proximity buffers loaded and dissolved successfully.')
+    return buff_geom
+
+
+def equalise_abse_records(df_presence, df_absence):
+    """
+    Read presence and absence dataframes and reduce number of absence records to match
+    the number of presence records.
+    
+    Parameters
+    ----------
+    df_presence : pandas dataframe
+        A dataframe holding records with presence values.
+    df_absence : pandas dataframe
+        A dataframe holding records with absence values.
+
+    Returns
+    ----------
+    df_absence : pandas dataframe
+        Equalised pandas dataframe with absence records.
+    """
+    
+    # notify
+    print('Equalising absence record number.')
+    
+    # check if presence is dataframe
+    if not isinstance(df_presence, pd.DataFrame):
+        raise TypeError('Presence records is not a pandas dataframe.')
+
+    # check if absence is dataframe
+    if not isinstance(df_absence, pd.DataFrame):
+        raise TypeError('Absence records is not a pandas dataframe.')
+
+    # count number of records in presence and absence
+    num_pres = df_presence.shape[0]
+    num_abse = df_absence.shape[0]
+
+    # select same number of presence in absence random sample.
+    if num_abse <= num_pres:
+        print('Number of absence records already <= number of presence. No need to equalise.')
+        return df_absence
+
+    elif num_abse > num_pres:
+        print('Reduced number of absence records from {0} to {1}'.format(num_abse, num_pres))
+        df_absence = df_absence.sample(n=num_pres)
+        return df_absence
+
+    else:
+        raise ValueError('Could not equalise absence records.')
+        return df_absence
+
+        
+def combine_pres_abse_records(df_presence, df_absence):
+    """
+    Combine pandas dataframes for presence and absence records. Adds new column of 1s and 0s 
+    for pres/abse records.
+
+    Parameters
+    ----------
+    df_presence: pandas dataframes
+        A dataframe type containing values extracted from env variables for presence locations.
+    df_absence: pandas dataframes
+        A dataframe type containing values extracted from env variables for absence locations.
+
+    Returns
+    ----------
+    df_pres_abse : pandas dataframes
+        A dataframe containing both presence and absence records.
+    """
+
+    # notify user
+    print('Combining presence and pseudo-absence point locations.')
+
+    # check if presence is numpy rec array
+    if not isinstance(df_presence, pd.DataFrame):
+        raise TypeError('> Presence data not a pandas dataframe type.')
+    elif not isinstance(df_absence, pd.DataFrame):
+        raise TypeError('> Absence data not a pandas dataframe type.')
+
+    try:
+        # add new pres_abse column to both dataframes
+        df_presence['pres_abse'] = 1
+        df_absence['pres_abse'] = 0
+        
+        # combine dataframes
+        df_pres_abse = df_presence.append(df_absence, 
+                                          ignore_index=True)
+
+    except:
+        raise ValueError('Could not append presence/absence to dataframe.')
+
+    # check if something came back
+    if df_pres_abse.shape[0] == 0:
+        raise ValueError('No presence/absence data was returned.')
+
+    # notify user and return
+    print('Combined total of {0} records.'.format(df_pres_abse.shape[0]))
+    return df_pres_abse
+   
+
+def generate_correlation_matrix(df_records, rast_cate_list=None, show_fig=False, show_text=False):
+    """
+    Calculate a pearson correlation matrix and present correlation pairs. Optional 
+    correlation matrix will be visualised if show_fig set to True. Categorical variables
+    are excluded.
+    
+    How to interprete pearson correlation values:
+        < 0.6 = No collinearity.
+          0.6 - 0.8 = Moderate collinearity.
+        > 0.8 = Strong collinearity. One of these predictors should be removed.
+
+    Parameters
+    ----------
+    df_records : pandas dataframe
+        A dataframe with rows (observations) and columns (continuous and categorical vars).
+    rast_cate_list : list or string 
+        A list or string of raster paths of continous and categorical layers.
+    show_fig : bool
+        If true, a correlation matrix will be plotted.
+    show_text : bool
+        If true, a correlation pair print out will be shown.
+    """
+
+    # do various checks
+    if not isinstance(df_records, pd.DataFrame):
+        raise TypeError('Presence-absence data is not a dataframe type.')
+    elif df_records.shape[0] == 0 or df_records.shape[1] == 0:
+        raise ValueError('Presence-absence dataframe has rows and/or columns.')
+    elif 'pres_abse' not in df_records:
+         raise ValueError('No pres_abse column exists in dataframe.')
+            
+    # check raster categorical list
+    if rast_cate_list is None:
+        rast_cate_list = []
+    if not isinstance(rast_cate_list, (list, str)):
+        raise TypeError('Raster categorical filepath list must be a list or single string.')
+
+    # select presence records only
+    df_presence = df_records.loc[df_records['pres_abse'] == 1]
+
+    # check if any rows came back, if so, drop pres_abse column
+    if df_presence.shape[0] != 0:
+        df_presence = df_presence.drop(columns='pres_abse')
+    else:
+        raise ValueError('No presence records exist in pandas dataframe.')
+
+    # iterate categorical names, drop if any exist, ignore if error
+    if rast_cate_list is not None:
+        for rast_path in rast_cate_list:
+            cate_name = os.path.basename(rast_path)
+            cate_name = os.path.splitext(cate_name)[0]
+            df_presence = df_presence.drop(columns=cate_name, errors='ignore')
+
+    try:
+        # calculate correlation matrix and then correlation pairs
+        cm = df_presence.corr()
+        cp = cm.unstack()     
+
+        # check if correlation matrix exist, plot if so
+        if len(cm) > 0 and show_fig:
+            print('Presenting correlation matrix.')
+
+            # create figure, axis, matrix, colorbar
+            fig = plt.figure(figsize=(10, 8))
+            ax = fig.add_subplot(111)
+            cax = ax.matshow(cm, interpolation='nearest', cmap='RdYlBu')
+            fig.colorbar(cax)
+
+            # create labels
+            ax.set_xticks(np.arange(len(df_presence.columns)))
+            ax.set_yticks(np.arange(len(df_presence.columns)))
+            ax.set_xticklabels([''] + df_presence.columns.to_list(), rotation=90)
+            ax.set_yticklabels([''] + df_presence.columns.to_list(), rotation=0)
+
+            # show, add padding
+            plt.show()
+            print('\n')
+
+        # check if correlation pairs exist, print if so
+        if show_text:
+            if len(cp) > 0:
+                print('Presenting correlation pairs.')
+                pd.set_option('display.max_rows', None)
+                print(cp)
+
+    except:
+        raise ValueError('Could not generate and show correlation matrix results.')
+
+
+
+
+    
 def extract_shp_info(shp_path):
     """
     Read a vector (e.g. shapefile) and extract geo-transformation, coordinate 
@@ -152,6 +553,7 @@ def extract_shp_info(shp_path):
         raise IOError('Unable to read shapefile: {0}. Please check.'.format(shp_path))    
     
     return shp_info_dict
+
 
 # move this to gdv_tools and update ref in validate input data func below
 def extract_rast_info(rast_path):
@@ -231,492 +633,12 @@ def extract_rast_info(rast_path):
     return rast_info_dict
    
 
-def validate_input_data(shp_path_list, rast_path_list):
-    """
-    Compare all input shapefiles and rasters and ensure geo transformations, coordinate systems,
-    size of dimensions (x and y) number of features, and nodata values all match. Takes two lists of
-    paths to shapefile and raster layers to be used in analysis.
 
-    Parameters
-    ----------
-    shp_path_list : string
-        A single list of strings with full path and filename of input shapefiles.
-    rast_path_list : string
-        A single list of strings with full path and filename of input rasters.
-    """
 
-    # notify user
-    print('Comparing shapefile and raster spatial information to check for inconsistencies.')
 
-    # check if shapefile and raster paths exists
-    if not shp_path_list or not rast_path_list:
-        raise ValueError('> No shapefile or raster path list provided.')
 
-    # check if list types, if not bail
-    if not isinstance(shp_path_list, list) or not isinstance(rast_path_list, list):
-        raise ValueError('> Shapefile or raster path list must be a list.')
 
-    # ensure shapefile and raster paths in list exist and are strings
-    for path in shp_path_list + rast_path_list:
 
-        # check if string, if not bail
-        if not isinstance(path, str):
-            raise ValueError('> Shapefile and raster paths must be a string.')
-
-        # check if shapefile or raster exists
-        if not os.path.exists(path):
-            raise OSError('> Unable to read shapefile or raster, file not found.')
-
-    # notify
-    print('> Extracting shapefile spatial information.')
-
-    # loop through each rast, extract info, store in list
-    shp_dict_list = []
-    for shp_path in shp_path_list:
-        shp_dict = extract_shp_info(shp_path)
-        shp_dict_list.append(shp_dict)
-
-    # notify
-    print('> Extracting raster spatial information.')
-
-    # loop through each rast, extract info, store in list
-    rast_dict_list = []
-    for rast_path in rast_path_list:
-        rast_dict = extract_rast_info(rast_path)
-        rast_dict_list.append(rast_dict)
-
-    # check if anything in output lists
-    if not shp_dict_list or not rast_dict_list:
-        raise ValueError('> No shapefile or raster spatial information in outputs.')
-
-    # combine dict lists
-    info_dict_list = shp_dict_list + rast_dict_list
-
-    # epsg - get values and invalid layers
-    epsg_list, no_epsg_list = [], []
-    for info_dict in info_dict_list:
-        epsg_list.append(info_dict.get('epsg'))
-        if not info_dict.get('epsg'):
-            no_epsg_list.append(info_dict.get('layer'))
-
-    # is_projected - get values and invalid layers
-    is_proj_list, no_proj_list = [], []
-    for info_dict in info_dict_list:
-        is_proj_list.append(info_dict.get('is_projected'))
-        if not info_dict.get('is_projected'):
-            no_proj_list.append(info_dict.get('layer'))
-
-    # feat count - get values and invalid layers (vector only)
-    no_feat_count_list = []
-    for info_dict in shp_dict_list:
-        if not info_dict.get('feat_count') > 0:
-            no_feat_count_list.append(info_dict.get('layer'))
-
-    # x_dim - get values and invalid layers
-    x_dim_list, no_x_dim = [], []
-    for info_dict in rast_dict_list:
-        x_dim_list.append(info_dict.get('x_dim'))
-        if not info_dict.get('x_dim') > 0:
-            no_x_dim.append(info_dict.get('layer'))        
-
-    # y_dim - get values and invalid layers
-    y_dim_list, no_y_dim = [], []
-    for info_dict in rast_dict_list:
-        y_dim_list.append(info_dict.get('y_dim'))
-        if not info_dict.get('y_dim') > 0:
-            no_y_dim.append(info_dict.get('layer'))
-
-    # nodata_val - get values and invalid layers
-    nodata_list = []
-    for info_dict in rast_dict_list:
-        nodata_list.append(info_dict.get('nodata_val'))
-
-    # notify - layers where epsg code missing 
-    if no_epsg_list:
-        print('> These layers have an unknown coordinate system: {0}.'.format(', '.join(no_epsg_list)))
-    if not all([e == epsg_list[0] for e in epsg_list]):
-        print('> Inconsistent coordinate systems between layers. Could cause errors.')
-
-    # notify - layers where not projected
-    if no_proj_list:
-        print('> These layers are not projected: {0}. Must be projected.'.format(', '.join(no_proj_list)))
-    if not all([e == is_proj_list[0] for e in is_proj_list]):
-        print('> Not all layers projected. All layers must have a projection system.')
-
-    # notify - layers where no features
-    if no_feat_count_list:
-        print('> These layers are empty: {0}. Must have features.'.format(', '.join(no_feat_count_list)))
-
-    # notify - layers where not x_dim
-    if no_x_dim:
-        print('> These layers have no x dimension: {0}. Must have.'.format(', '.join(no_x_dim)))
-    if not all([e == x_dim_list[0] for e in x_dim_list]):
-        print('> Inconsistent x dimensions between layers. Must be consistent.')    
-
-    # notify - layers where not y_dim
-    if no_y_dim:
-        print('> These layers have no y dimension: {0}. Must have.'.format(', '.join(no_y_dim)))
-    if not all([e == y_dim_list[0] for e in y_dim_list]):
-        print('> Inconsistent y dimensions between layers. Must be consistent.')      
-
-    # notify - layers where nodata
-    if not all([e == nodata_list[0] for e in nodata_list]):
-        print('> Inconsistent NoData values between layers. Could cause errors.'.format(', '.join(no_feat_count_list)))
-
-    # raise error if any vital errors detected
-    if no_epsg_list or no_proj_list or no_feat_count_list or no_x_dim or no_y_dim:
-        raise ValueError('> Errors found in layers (read above). Please fix and re-run the tool.')
-
-
-def read_coordinates_shp(shp_path):
-    """
-    Read observation records from a projected ESRI Shapefile and extracts the x and y values
-    located within. This must be a point geometry-type dataset and it must be projected.
-
-    Parameters
-    ----------
-    shp_path: string
-        A single string with full path and filename of shapefile.
-
-    Returns
-    ----------
-    df_presence : pandas dataframe
-        A pandas dataframe containing two columns (x and y) with coordinates.
-    """
-
-    # notify user
-    print('Reading species point locations from shapefile.')
-
-    # check if string, if not bail
-    if not isinstance(shp_path, str):
-        raise ValueError('> Shapefile path must be a string. Please check the file path.')
-
-    # check if shp exists
-    if not os.path.exists(shp_path):
-        raise OSError('> Unable to read species point locations, file not found. Please check the file path.')
-
-    try:
-        # read shapefile as layer
-        shp = ogr.Open(shp_path, 0)
-        lyr = shp.GetLayer()
-
-        # check if projected (i.e. in metres)
-        is_projected = lyr.GetSpatialRef().IsProjected()
-
-        # get num feats
-        num_feats = lyr.GetFeatureCount()
-
-    except Exception:
-        raise TypeError('> Could not read species point locations. Is the file corrupt?')
-
-    # check if point/multi point type
-    if lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
-        raise ValueError('> Shapefile is not a point/multi-point type.')
-
-    # check if shapefile is empty
-    if num_feats == 0:
-        raise ValueError('> Shapefile has no features in it. Please check.')
-
-    # check if shapefile is projected (i.e. in metres)
-    if not is_projected:
-        raise ValueError('> Shapefile is not projected. Please project into local grid (we recommend MGA or ALBERS).')
-
-    # loop through feats
-    coords = []
-    for feat in lyr:
-        geom = feat.GetGeometryRef()
-
-        # get x and y of individual point type
-        if geom.GetGeometryName() == 'POINT':
-            coords.append([geom.GetX(), geom.GetY()])
-
-        # get x and y of each point in multipoint type
-        elif geom.GetGeometryName() == 'MULTIPOINT':
-            for i in range(geom.GetGeometryCount()):
-                sub_geom = geom.GetGeometryRef(i)   
-                coords.append([sub_geom.GetX(), sub_geom.GetY()])
-
-        # error, a non-point type exists
-        else:
-            raise TypeError('> Unable to read point location, geometry is invalid.')
-
-    # check if list is populated
-    if not coords:
-        raise ValueError('> No coordinates in coordinate list.')
-
-    # convert coord array into dataframe
-    df_presence = pd.DataFrame(coords, columns=['x', 'y'])
-
-    # drop variables
-    shp, lyr = None, None
-
-    # notify user and return
-    print('> Species point presence observations loaded successfully.')
-    return df_presence   
-
-
-def read_mask_shp(shp_path):
-    """
-    Read mask from a projected ESRI Shapefile. This must be a polygon geometry-type 
-    dataset and it must be projected.
-    
-    Parameters
-    ----------
-    shp_path: string
-        A single string with full path and filename of shapefile.
-
-    Returns
-    ----------
-    mask_geom : ogr vector geometry
-        An ogr vector of type multipolygon geometry with a single feature (dissolved).
-    """
-    
-    # notify user
-    print('Reading mask polygon(s) from shapefile.')
-    
-    # check if string, if not bail
-    if not isinstance(shp_path, str):
-        raise ValueError('> Shapefile path must be a string. Please check the file path.')
-    
-    # check if shp exists
-    if not os.path.exists(shp_path):
-        raise OSError('> Unable to read mask polygon, file not found. Please check the file path.')
-    
-    try:
-        # read shapefile as layer
-        shp = ogr.Open(shp_path, 0)
-        lyr = shp.GetLayer()
-        
-        # get spatial ref system
-        srs = lyr.GetSpatialRef()
-
-        # get num feats
-        num_feats = lyr.GetFeatureCount()
-
-    except Exception:
-        raise TypeError('> Could not read mask polygon(s). Is the file corrupt?')
-        
-    # check if point/multi point type
-    if lyr.GetGeomType() not in [ogr.wkbPolygon, ogr.wkbMultiPolygon]:
-        raise ValueError('> Shapefile is not a polygon/multi-polygon type.')
-        
-    # check if shapefile is empty
-    if num_feats == 0:
-        raise ValueError('> Shapefile has no features in it. Please check.')
-        
-    # check if shapefile is projected (i.e. in metres)
-    if not srs.IsProjected():
-        raise ValueError('> Shapefile is not projected. Please project into local grid (we recommend MGA or ALBERS).')
-          
-    # notify
-    print('> Compiling geometry and dissolving polygons.')
-    
-    # loop feats
-    mask_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-    for feat in lyr:
-        geom = feat.GetGeometryRef()
-        
-        # add geom if individual polygon type
-        if geom.GetGeometryName() == 'POLYGON':
-            mask_geom.AddGeometry(geom)
-            
-        # add geom if multi-polygon type
-        elif geom.GetGeometryName() == 'MULTIPOLYGON':
-            for i in range(geom.GetGeometryCount()):
-                sub_geom = geom.GetGeometryRef(i)
-                mask_geom.AddGeometry(sub_geom)
-        
-        # error, a non-polygon type exists
-        else:
-            raise TypeError('> Unable to read polygon, geometry is invalid.')
-            
-    # union all features together (dissolve)
-    mask_geom = mask_geom.UnionCascaded()
-            
-    # check if mask geom is populated
-    if not mask_geom or not mask_geom.GetGeometryCount() > 0:
-        raise ValueError('> No polygons exist in dissolved mask. Check mask shapefile.')
-        
-    # drop variables
-    shp, lyr, srs = None, None, None
-    
-    # notify user and return
-    print('> Mask polygons loaded and dissolved successfully.')
-    return mask_geom
-
-# move this to gdv_tools
-def rasters_to_dataset(rast_path_list, nodata_value=-9999):
-    """
-    Read a list of rasters (e.g. tif) and convert them into an xarray dataset, 
-    where each raster layer becomes a new dataset variable.
-
-    Parameters
-    ----------
-    rast_path_list: list
-        A list of strings with full path and filename of a raster.
-    nodata_value : int or float
-        A int or float indicating the no dat avalue expected. Default is -9999.
-
-    Returns
-    ----------
-    ds : xarray Dataset
-    """
-    
-    # notify user
-    print('Converting rasters to an xarray dataset.')
-    
-    # check if raster exists
-    if not rast_path_list:
-        raise ValueError('> No raster paths in list. Please check list.')    
-    
-    # check if list, if not bail
-    if not isinstance(rast_path_list, list):
-        raise ValueError('> Raster path list must be a list.')
-        
-    # ensure raster paths in list exist and are strings
-    for rast_path in rast_path_list:
-
-        # check if string, if not bail
-        if not isinstance(rast_path, str):
-            raise ValueError('> Raster path must be a string. Please check the file path.')
-
-        # check if raster exists
-        if not os.path.exists(rast_path):
-            raise OSError('> Unable to read raster, file not found. Please check the file path.')
-            
-    # check if no data value is correct
-    if type(nodata_value) not in [int, float]:
-        raise TypeError('> NoData value is not an int or float.')
-         
-    # loop thru raster paths and convert to data arrays
-    da_list = []
-    for rast_path in rast_path_list:
-        try:
-            # get filename
-            rast_filename = os.path.basename(rast_path)
-            rast_filename = os.path.splitext(rast_filename)[0]
-
-            # open raster as dataset, rename band to var, add var name 
-            da = xr.open_rasterio(rast_path)
-            da = da.rename({'band': 'variable'})
-            da['variable'] = np.array([rast_filename])
-            
-            # check if no data val attributes exist, replace with -9999
-            if da.attrs and da.attrs.get('nodatavals'):
-                nds = da.attrs.get('nodatavals')
-
-                # if iterable, iterate them and replace with -9999
-                if type(nds) in [list, tuple]:
-                    for nd in nds:
-                        da = da.where(da != nd, nodata_value)
-
-                # if single numeric, replace with -9999
-                elif type(nds) in [float, int]:
-                    da = da.where(da != nd, nodata_value)
-        
-                # couldnt figure it out, warn user
-                else:
-                    print('> Unknown NoData value. Check NoData of layer: {0}'.format(rast_path))
-
-            # append to list
-            da_list.append(da)
-            
-            # notify
-            print('> Converted raster to xarray data array: {0}'.format(rast_filename))
-            
-        except Exception:
-            raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
-            
-    # check if anything came back, then proceed
-    if not da_list:
-        raise ValueError('> No data arrays converted from raster paths. Please check rasters are valid.')
-
-    # combine all da together and create dataset
-    try:
-        ds = xr.concat(da_list, dim='variable')
-        ds = ds.to_dataset(dim='variable')
-        
-    except Exception:
-        raise ValueError('Could not concat data arrays. Check your rasters.')
-              
-    # notify user and return
-    print('> Rasters converted to dataset successfully.\n')
-    return ds
-
-
-def get_dataset_resolution(ds):
-    """
-    Read dataset and get pixel resolution from attributes. If attributes don't exist, fall back
-    to rough approach of minus one pixel to another.
-
-    Parameters
-    ----------
-    ds: xarray dataset
-        A single xarray dataset with variables and x and y dims.
-
-    Returns
-    ----------
-    res : float
-        A float containing the cell resolution of xarray dataset.
-    """
-
-    # notify user
-    print('Extracting cell resolution from dataset.')
-
-    # check if xarray dataset type
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Must provided an xarray dataset.')
-
-    # check if we have 3 dims
-    if not len(ds.to_array().shape) == 3:
-        raise ValueError('> Dataset does not have shape of 3 (vars, y, x).')
-
-    # check if x and y dims exist
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('> No x and/or y coordinate dimension in dataset.')
-
-    # check if variables exist
-    if len(ds) == 0:
-        raise ValueError('> Dataset has no variables (is empty).')
-
-    try:
-        # set up
-        res = None
-
-        # check for attributes and get res if exists
-        attr_dict = ds.attrs
-        res = attr_dict.get('res')
-
-    except:
-        pass
-
-    # check if res exists as iterable, get first elem
-    if res and type(res) in [list, tuple]:
-
-        # if 2 elemts, get max, else first
-        if len(res) == 2:
-            res = max(float(res[0]), res[1])
-        else:
-            res = float(res[0])
-
-    elif res and type(res) in [float, int]:
-
-        # just get the value as float
-        res = float(res[0])
-
-    else:
-        # ugly fall back solution, minus first pixel by second
-        x_res = abs(float(ds['x'].isel(x=0))) - abs(float(ds['x'].isel(x=1)))
-        y_res = abs(float(ds['y'].isel(y=0))) - abs(float(ds['y'].isel(y=1)))
-        res = float(max(x_res, y_res))
-
-    # check if any mask pixels (i.e. 1s) were returned
-    if not res:
-        raise ValueError('> No resolution could be obtained from dataset.')
-
-    # notify user and return
-    print('> Resolution extracted successfully from dataset.')
-    return res
 
 
 def get_dims_order_and_length(ds):
@@ -759,6 +681,7 @@ def get_dims_order_and_length(ds):
     return dims_order, dims_length
 
 
+# delete this
 def get_mask_from_dataset(ds, nodata_value=-9999):
     """
     Read dataset and create mask from NoData values (-9999) within. Mask set to 1, NoData set to 0.
@@ -807,572 +730,29 @@ def get_mask_from_dataset(ds, nodata_value=-9999):
     return mask
     
     
-def generate_proximity_areas(shp_path, buff_m=100):
-    """
-    Read species point locations from a projected ESRI Shapefile and buffer them to a user 
-    defined number of metres. This must be a point geometry-type shapefile and it must be 
-    projected. The resulting buffer areas can be used to eliminate pseudo-absences.
-    
-    Parameters
-    ----------
-    shp_path : string
-        A single string with full path and filename of shapefile.
-    buff_m : int
-        A numeric value in which points a buffered by. Must be metres. Default 100m.
 
-    Returns
-    ----------
-    buff_geom : ogr vector geometry
-        An ogr vector of type multipolygon geometry with a single feature (dissolved).
-    """
 
-    # notify user
-    print('Generating proximity buffers around species point locations.')
 
-    # check if string, if not bail
-    if not isinstance(shp_path, str):
-        raise ValueError('> Shapefile path must be a string. Please check the file path.')
 
-    # check if shp exists
-    if not os.path.exists(shp_path):
-        raise OSError('> Unable to read species point locations, file not found. Please check the file path.')
 
-    # check if buffer is an int
-    if not isinstance(buff_m, int):
-        raise ValueError('> Buffer value is not an integer. Please check the entered value.')
+
+     
         
-    # check if buffer is above 0
-    if not buff_m > 0:
-        raise ValueError('> Buffer length must be > 0. Please check the entered value.')    
 
-    try:
-        # read shapefile as layer
-        shp = ogr.Open(shp_path, 0)
-        lyr = shp.GetLayer()
 
-        # check if projected (i.e. in metres)
-        is_projected = lyr.GetSpatialRef().IsProjected()
 
-        # get num feats
-        num_feats = lyr.GetFeatureCount()
 
-    except Exception:
-        raise TypeError('> Could not read species point locations. Is the file corrupt?')
 
-    # check if point/multi point type
-    if lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
-        raise ValueError('> Shapefile is not a point/multi-point type.')
 
-    # check if shapefile is empty
-    if num_feats == 0:
-        raise ValueError('> Shapefile has no features in it. Please check.')
 
-    # check if shapefile is projected (i.e. in metres)
-    if not is_projected:
-        raise ValueError('> Shapefile is not projected. Please project into local grid (we recommend MGA or ALBERS).')
 
-    # loop feats
-    buff_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-    for feat in lyr:
-        geom = feat.GetGeometryRef()
 
-        # add geom if individual polygon type
-        if geom.GetGeometryName() == 'POINT':
-            geom = geom.Buffer(buff_m)
-            buff_geom.AddGeometry(geom)
 
-        # add geom if multi-polygon type
-        elif geom.GetGeometryName() == 'MULTIPOINT':
-            for i in range(geom.GetGeometryCount()):
-                sub_geom = geom.GetGeometryRef(i)
-                sub_geom = sub_geom.Buffer(buff_m)
-                buff_geom.AddGeometry(sub_geom)
 
-        # error, a non-polygon type exists
-        else:
-            raise TypeError('> Unable to read point, geometry is invalid.')
 
-    # union all features together (dissolve)
-    buff_geom = buff_geom.UnionCascaded()
 
-    # check if buffer geom is populated
-    if not buff_geom or not buff_geom.GetGeometryCount() > 0:
-        raise ValueError('> No features exist in proximity buffer. Check point shapefile.')
 
-    # drop variables
-    shp, lyr = None, None
 
-    # notify user and return
-    print('> Proximity buffers loaded and dissolved successfully.')
-    return buff_geom
-
-
-def generate_absences_from_shp(mask_shp_path, num_abse, occur_shp_path=None, buff_m=None):
-    """
-    Generates pseudo-absence (random or pseudo-random) locations within provided mask polygon. 
-    Pseudo-absence points are key in sdm work. A mask shapefile path and value for number
-    of pseudo-absence points to generate is required. Optionally, if user provides an occurrence
-    shapefile path and buffer length (in metres), proximity buffers can be also created around
-    species occurrences - another often used function sdm work.
-
-    Parameters
-    ----------
-    mask_shp_path: string
-        A single string with full path and filename of shapefile of mask.
-    num_abse: int
-        A int indicating how many pseudo-absence points to generated.
-    occur_shp_path : string (optional)
-        A single string with full path and filename of shapefile of occurrence records.
-    buff_m : int (optional)
-        A int indicating radius of buffers (proximity zones) around occurrence points (in metres).
-        
-    Returns
-    ----------
-    df_absence: pandas dataframe
-        A pandas dataframe containing two columns (x and y) with coordinates.
-    """
-
-    # notify user
-    print('Generating {0} randomised psuedo-absence locations.'.format(num_abse))
-
-    # check if string, if not bail
-    if not isinstance(mask_shp_path, str):
-        raise ValueError('> Mask shapefile path must be a string. Please check the file path.')
-
-    # check if shp exists
-    if not os.path.exists(mask_shp_path):
-        raise OSError('> Unable to read mask shapefile, file not found. Please check the file path.')
-
-    # check if number of absence points is an int
-    if not isinstance(num_abse, int):
-        raise ValueError('> Num of absence points value is not an integer. Please check the entered value.')
-
-    # check if num of absence points is above 0
-    if not num_abse > 0:
-        raise ValueError('> Num of absence points must be > 0. Please check the entered value.')  
-
-    # load mask polygon, dissolve it, output multipolygon geometry
-    mask_geom = read_mask_shp(shp_path=mask_shp_path)
-
-    # check if mask geom exists
-    if not mask_geom or not mask_geom.GetGeometryCount() > 0:
-        raise ValueError('> No polygons exist in dissolved mask. Check mask shapefile.')
-
-    # erase proximities from mask if user provides values for it
-    buff_geom = None
-    if occur_shp_path and buff_m:
-
-        # notify
-        print('> Removing proximity buffer areas from mask area.')
-
-        # read proximity buffer geoms
-        buff_geom = generate_proximity_areas(occur_shp_path, buff_m)
-
-        # check if proximity buffer geom exists
-        if not buff_geom or not buff_geom.GetGeometryCount() > 0:
-            raise ValueError('> No proximity buffer polygons exist in dissolved mask. Check mask shapefile.')
-
-        try:
-            # difference mask and proximity buffers
-            diff_geom = mask_geom.Difference(buff_geom)
-
-        except:
-            raise ValueError('> Could not difference mask and proximity buffers.')
-
-        # check if difference geometry exists
-        if not diff_geom or not diff_geom.GetArea() > 0:
-            raise ValueError('> Nothing returned from difference. Is your buffer length too high?') 
-        
-        # set mask_geom to buff_geom
-        mask_geom = diff_geom
-        
-    # notify
-    print('> Randomising absence points within mask area.')
-    
-    # get bounds of mask
-    env = mask_geom.GetEnvelope()
-    x_min, x_max, y_min, y_max = env[0], env[1], env[2], env[3]
-
-    # create random points and fill a list with x and y
-    counter = 0
-    coords = []
-    for i in range(num_abse):
-        while counter < num_abse:
-            
-            # get random x and y coord
-            rand_x = random.uniform(x_min, x_max)
-            rand_y = random.uniform(y_min, y_max)
-
-            # create point and add x and y to it
-            pnt = ogr.Geometry(ogr.wkbPoint)
-            pnt.AddPoint(rand_x, rand_y)
-            
-            # if point in mask, include it
-            if pnt.Within(mask_geom):
-                coords.append([pnt.GetX(), pnt.GetY()])
-                counter += 1
-        
-    # check if list is populated
-    if not coords:
-        raise ValueError('> No coordinates in coordinate list.')
-        
-    # convert coord array into dataframe
-    df_absence = pd.DataFrame(coords, columns=['x', 'y'])
-        
-    # drop variables
-    mask_geom, buff_geom, abse_geom = None, None, None
-        
-    # notify and return
-    print('> Generated pseudo-absence points successfully.')
-    return df_absence
-
-
-def generate_absences_from_dataset(ds, num_abse, occur_shp_path=None, buff_m=None, res_factor=3, 
-                                   nodata_value=-9999):
-    """
-    Generates pseudo-absence (random or pseudo-random) locations within dataset mask. 
-    Pseudo-absence points are key in sdm work. A dataset, value for number
-    of pseudo-absence points, and NoData value to generate is required. Optionally, if 
-    user provides an occurrence shapefile path and buffer length (in metres), proximity 
-    buffers can be also created around species occurrences - another often used function 
-    in sdm work.
-
-    Parameters
-    ----------
-    ds : xarray dataset
-        A dataset holding at least one variable.
-    num_abse: int
-        A int indicating how many pseudo-absence points to generated.
-    occur_shp_path : string (optional)
-        A single string with full path and filename of shapefile of occurrence records.
-    buff_m : int (optional)
-        A int indicating radius of buffers (proximity zones) around occurrence points (in metres).
-    res_factor : int
-        A threshold multiplier used during pixel + point intersection. For example
-        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-    nodata_value : int or float
-        A value indicating the NoData values within xarray datatset.
-
-    Returns
-    ----------
-    df_absence: pandas dataframe
-        A pandas dataframe containing two columns (x and y) with coordinates.
-    """
-
-    # notify user
-    print('Generating {0} randomised psuedo-absence locations.'.format(num_abse))
-
-    # check if number of absence points is an int
-    if not isinstance(ds, xr.Dataset):
-        raise ValueError('> Dataset is not an xarray dataset.')
-    
-    # check if number of absence points is an int
-    if not isinstance(num_abse, int):
-        raise ValueError('> Num of absence points value is not an integer. Please check the entered value.')
-
-    # check if num of absence points is above 0
-    if not num_abse > 0:
-        raise ValueError('> Num of absence points must be > 0. Please check the entered value.')  
-
-    # get mask from ds nodata vals
-    da_mask = get_mask_from_dataset(ds)
-
-    # check if any mask pixels (i.e. 1s) were returned
-    if not bool(da_mask.any()):
-        raise ValueError('> No mask pixels returned. Possibly empty/corrupt raster layer(s) used in input.')
-
-    # erase proximities from mask if user provides values for it
-    buff_geom = None
-    if occur_shp_path and buff_m:
-
-        # notify
-        print('> Generating buffer areas from occurrence points.')
-
-        # read proximity buffer geoms
-        buff_geom = generate_proximity_areas(occur_shp_path, buff_m)
-
-        # check if proximity buffer geom exists
-        if not buff_geom or not buff_geom.GetGeometryCount() > 0:
-            raise ValueError('> No proximity buffer polygons exist in dissolved mask. Check mask shapefile.')
-
-    # notify
-    print('> Randomising absence points within mask area.')
-    
-    # get cell resolution from dataset
-    res = get_dataset_resolution(ds)
-
-    # get bounds of mask  # todo update this to gdv_tools.get_dataset_extent
-    x_min, x_max = float(da_mask['x'].min()), float(da_mask['x'].max())
-    y_min, y_max = float(da_mask['y'].min()), float(da_mask['y'].max())
-
-    # create random points and fill a list with x and y
-    counter = 0
-    coords = []
-    for i in range(num_abse):
-        while counter < num_abse:
-
-            # get random x and y coord
-            rand_x = random.uniform(x_min, x_max)
-            rand_y = random.uniform(y_min, y_max)
-
-            # create point and add x and y to it
-            pnt = ogr.Geometry(ogr.wkbPoint)
-            pnt.AddPoint(rand_x, rand_y)
-            
-            try:
-                # get pixel
-                pixel = int(da_mask.sel(x=rand_x, y=rand_y, method='nearest', tolerance=res * res_factor))
-                
-                # if within pixel and buffer areas, else just pixel
-                if pixel == 1 and buff_geom:
-                    if not pnt.Within(buff_geom):
-                        coords.append([pnt.GetX(), pnt.GetY()])
-                        counter += 1
-                        
-                elif pixel == 1:
-                    coords.append([pnt.GetX(), pnt.GetY()])
-                    counter += 1
-                    
-            except:
-                continue
-
-    # check if list is populated
-    if not coords:
-        raise ValueError('> No coordinates in coordinate list.')
-
-    # convert coord array into dataframe
-    df_absence = pd.DataFrame(coords, columns=['x', 'y'])
-
-    # drop variables
-    da_mask, buff_geom = None, None
-
-    # notify and return
-    print('> Generated pseudo-absence points successfully.')
-    return df_absence
-
-
-def equalise_absence_records(df_presence_data, df_absence_data):
-    """
-    Read presence and absence dataframes and reduce number of absence records to match
-    the number of presence records.
-    
-    Parameters
-    ----------
-    df_presence_data : pandas dataframe
-        A dataframe holding records with presence values.
-    df_absence_data : pandas dataframe
-        A dataframe holding records with absence values.
-
-    Returns
-    ----------
-    df_absence_data : pandas dataframe
-        Equalised pandas dataframe with absence records.
-    """
-    
-    # notify
-    print('> Equalising absence record number.')
-    
-    # check if presence is dataframe
-    if not isinstance(df_presence_data, pd.DataFrame):
-        raise TypeError('Presence records is not a pandas dataframe.')
-
-    # check if absence is dataframe
-    if not isinstance(df_absence_data, pd.DataFrame):
-        raise TypeError('Absence records is not a pandas dataframe.')
-
-    # count number of records in presence and absence
-    num_pres = df_presence_data.shape[0]
-    num_abse = df_absence_data.shape[0]
-
-    # select same number of presence in absence random sample.
-    if num_abse <= num_pres:
-        print('> Number of absence records already <= number of presence. No need to equalise.')
-        return df_absence_data
-
-    elif num_abse > num_pres:
-        print('> Reduced number of absence records from {0} to {1}'.format(num_abse, num_pres))
-        df_absence_data = df_absence_data.sample(n=num_pres)
-        return df_absence_data
-
-    else:
-        raise ValueError('> Could not equalise absence records.')
-
-
-def extract_dataset_values(ds, coords, res_factor=3, nodata_value=-9999):
-    """
-    Read an xarray dataset and convert them into a numpy records array.
-
-    Parameters
-    ----------
-    ds: xarray dataset
-        A dataset with data variables.
-    coords : pandas dataframe
-        A pandas dataframe containing x and y columns with records.
-    res_factor : int
-        A threshold multiplier used during pixel + point intersection. For example
-        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-    nodata_value : int or float
-        A int or float indicating the no dat avalue expected. Default is -9999.
-
-    Returns
-    ----------
-    df_presence_data : pandas dataframe
-    """
-
-    # notify user
-    print('Extracting xarray dataset values to x and y coordinates.')
-
-    # check if coords is a pandas dataframe
-    if not isinstance(coords, pd.DataFrame):
-        raise TypeError('> Provided coords is not a numpy ndarray type. Please check input.')
-
-    # check if dataset type provided
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Provided dataset is not an xarray dataset type. Please check input.')
-
-    # check dimensionality of pandas dataframe. x and y only
-    if len(coords.columns) != 2:
-        raise ValueError('Num of columns in coords not equal to 2. Please ensure shapefile is valid.')
-
-    # check if res factor is int type
-    if not isinstance(res_factor, int):
-        raise TypeError('> Resolution factor must be an integer.')
-
-    # check dimensionality of numpy array. xy only
-    if not res_factor >= 1:
-        raise ValueError('Resolution factor must be value of 1 or greater.')
-
-    # get cell resolution from dataset
-    res = get_dataset_resolution(ds)
-
-    # check res exists
-    if not res:
-        raise ValueError('> No resolution extracted from dataset.')
-
-    # multiply res by res factor
-    res = res * res_factor
-
-    # loop through data var and extract values at coords
-    values = []
-    for i, row in coords.iterrows():
-        try:
-            # get values from vars at current pixel, tolerence is to 2 pixels either side
-            pixel = ds.sel(x=row.get('x'), y=row.get('y'), method='nearest', tolerance=res * res_factor)
-            pixel = pixel.to_array().values
-            pixel = list(pixel)
-
-        except:
-            # fill with list of nan equal to data var size
-            pixel = [nodata_value] * len(ds.data_vars)
-
-        # append to list
-        values.append(pixel)
-
-    try:
-        # convert values list into pandas dataframe
-        df_presence_data = pd.DataFrame(values, columns=list(ds.data_vars))
-
-    except:
-        raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
-
-    # notify user and return
-    print('> Extracted xarray dataset values successfully.\n')
-    return df_presence_data
-
-
-def remove_nodata_records(df_records, nodata_value=-9999):
-    """
-    Read a numpy record array and remove -9999 (nodata) records.
-
-    Parameters
-    ----------
-    df_records: pandas dataframe
-        A pandas dataframe type containing values extracted from env variables.
-    nodata_value : int or float
-        A int or float indicating the no dat avalue expected. Default is -9999.
-
-    Returns
-    ----------
-    df_records : numpy record array
-        A numpy record array without nodata values.
-    """
-
-    # notify user
-    print('Removing records containing NoData (-9999) values.')
-
-    # check if numpy rec array
-    if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Not a pands dataframe type.')
-
-    # check if no data value is correct
-    if type(nodata_value) not in [int, float]:
-        raise TypeError('> NoData value is not an int or float.')
-        
-    # get original num records
-    orig_num_recs = df_records.shape[0]
-
-    # remove any record containing nodata value
-    df_records = df_records[~df_records.eq(nodata_value).any(axis=1)]
-
-    # check if array exists
-    if df_records.shape[0] == 0:
-        raise ValueError('> No valid values were detected in dataframe - all were NoData.')
-        
-    # get num of records removed
-    num_removed = orig_num_recs - df_records.shape[0]
-
-    # notify user and return
-    print('> Removed {0} records containing NoData values successfully.'.format(num_removed))
-    return df_records
-
-
-def combine_presence_absence_records(df_presence, df_absence):
-    """
-    Combine pandas dataframes for presence and absence records. Adds new column of 1s and 0s 
-    for pres/abse records.
-
-    Parameters
-    ----------
-    df_presence: pandas dataframes
-        A dataframe type containing values extracted from env variables for presence locations.
-    df_absence: pandas dataframes
-        A dataframe type containing values extracted from env variables for absence locations.
-
-    Returns
-    ----------
-    df_pres_abse : pandas dataframes
-        A dataframe containing both presence and absence records.
-    """
-
-    # notify user
-    print('Combining presence and pseudo-absence point locations.')
-
-    # check if presence is numpy rec array
-    if not isinstance(df_presence, pd.DataFrame):
-        raise TypeError('> Presence data not a pandas dataframe type.')
-
-    # check if absence is numpy rec array
-    if not isinstance(df_absence, pd.DataFrame):
-        raise TypeError('> Absence data not a pandas dataframe type.')
-
-    try:
-        # add new pres_abse column to both dataframes
-        df_presence['pres_abse'] = 1
-        df_absence['pres_abse'] = 0
-        
-        # combine dataframes
-        df_pres_abse = df_presence.append(df_absence, ignore_index=True)
-
-    except:
-        raise ValueError('> Could not append presence/absence to dataframe.')
-
-    # check if something came back
-    if df_pres_abse.shape[0] == 0:
-        raise ValueError('> No presence/absence data was returned.')
-
-    # notify user and return
-    print('> Combined presence and absence records: total of {0} records.'.format(df_pres_abse.shape[0]))
-    return df_pres_abse
 
 
 def split_train_test(df_records, test_ratio=0.1, shuffle=True, equalise_test_set=False):
@@ -2185,97 +1565,6 @@ def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', noda
     return cont_matrices, cate_matrices
 
     
-def generate_correlation_matrix(df_records, rast_cate_list, show_fig=False):
-    """
-    Calculate a pearson correlation matrix and present correlation pairs. Optional 
-    correlation matrix will be visualised if show_fig set to True. Categorical variables
-    are excluded.
-    
-    How to interprete pearson correlation values:
-        < 0.6 = No collinearity.
-          0.6 - 0.8 = Moderate collinearity.
-        > 0.8 = Strong collinearity. One of these predictors should be removed.
-
-    Parameters
-    ----------
-    df_records : pandas dataframe
-        A dataframe with rows (observations) and columns (continuous and categorical vars).
-    rast_cate_list : list or string 
-        A list or string of raster paths of continous and categorical layers.
-    show_fig : boolean
-        If true, a correlation matrix will be plotted.
-    """
-
-    # check if presence is numpy rec array
-    if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Presence-absence data is not a pandas dataframe type.')
-
-    # check if any cols are in dataframe
-    if df_records.shape[0] == 0 or df_records.shape[1] == 0:
-        raise ValueError('> Presence-absence pandas dataframe has rows and/or columns.')
-
-    # check if pres_abse column in dataframe
-    if 'pres_abse' not in df_records:
-         raise ValueError('> No pres_abse column exists in pandas dataframe.')
-
-    if not isinstance(rast_cate_list, (list, str)):
-        raise TypeError('Raster categorical filepath list must be a list or single string.')
-
-    # check if show fig is boolean
-    if not isinstance(show_fig, bool):
-        raise TypeError('> Show figure must be a boolean (true or false).')
-
-    # select presence records only
-    df_presence = df_records.loc[df_records['pres_abse'] == 1]
-
-    # check if any rows came back, if so, drop pres_abse column
-    if df_presence.shape[0] != 0:
-        df_presence = df_presence.drop(columns='pres_abse')
-    else:
-        raise ValueError('> No presence records exist in pandas dataframe.')
-
-    # iterate categorical names, drop if any exist, ignore if error
-    for rast_path in rast_cate_list:
-        cate_name = os.path.basename(rast_path)
-        cate_name = os.path.splitext(cate_name)[0]
-        df_presence = df_presence.drop(columns=cate_name, errors='ignore')
-
-    try:
-        # calculate correlation matrix and then correlation pairs
-        cm = df_presence.corr()
-        cp = cm.unstack()     
-
-        # check if correlation matrix exist, plot if so
-        if len(cm) > 0 and show_fig:
-
-            # notify
-            print('> Presenting correlation matrix.')
-
-            # create figure, axis, matrix, colorbar
-            fig = plt.figure(figsize=(10, 8))
-            ax = fig.add_subplot(111)
-            cax = ax.matshow(cm, interpolation='nearest', cmap='RdYlBu')
-            fig.colorbar(cax)
-
-            # create labels
-            ax.set_xticklabels([''] + df_presence.columns.to_list(), rotation=90)
-            ax.set_yticklabels([''] + df_presence.columns.to_list(), rotation=0)
-
-            # show
-            plt.show()
-            
-            # add padding
-            print('\n')
-
-        # check if correlation pairs exist, print if so
-        if len(cp) > 0:
-
-            # notify
-            print('> Presenting correlation pairs.')
-            print(cp)
-
-    except:
-        raise ValueError('> Could not generate and show correlation matrix results.')
 
 
 def generate_vif_scores(df_records, rast_cate_list):

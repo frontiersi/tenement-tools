@@ -290,9 +290,7 @@ def read_shapefile(shp_path=None):
     # check if string, if not bail
     if not isinstance(shp_path, str):
         raise ValueError('Shapefile path must be a string. Please check the file path.')
-
-    # check if shp exists
-    if not os.path.exists(shp_path):
+    elif not os.path.exists(shp_path):
         raise OSError('Unable to read shapefile. Please check the file path.')
 
     try:
@@ -308,18 +306,14 @@ def read_shapefile(shp_path=None):
 
     except Exception:
         raise TypeError('Could not read shapefile records. Is the file corrupt?')
-
-    # check if point/multi point type
-    if lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
-        raise ValueError('Shapefile is not a point/multi-point type.')
-
-    # check if shapefile is empty
-    if num_feats == 0:
-        raise ValueError('Shapefile has no features in it. Please check.')
-
-    # check if shapefile is projected (i.e. in metres)
+        
+    # check shapefile parameters
     if epsg != 3577:
         raise ValueError('Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
+    elif lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
+        raise ValueError('Shapefile is not a point/multi-point type.')
+    elif num_feats == 0:
+        raise ValueError('Shapefile has no features in it. Please check.')
 
     # convert shapefile table to pandas df
     rows = []
@@ -680,9 +674,6 @@ def get_xr_resolution(ds):
         A float containing the cell resolution of xarray dataset.
     """
 
-    # notify user
-    print('Extracting cell resolution from dataset.')
-
     # check if x and y dims exist
     if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
         raise ValueError('No x, y dimensions in dataset.')
@@ -734,9 +725,6 @@ def get_xr_crs(ds):
         A int containing the crs of xarray dataset.
     """
 
-    # notify user
-    print('Extracting CRS from dataset.')
-
     # try getting crs option 1
     try:
         crs = ds.crs
@@ -755,8 +743,7 @@ def get_xr_crs(ds):
     if not crs:
         raise ValueError('Could not extract crs from dataset.')
 
-    # notify user and return
-    print('CRS extracted successfully from dataset.')
+    # return
     return crs
 
 
@@ -774,9 +761,6 @@ def get_xr_extent(ds):
     extent : dict
         A dict containing the datasets l, b, r, t bounding box coordinates.
     """
-    
-    # notify user
-    print('Extracting spatial extent from dataset.')
 
     # check if xarray dataset type
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
@@ -802,7 +786,7 @@ def get_xr_extent(ds):
     return extent
     
 
-def remove_nodata_records(df_records, nodata_value=np.nan):
+def remove_nodata_records(df_records, nodata_value=-999):
     """
     Read a numpy record array and remove -9999 (nodata) records.
 
@@ -1019,7 +1003,7 @@ def extract_rast_info(rast_path):
     return rast_info_dict
      
 # 
-def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-9999):
+def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
     """
     Read a xarray dataset and convert them into a numpy records array. Based 
     on RSGISLib code.
@@ -1035,9 +1019,6 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
     res_factor : int
         A threshold multiplier used during pixel + point intersection. For example
         if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-    nodata_value : int or float
-        A int or float indicating the no dat avalue expected. Default is -9999.
-        Deprecated.
 
     Returns
     ----------
@@ -1045,29 +1026,21 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
     """
 
     # notify user
-    print('Extracting xarray dataset values to x and y coordinates.')
+    print('Extracting xarray values to x and y coordinates.')
+    
+    # check if dataset adequate
+    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
+        raise TypeError('Provided dataset is not an xarray dataset type. Please check input.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('> No x and/or y coordinate dimension in dataset.') 
 
     # check if coords is a pandas dataframe
     if not isinstance(coords, pd.DataFrame):
-        raise TypeError('> Provided coords is not a numpy ndarray type. Please check input.')
-
-    # check if dataset type provided
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Provided dataset is not an xarray dataset type. Please check input.')
-        
-    # check if x and y dims exist
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('> No x and/or y coordinate dimension in dataset.') 
-
-    # check dimensionality of pandas dataframe. x and y only
-    if len(coords.columns) != 2:
-        raise ValueError('Num of columns in coords not equal to 2. Please ensure shapefile is valid.')
+        raise TypeError('Provided coords is not a numpy ndarray type. Please check input.')
+    elif len(coords.columns) != 2:
+        raise ValueError('Num of columns in coords not equal to 2.')
 
     # check if res factor is int type
-    if not isinstance(res_factor, int):
-        raise TypeError('> Resolution factor must be an integer.')
-
-    # check dimensionality of numpy array. xy only
     if not res_factor >= 1:
         raise ValueError('Resolution factor must be value of 1 or greater.')
         
@@ -1079,10 +1052,8 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
 
     # get cell resolution from dataset
     res = get_xr_resolution(ds)
-
-    # check res exists
     if not res:
-        raise ValueError('> No resolution extracted from dataset.')
+        raise ValueError('No resolution extracted from dataset.')
 
     # multiply res by res factor
     res = res * res_factor
@@ -1134,7 +1105,7 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3, nodata_value=-999
         raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
 
     # notify user and return
-    print('Extracted xarray dataset values successfully.')
+    print('Extracted xarray values successfully.')
     return df_samples 
 
 
