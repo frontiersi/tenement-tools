@@ -2138,3 +2138,147 @@ def remove_oa_data(ds, oa_classes=[1, 4, 5], max_cloud=10, remove=False):
     # notify and return
     print('Removed times successfully.')
     return ds
+
+
+def extract_shp_info(shp_path):
+    """
+    Read a vector (e.g. shapefile) and extract geo-transformation, coordinate 
+    system, projection type, size of dimensions (x and y), nodata value.
+
+    Parameters
+    ----------
+    shp_path: string
+        A single string with full path and filename of a raster.
+
+    Returns
+    ----------
+    shp_meta_dict : dictionary with keys:
+        layer = name of variable
+        type = type of data, vector or raster.
+        epsg = the epsg code of spatial reference system.
+        is_projected = is projection system, true or false.
+        feat_count = how many features within shapefile.
+    """
+    
+    # check if string, if not bail
+    if not isinstance(shp_path, str):
+        raise ValueError('> Shapefile path must be a string. Please check the file path.')
+
+    # check if shapefile exists
+    if not os.path.exists(shp_path):
+        raise OSError('> Unable to read shapefile, file not found. Please check the file path.')    
+
+    # init dict
+    shp_info_dict = {
+        'layer': os.path.basename(shp_path),
+        'type': 'vector',
+        'epsg': None,
+        'is_projected': 0,
+        'feat_count': 0
+    }
+    
+    try:
+        # read shapefile as layer
+        shp = ogr.Open(shp_path, 0)
+        lyr = shp.GetLayer()
+        
+        # add feat count
+        shp_info_dict['feat_count'] = lyr.GetFeatureCount()
+        
+        # get spatial ref
+        srs = lyr.GetSpatialRef()
+
+        # get epsg if exists
+        if srs and srs.GetAttrValue('AUTHORITY', 1):
+            shp_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
+            
+        # get is projected if exists
+        if srs and srs.IsProjected():
+            shp_info_dict['is_projected'] = srs.IsProjected()
+            
+        # drop variables
+        shp, lyr = None, None
+        
+    except Exception:
+        raise IOError('Unable to read shapefile: {0}. Please check.'.format(shp_path))    
+    
+    return shp_info_dict
+
+
+# move this to gdv_tools and update ref in validate input data func below
+def extract_rast_info(rast_path):
+    """
+    Read a raster (e.g. tif) and extract geo-transformation, coordinate 
+    system, projection type, size of dimensions (x and y), nodata value.
+
+    Parameters
+    ----------
+    rast_path: string
+        A single string with full path and filename of a raster.
+
+    Returns
+    ----------
+    rast_meta_dict : dictionary with keys:
+        layer = name of layer
+        type = type of data, vector or raster.
+        geo_trans = raster geotransformation info.
+        epsg = the epsg code of spatial reference system.
+        is_projected = is projection system, true or false.
+        x_dim = number of raster cells along x axis.
+        y_dim = number of raster cells along y axis.
+        nodata_val = no data value embedded in raster.
+    """
+    
+    # check if string, if not bail
+    if not isinstance(rast_path, str):
+        raise ValueError('> Raster path must be a string. Please check the file path.')
+
+    # check if raster exists
+    if not os.path.exists(rast_path):
+        raise OSError('> Unable to read raster, file not found. Please check the file path.')    
+
+    # init dict
+    rast_info_dict = {
+        'layer': os.path.basename(rast_path),
+        'type': 'raster',
+        'geo_tranform': None,
+        'x_dim': None,
+        'y_dim': None,
+        'epsg': None,
+        'is_projected': 0,
+        'nodata_val': None
+    }
+        
+    try:
+        # open raster
+        rast = gdal.Open(rast_path, 0)
+
+        # add transform, dims
+        rast_info_dict['geo_tranform'] = rast.GetGeoTransform()
+        rast_info_dict['x_dim'] = rast.RasterXSize
+        rast_info_dict['y_dim'] = rast.RasterYSize
+        rast_info_dict['nodata_val'] = rast.GetRasterBand(1).GetNoDataValue()
+
+        # get spatial ref
+        srs = rast.GetSpatialRef()
+
+        # get epsg if exists
+        if srs and srs.GetAttrValue('AUTHORITY', 1):
+            rast_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
+
+        # get is projected if exists
+        if srs and srs.IsProjected():
+            rast_info_dict['is_projected'] = srs.IsProjected()
+
+        # get nodata value if exists
+        if srs and srs.IsProjected():
+            rast_info_dict['is_projected'] = srs.IsProjected()    
+
+        # drop
+        rast = None
+
+    except Exception:
+        raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
+
+    return rast_info_dict
+   
