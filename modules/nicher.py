@@ -27,29 +27,10 @@ import os
 import sys
 import random
 import math
-import gdal
 import xarray as xr
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from osgeo import ogr, osr
-from numpy.lib.recfunctions import rec_append_fields
-from numpy.lib.recfunctions import rec_drop_fields
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import ExtraTreesClassifier as et
-from sklearn.ensemble import RandomForestClassifier as rt
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import brier_score_loss
-from sklearn.metrics import log_loss
-from sklearn.metrics import f1_score
-from sklearn.metrics import matthews_corrcoef
-from sklearn.metrics import normalized_mutual_info_score
-from sklearn.metrics import cohen_kappa_score
-from scipy.stats import pointbiserialr
 
 sys.path.append('../../shared')
 import tools
@@ -118,7 +99,14 @@ def generate_absences(ds, num_abse=1000, occur_shp_path=None, buff_m=100, res_fa
     df_absence: pandas dataframe
         A pandas dataframe containing two columns (x and y) with coordinates.
     """
-
+    
+    # imports
+    # imports check
+    try:
+        from osgeo import ogr
+    except:
+        raise ImportError('Could not import osgeo.')
+    
     # notify user
     print('Generating {0} randomised psuedo-absence locations.'.format(num_abse))
 
@@ -487,396 +475,101 @@ def generate_correlation_matrix(df_records, rast_cate_list=None, show_fig=False,
         raise ValueError('Could not generate and show correlation matrix results.')
 
 
-
-
-    
-def extract_shp_info(shp_path):
+def generate_vif_scores(df_records, rast_cate_list=None):
     """
-    Read a vector (e.g. shapefile) and extract geo-transformation, coordinate 
-    system, projection type, size of dimensions (x and y), nodata value.
-
-    Parameters
-    ----------
-    shp_path: string
-        A single string with full path and filename of a raster.
-
-    Returns
-    ----------
-    shp_meta_dict : dictionary with keys:
-        layer = name of variable
-        type = type of data, vector or raster.
-        epsg = the epsg code of spatial reference system.
-        is_projected = is projection system, true or false.
-        feat_count = how many features within shapefile.
-    """
-    
-    # check if string, if not bail
-    if not isinstance(shp_path, str):
-        raise ValueError('> Shapefile path must be a string. Please check the file path.')
-
-    # check if shapefile exists
-    if not os.path.exists(shp_path):
-        raise OSError('> Unable to read shapefile, file not found. Please check the file path.')    
-
-    # init dict
-    shp_info_dict = {
-        'layer': os.path.basename(shp_path),
-        'type': 'vector',
-        'epsg': None,
-        'is_projected': 0,
-        'feat_count': 0
-    }
-    
-    try:
-        # read shapefile as layer
-        shp = ogr.Open(shp_path, 0)
-        lyr = shp.GetLayer()
-        
-        # add feat count
-        shp_info_dict['feat_count'] = lyr.GetFeatureCount()
-        
-        # get spatial ref
-        srs = lyr.GetSpatialRef()
-
-        # get epsg if exists
-        if srs and srs.GetAttrValue('AUTHORITY', 1):
-            shp_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
-            
-        # get is projected if exists
-        if srs and srs.IsProjected():
-            shp_info_dict['is_projected'] = srs.IsProjected()
-            
-        # drop variables
-        shp, lyr = None, None
-        
-    except Exception:
-        raise IOError('Unable to read shapefile: {0}. Please check.'.format(shp_path))    
-    
-    return shp_info_dict
-
-
-# move this to gdv_tools and update ref in validate input data func below
-def extract_rast_info(rast_path):
-    """
-    Read a raster (e.g. tif) and extract geo-transformation, coordinate 
-    system, projection type, size of dimensions (x and y), nodata value.
-
-    Parameters
-    ----------
-    rast_path: string
-        A single string with full path and filename of a raster.
-
-    Returns
-    ----------
-    rast_meta_dict : dictionary with keys:
-        layer = name of layer
-        type = type of data, vector or raster.
-        geo_trans = raster geotransformation info.
-        epsg = the epsg code of spatial reference system.
-        is_projected = is projection system, true or false.
-        x_dim = number of raster cells along x axis.
-        y_dim = number of raster cells along y axis.
-        nodata_val = no data value embedded in raster.
-    """
-    
-    # check if string, if not bail
-    if not isinstance(rast_path, str):
-        raise ValueError('> Raster path must be a string. Please check the file path.')
-
-    # check if raster exists
-    if not os.path.exists(rast_path):
-        raise OSError('> Unable to read raster, file not found. Please check the file path.')    
-
-    # init dict
-    rast_info_dict = {
-        'layer': os.path.basename(rast_path),
-        'type': 'raster',
-        'geo_tranform': None,
-        'x_dim': None,
-        'y_dim': None,
-        'epsg': None,
-        'is_projected': 0,
-        'nodata_val': None
-    }
-        
-    try:
-        # open raster
-        rast = gdal.Open(rast_path, 0)
-
-        # add transform, dims
-        rast_info_dict['geo_tranform'] = rast.GetGeoTransform()
-        rast_info_dict['x_dim'] = rast.RasterXSize
-        rast_info_dict['y_dim'] = rast.RasterYSize
-        rast_info_dict['nodata_val'] = rast.GetRasterBand(1).GetNoDataValue()
-
-        # get spatial ref
-        srs = rast.GetSpatialRef()
-
-        # get epsg if exists
-        if srs and srs.GetAttrValue('AUTHORITY', 1):
-            rast_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
-
-        # get is projected if exists
-        if srs and srs.IsProjected():
-            rast_info_dict['is_projected'] = srs.IsProjected()
-
-        # get nodata value if exists
-        if srs and srs.IsProjected():
-            rast_info_dict['is_projected'] = srs.IsProjected()    
-
-        # drop
-        rast = None
-
-    except Exception:
-        raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
-
-    return rast_info_dict
-   
-
-
-
-
-
-
-
-
-
-def get_dims_order_and_length(ds):
-    """
-    Read dataset and get order and length of x and y dimensions. 
-
-    Parameters
-    ----------
-    ds: xarray dataset
-        A dataset with x and y dimensions.
-
-    Returns
-    ----------
-    dims_order : list
-        A basic list with dataset's x and y ordering.
-    dims_length : list
-        A basic list with dims lengths in same order of dims_order
-    """
-    
-    # check if dataset type provided
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Provided dataset is not an xarray dataset type. Please check input.')
-        
-    # get data array dimensions
-    da_dims = ds.to_array().dims
-    
-    # get order and length based on index location
-    if da_dims.index('y') < da_dims.index('x'):
-        dims_order = ['y', 'x']
-        dims_length = [len(ds['y']), len(ds['x'])]
-        
-    elif da_dims.index('y') > da_dims.index('x'):
-        dims_order = ['x', 'y']
-        dims_length = [len(ds['x']), len(ds['y'])]
-        
-    else:
-        raise ValueError('Dimensions x and y ordering could not be determined.')
-        
-    # return
-    return dims_order, dims_length
-
-
-# delete this
-def get_mask_from_dataset(ds, nodata_value=-9999):
-    """
-    Read dataset and create mask from NoData values (-9999) within. Mask set to 1, NoData set to 0.
-
-    Parameters
-    ----------
-    ds : xarray dataset
-        A single xarray dataset with variables and x and y dims.
-    nodata_value : int or float
-        A int or float indicating the no dat avalue expected. Default is -9999.
-
-    Returns
-    ----------
-    mask : xarray data array
-        An xarray DataArray type. Contains just x and y dims, shape=(y, x).
-    """
-
-    # check if xarray dataset type
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Must provided an xarray dataset.')
-
-    # check if we have 3 dims
-    if not len(ds.to_array().shape) == 3:
-        raise ValueError('> Dataset does not have shape of 3 (vars, y, x).')
-
-    # check if x and y dims exist
-    if 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('> No x and/or y coordinate dimension in dataset.')
-
-    # check if variables exist
-    if len(ds) == 0:
-        raise ValueError('> Dataset has no variables (is empty).')
-        
-    # check if no data value is correct
-    if type(nodata_value) not in [int, float]:
-        raise TypeError('> NoData value is not an int or float.')
-
-    # convert to mask, 1 = presence, 0 = absence
-    mask = xr.where(ds != nodata_value, 1, 0).to_array(dim='mask').min('mask')
-
-    # check if any mask pixels (i.e. 1s) were returned
-    if not bool(mask.any()):
-        raise ValueError('> No mask pixels returned. Possibly empty/corrupt raster layer(s) used in input.')
-
-    # return
-    return mask
-    
-    
-
-
-
-
-
-
-     
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def split_train_test(df_records, test_ratio=0.1, shuffle=True, equalise_test_set=False):
-    """
-    Split dataframe dataframe into a training and testing set by a user-specified ratio.
-    The default is 10% of records set aside for testing.
+    Calculate variance inflaction factor scores and presents them. Categorical variables
+    are excluded.
+
+    How to interperate vif scores:
+        1 = No multicollinearity.
+        1 - 5 = Moderate multicollinearity.
+        > 5 = High multicollinearity.
+        > 10 = This predictor should be removed from the model.
 
     Parameters
     ----------
     df_records : pandas dataframe
-        A pandas dataframe type containing values extracted from env variables for 
-        presence and absence locations.
-    test_ratio : float
-        The ratio of samples that will be assigned as the test set e.g. 0.1 = 10% of 
-        samples. Default is 0.1 (10%.)
-    shuffle : bool
-        Shuffle the dataset randomly to reduce bias.
-    presence_only : bool
-        Limit test set to presence records only to presence like MaxEnt.
-    equalise_test_set : bool
-        Reduce number of absence records to meet same number of presence. Imbalance can
-        occur between presence and absence if large number of absence are generated prior.
-   
-    Returns
-    ----------
-    df_train : pandas dataframe
-        A pandas dataframe containing training set.
-    df_test : pandas dataframe
-        A pandas dataframe containing testing set.
+        A dataframe with rows (observations) and columns (continuous and categorical vars).
+    rast_cate_list : list or string 
+        A list or string of raster paths of continous and categorical layers.
     """
+    
+    # imports
+    from sklearn.linear_model import LinearRegression
 
-    # check if we have a numpy record array
+    # check dataframe
     if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Presence/absence dataframe is not a pandas dataframe type.')
-
-    # check test ratio is a float
-    if not isinstance(test_ratio, float):
-        raise TypeError('> Test ratio must be a float.')
-
-    # check test ratio is between 0 and 1
-    if test_ratio <= 0 or test_ratio >= 1:
-        raise ValueError('> Test ratio must be between 0 and 1.')
-        
-    # check shuffle
-    if not isinstance(shuffle, bool):
-        raise TypeError('> Shuffle is not a boolean (true or false).')
-        
-    # check shuffle
-    if not isinstance(equalise_test_set, bool):
-        raise TypeError('> Equalise test set is not a boolean (true or false).')
-    
-    # prepare stratify option - keeps testing 1s and 0s in proportion to full dataset
-    df_stratify = df_records['pres_abse']
-        
-    # split in to train and test, with ratio, and shuffle
-    df_train, df_test = train_test_split(df_records, test_size=test_ratio, shuffle=shuffle, stratify=df_stratify)
-    
-    # equalise records if requested (make num absence = num presence)
-    if equalise_test_set:
-        # slice test set into presence and absence sets
-        df_test_p = df_test[df_test['pres_abse'] == 1]
-        df_test_a = df_test[df_test['pres_abse'] == 0]
-
-        # reduce num absence recocrds if lower than presence
-        if (df_test_p.shape[0] < df_test_a.shape[0]):    
+        raise TypeError('Presence-absence data is not a dataframe type.')
+    elif df_records.shape[0] == 0 or df_records.shape[1] == 0:
+        raise ValueError('Presence-absence dataframe has rows and/or columns.')
+    elif 'pres_abse' not in df_records:
+         raise ValueError('> No pres_abse column exists in dataframe.')
             
-            # sample randomly to match presence num
-            df_test_a_sample = df_test_a.sample(n=df_test_p.shape[0])
-            
-            # get absence records that were not sampled
-            df_merged = df_test_a.merge(df_test_a_sample, how='left', indicator=True)
-            df_merged = df_merged.query('_merge == "left_only"').drop(['_merge'], axis=1)
-            
-            # append omitted absence records back on to train set
-            df_train.append(df_merged, ignore_index=True)
-                        
-            # merge test presence and absence subset records together
-            df_test = df_test_p.append(df_test_a, ignore_index=True)
-            
-    return df_train, df_test
+    # check raster categorical list
+    if rast_cate_list is None:
+        rast_cate_list = []
+    if not isinstance(rast_cate_list, (list, str)):
+        raise TypeError('Raster categorical filepath list must be a list or single string.')
 
+    # select presence records only
+    df_presence = df_records.loc[df_records['pres_abse'] == 1]
 
-def split_y_x(df_records, y_column='pres_abse'):
-    """
-    Read dataset and split into response (pres_abse values) and predictor (env raster values) 
-    variables. Required for ExtraTrees/RandomForest regression.
+    # check if any rows came back, if so, drop pres_abse column
+    if df_presence.shape[0] != 0:
+        df_presence = df_presence.drop(columns='pres_abse')
+    else:
+        raise ValueError('No presence records exist in pandas dataframe.')
 
-    Parameters
-    ----------
-    df_records: pandas dataframe
-        A single dataframe with variable names and values extracted from raster.
-    y_column: string
-        The name of the column that holds presence and absence binary values (1s and 0s). 
-        Default is pres_abse.
-
-    Returns
-    ----------
-    np_y :numpy array
-        A numpy array with binary 1s and 0s of species presence.
-    np_x : numpy array
-        A numpy array with env variable values.
-    """
-    
-    # check for records array
-    if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Presence/absence dataframe is not a pandas dataframe.')
-
-    # check if response label is string
-    if not isinstance(y_column, str):
-        raise TypeError('> Response (y) column name must be a string.')
-
-    # check if response column name is in array
-    if y_column not in df_records:
-        raise ValueError('> There is no column called {0} in dataframe.'.format(y_column))
+    # iterate categorical names, drop if any exist, ignore if error
+    for rast_path in rast_cate_list:
+        cate_name = os.path.basename(rast_path)
+        cate_name = os.path.splitext(cate_name)[0]
+        df_presence = df_presence.drop(columns=cate_name, errors='ignore')
 
     try:
-        # get response (y) and predictors (x) as numpy arrays
-        np_y = np.array(df_records[y_column].astype('int8'))
-        np_x = np.array(df_records.drop(columns=y_column, errors='ignore'))
+        # create empty dataframe
+        df_vif_scores = pd.DataFrame(columns=['Variable', 'VIF Score'])
+
+        # init a lin reg model
+        linear_model = LinearRegression()
+
+        # loop
+        for col in df_presence.columns:
+
+            # get response and predictors
+            y = np.array(df_presence[col])
+            x = np.array(df_presence.drop(columns=col, errors='ignore'))
+
+            # fit lin reg model and predict
+            linear_model.fit(x, y)
+            preds = linear_model.predict(x)
+
+            # calculate to coeff of determination
+            ss_tot = sum((y - np.mean(y))**2)
+            ss_res = sum((y - preds)**2)
+            r2 = 1 - (ss_res / ss_tot)
+
+            # set r2 == 1 to 0.9999 in order to prevent % by 0 error
+            if r2 == 1:
+                r2 = 0.9999
+
+            # calculate vif 
+            vif = 1 / (1 - r2)
+            vif = vif.round(3)
+
+            # add to dataframe
+            vif_dict = {'Variable': str(col), 'VIF Score': vif}
+            df_vif_scores = df_vif_scores.append(vif_dict, ignore_index=True) 
 
     except:
-        raise ValueError('> Could not seperate response from predictors.')
+        raise ValueError('Could not generate and show vif results.')
 
-    return np_y, np_x
+    # check if vif results exist, print if so
+    if len(df_vif_scores) > 0:
+        print('- ' * 30)
+        print(df_vif_scores.sort_values(by='VIF Score', ascending=True))
+        print('- ' * 30)
+        print('')
 
 
 def create_estimator(estimator_type='rf', n_estimators=100, criterion='gini', max_depth=None, min_samples_split=2,
@@ -953,91 +646,59 @@ def create_estimator(estimator_type='rf', n_estimators=100, criterion='gini', ma
     estimator : sklearn estimator object
         An estimator object.
     """
+    
+    # imports
+    from sklearn.ensemble import ExtraTreesClassifier as et
+    from sklearn.ensemble import RandomForestClassifier as rt
         
     # notify
     print('Creating species distribution model estimator.')
     
-    # check estimator type
+    # check parameters
     if estimator_type not in ['rf', 'et']:
-        raise ValueError('> Estimator type must be of type rf or et.')
-        
-    # check if num estimators (no nones)
-    if not isinstance(n_estimators, int) or n_estimators <= 0:
-        raise ValueError('> Num of estimators must be > 0.')
-        
-    # check criterion
-    if criterion not in ['gini', 'entropy']:
-        raise ValueError('> Criterion must be of type gini or entropy.')
-        
-    # check max depth (none allowed)
-    if (isinstance(max_depth, int) and max_depth <= 0) or isinstance(max_depth, (str, float)):
-        raise ValueError('> Max depth must be empty or > 0.')
-
-    # check min num samples split (no nones)
-    if not isinstance(min_samples_split, (int, float)) or min_samples_split <= 0:
-        raise ValueError('> Min sample split must be numeric and > 0.')
-        
-    # check min num samples leaf (no nones)
-    if not isinstance(min_samples_leaf, (int, float)) or min_samples_leaf <= 0:
-        raise ValueError('> Min samples at leaf node must be numeric and > 0.')
-        
-    # check min weight fraction leaf (no nones)
-    if not isinstance(min_weight_fraction_leaf, float) or min_weight_fraction_leaf < 0.0:
-        raise ValueError('> Min weight fraction at leaf node must be numeric and >= 0.0.')
-        
-    # check max features (nones allowed)
-    if max_features not in ['auto', 'sqrt', 'log2', None]:
-        raise ValueError('> Max features must be an empty or either: auto, sqrt, log2.')
-        
-    # check max leaf nodes (none allowed)
-    if (isinstance(max_leaf_nodes, int) and max_leaf_nodes <= 0) or isinstance(max_leaf_nodes, (str, float)):
+        raise ValueError('Estimator type must be of type rf or et.')
+    elif not isinstance(n_estimators, int) or n_estimators <= 0:
+        raise ValueError('Num of estimators must be > 0.')
+    elif criterion not in ['gini', 'entropy']:
+        raise ValueError('Criterion must be of type gini or entropy.')
+    elif (isinstance(max_depth, int) and max_depth <= 0) or isinstance(max_depth, (str, float)):
+        raise ValueError('Max depth must be empty or > 0.')
+    elif not isinstance(min_samples_split, (int, float)) or min_samples_split <= 0:
+        raise ValueError('Min sample split must be numeric and > 0.')
+    elif not isinstance(min_samples_leaf, (int, float)) or min_samples_leaf <= 0:
+        raise ValueError('Min samples at leaf node must be numeric and > 0.')
+    elif not isinstance(min_weight_fraction_leaf, float) or min_weight_fraction_leaf < 0.0:
+        raise ValueError('Min weight fraction at leaf node must be numeric and >= 0.0.')
+    elif max_features not in ['auto', 'sqrt', 'log2', None]:
+        raise ValueError('Max features must be an empty or either: auto, sqrt, log2.')
+    elif (isinstance(max_leaf_nodes, int) and max_leaf_nodes <= 0) or isinstance(max_leaf_nodes, (str, float)):
         raise ValueError('> Max leaf nodes must be empty or > 0.')
-        
-    # check min impurity decrease
-    if not isinstance(min_impurity_decrease, float) or min_impurity_decrease < 0.0:
+    elif not isinstance(min_impurity_decrease, float) or min_impurity_decrease < 0.0:
         raise ValueError('> Min impurity decrease must be a float and >= 0.0.')    
-                
-    # check bootstrap
-    if not isinstance(bootstrap, bool):
+    elif not isinstance(bootstrap, bool):
         raise ValueError('> Boostrap must be boolean.')
-        
-    # check oob score
-    if not isinstance(oob_score, bool):
+    elif not isinstance(oob_score, bool):
         raise ValueError('> OOB score must be boolean.')    
-        
-    # check num jobs (none allowed)
-    if (isinstance(n_jobs, int) and n_jobs < -1) or isinstance(n_jobs, (str, float)):
+    elif (isinstance(n_jobs, int) and n_jobs < -1) or isinstance(n_jobs, (str, float)):
         raise ValueError('> Num jobs must be > -1.')
-        
-    # check random state (none allowed)
-    if (isinstance(random_state, int) and random_state <= 0) or isinstance(random_state, (str, float)):
+    elif (isinstance(random_state, int) and random_state <= 0) or isinstance(random_state, (str, float)):
         raise ValueError('> Random state must be empty or > 0.')    
-
-    # check verbose (no none)
-    if not isinstance(verbose, int) or verbose < 0:
+    elif not isinstance(verbose, int) or verbose < 0:
         raise ValueError('> Verbose >= 0.')
-        
-    # check warm start
-    if not isinstance(warm_start, bool):
+    elif not isinstance(warm_start, bool):
         raise ValueError('> Warm start must be boolean.')
-        
-    # check class weight (nones allowed)
-    if class_weight not in ['balanced', 'balanced_subsample', None]:
+    elif class_weight not in ['balanced', 'balanced_subsample', None]:
         raise ValueError('> Class weight must be an empty or either: balanced or balanced_subsample.')
-        
-    # check ccp alpha (no nones)
-    if not isinstance(ccp_alpha, float) or ccp_alpha < 0.0:
+    elif not isinstance(ccp_alpha, float) or ccp_alpha < 0.0:
         raise ValueError('> CCP Alpha must be a float and >= 0.0.')
-    
-    # check max samples (none allowed)
-    if (isinstance(max_samples, (int, float)) and max_samples <= 0) or isinstance(max_samples, (str)):
+    elif (isinstance(max_samples, (int, float)) and max_samples <= 0) or isinstance(max_samples, (str)):
         raise ValueError('> Max samples state must be empty or > 0.')
                
     # set estimator type
     try:
         estimator = None
         if estimator_type == 'rf':
-            print('> Setting up estimator for Random Forest.')
+            print('Setting up estimator for Random Forest.')
             estimator = rt(n_estimators=n_estimators, criterion=criterion, max_depth=max_depth, 
                            min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, 
                            min_weight_fraction_leaf=min_weight_fraction_leaf, max_features=max_features,
@@ -1046,7 +707,7 @@ def create_estimator(estimator_type='rf', n_estimators=100, criterion='gini', ma
                            verbose=verbose, warm_start=warm_start, class_weight=class_weight, 
                            ccp_alpha=ccp_alpha, max_samples=max_samples)
         elif estimator_type == 'et': 
-            print('> Setting up estimator for Extra Trees.')
+            print('Setting up estimator for Extra Trees.')
             estimator = et(n_estimators=n_estimators, criterion=criterion, max_depth=max_depth, 
                            min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, 
                            min_weight_fraction_leaf=min_weight_fraction_leaf, max_features=max_features,
@@ -1055,18 +716,59 @@ def create_estimator(estimator_type='rf', n_estimators=100, criterion='gini', ma
                            verbose=verbose, warm_start=warm_start, class_weight=class_weight, 
                            ccp_alpha=ccp_alpha, max_samples=max_samples)
         else:
-            raise ValueError('> Selected estimator type does not exist. Please use Random Forest or Extra Trees.')
+            raise ValueError('Selected estimator type does not exist. Please use Random Forest or Extra Trees.')
             
     except:
-        raise ValueError('> Could not create estimator. Is sklearn version correct?')
+        raise ValueError('Could not create estimator. Is sklearn version correct?')
         
     # notify user and return
-    print('> Estimator created successfully.')
+    print('Estimator created successfully.')
     return estimator
 
 
-def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, replicates=5, test_ratio=0.1, equalise_test_set=False, 
-                 shuffle_split=True, calc_accuracy_stats=False, nodata_value=-9999):
+def get_dims_order_and_length(ds):
+    """
+    Read dataset and get order and length of x and y dimensions. 
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A dataset with x and y dimensions.
+
+    Returns
+    ----------
+    dims_order : list
+        A basic list with dataset's x and y ordering.
+    dims_length : list
+        A basic list with dims lengths in same order of dims_order
+    """
+    
+    # check if dataset type provided
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Provided dataset is not an xarray dataset type. Please check input.')
+        
+    # get data array dimensions
+    da_dims = ds.to_array().dims
+    
+    # get order and length based on index location
+    if da_dims.index('y') < da_dims.index('x'):
+        dims_order = ['y', 'x']
+        dims_length = [len(ds['y']), len(ds['x'])]
+        
+    elif da_dims.index('y') > da_dims.index('x'):
+        dims_order = ['x', 'y']
+        dims_length = [len(ds['x']), len(ds['y'])]
+        
+    else:
+        raise ValueError('Dimensions x and y ordering could not be determined.')
+        
+    # return
+    return dims_order, dims_length
+
+
+def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, 
+                 replicates=5, test_ratio=0.1, equalise_test_set=False, 
+                 shuffle_split=True, calc_accuracy_stats=False):
     """
     Generate a species distribution model (SDM) for given estimator and provided species occurrence
     points. Numerous parameters can be set to get more out of your data - see parameters below. Two or more
@@ -1100,79 +802,62 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
         Numerous accuracy metrics can be generated for each SDM and presented if set to True. These
         metrics include response curves, general classification and probability accuracy, and 
         others.
-    nodata_value : int or float,   
-        The NoData value in the dataset. Default is -9999.
 
     Returns
     ----------
     df_result : xarray dataset
         A dataset with four variables - SDM mean, median, standard dev., variance.
     """
+    
+    # imports
+    from sklearn.metrics import accuracy_score
 
     # notify user
     print('Beginning species distribution modelling (SDM) process.')
 
-    # check if dataset type provided
+    # check datasets
     if not isinstance(ds, xr.Dataset):
-        raise TypeError('> Provided dataset is not an xarray dataset type. Please check input.')
-
-    # check for records array
-    if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Presence/absence data array is not a pandas data frame.')
-
-    # check if estimator provided
-    if estimator == None:
-        raise ValueError('> No estimator provided. Please create an estimator first.')
+        raise TypeError('Provided dataset is not an xarray dataset type. Please check input.')
+    elif not isinstance(df_records, pd.DataFrame):
+        raise TypeError('Presence/absence data array is not a pandas data frame.')
+    elif estimator == None:
+        raise ValueError('No estimator provided. Please create an estimator first.')
         
-    # check continous is list
+    # check rast cont list
+    if rast_cont_list is None:
+        rast_cont_list = []
     if not isinstance(rast_cont_list, list):
-        raise TypeError('> Raster continuous paths is not a list.')
-        
-    # check continous is list
+        raise TypeError('Raster continuous paths is not a list.')
+    
+    # check rast cate list
+    if rast_cate_list is None:
+        rast_cate_list = []
     if not isinstance(rast_cate_list, list):
-        raise TypeError('> Raster categorical paths is not a list.')
+        raise TypeError('Raster categorical paths is not a list.')        
 
     # check if valid estimator
     allowed_estimators = ['RandomForestClassifier()', 'ExtraTreeClassifier()', 'DecisionTreeClassifier()']
     if str(estimator.base_estimator) not in allowed_estimators:
-        raise TypeError('> Estimator must be a RandomForestClassifier or ExtraTreeClassifier.')
+        raise TypeError('Estimator must be a RandomForestClassifier or ExtraTreeClassifier.')
 
-    # check test ratio is a float
+    # check parameters
     if not isinstance(test_ratio, float):
-        raise TypeError('> Test ratio must be a float.')
-
-    # check test ratio is between 0 and 1
-    if test_ratio <= 0 or test_ratio >= 1:
-        raise ValueError('> Test ratio must be between 0 and 1.')
-
-    # check number of replicates (model iterations)
-    if not isinstance(replicates, int):
-        raise TypeError('> Replicates must be an integer.')
-
-    # check if replicates <= 1
-    if not replicates > 1:
-        raise ValueError('> Replicates must be greater than 1.')
-
-    # check if raster list is a list type
-    if not isinstance(rast_cate_list, list):
-        raise TypeError('> Raster categorical list is not a list.')
-
-    # check shuffle split
-    if not isinstance(shuffle_split, bool):
-        raise TypeError('> Shuffle split is not a boolean, must be True or False.')
-
-    # check calc response curves type
-    if not isinstance(calc_accuracy_stats, bool):
-        raise TypeError('> Calculate accuracy statistics is not boolean, must be True or False.')
-
-    # check nodata value
-    if not isinstance(nodata_value, (int, float)):
-        raise TypeError('> NoData value must be integer or float.')
+        raise TypeError('Test ratio must be a float.')
+    elif test_ratio <= 0 or test_ratio >= 1:
+        raise ValueError('Test ratio must be between 0 and 1.')
+    elif not isinstance(replicates, int):
+        raise TypeError('Replicates must be an integer.')
+    elif not replicates > 1:
+        raise ValueError('Replicates must be greater than 1.')
+    elif not isinstance(rast_cate_list, list):
+        raise TypeError('Raster categorical list is not a list.')
+    elif not isinstance(shuffle_split, bool):
+        raise TypeError('Shuffle split is not a boolean, must be True or False.')
+    elif not isinstance(calc_accuracy_stats, bool):
+        raise TypeError('Calculate accuracy statistics is not boolean, must be True or False.')
+    elif not isinstance(equalise_test_set, bool):
+        raise TypeError('Equalise test set value must be boolean (true or false).')          
         
-    # check equalise value
-    if not isinstance(equalise_test_set, bool):
-        raise TypeError('> Equalise test set value must be boolean (true or false).')  
-
     # get dim order and sizes, create empty ds, stack original ds
     dims_order, dims_length = get_dims_order_and_length(ds)
     ds_result = xr.zeros_like(ds).drop(list(ds.data_vars))
@@ -1185,16 +870,21 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
         result_dict_list = []
 
         # generate lek matrices for response curves
-        cont_matrices, cate_matrices = create_lek_matrices(df_records, rast_cate_list)
+        cont_matrices, cate_matrices = create_lek_matrices(df_records=df_records, 
+                                                           rast_cate_list=rast_cate_list,
+                                                           nodata_value=ds.nodatavals)
 
     # perform sdm for n replications
     for i in range(replicates):
 
         # notify
-        print('> Generating SDM replicate: {0} of {1}.'.format(i + 1, replicates))
+        print('Generating SDM replicate: {0} of {1}.'.format(i + 1, replicates))
 
         # split data in to train/test and x and y (predictors and response) sets 
-        df_train, df_test = split_train_test(df_records, test_ratio, shuffle=shuffle_split, equalise_test_set=equalise_test_set)
+        df_train, df_test = split_train_test(df_records=df_records, 
+                                             test_ratio=test_ratio, 
+                                             shuffle=shuffle_split, 
+                                             equalise_test_set=equalise_test_set)
         
         # further split train and test data into x and y (predictors and response) sets         
         np_train_y, np_train_x = split_y_x(df_train)
@@ -1257,7 +947,7 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
             result_dict_list.append(result_dict)
 
     # notify
-    print('> SDM processing completed. Getting outputs in order.')
+    print('SDM processing completed. Getting outputs in order.')
 
     # unstack dataset
     ds = ds.unstack()
@@ -1266,7 +956,7 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
     if calc_accuracy_stats:
         try:
             # notify
-            print('> User requested accuracy results. Preparing accuracy information.')
+            print('Preparing accuracy information.')
 
             # get all variable names
             all_var_names = list(ds.data_vars)
@@ -1317,7 +1007,7 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
         
         except Exception as e:
             print(e) # todo remove
-            print('> Could not generate accuracy measurements. Aborting.')
+            print('Could not generate accuracy measurements. Aborting.')
 
         # plot continuous responses
         cont_responses = np.array([d.get('cont_probs') for d in result_dict_list])
@@ -1370,8 +1060,9 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
         else:
             print('> Not enough information to plot categorical response curves.')
 
-    # mask create mask, replace with nan. replace 0 with very low 0 so not masked out
-    da_mask = get_mask_from_dataset(ds, nodata_value=nodata_value)
+    # create mask, replace with nan. replace 0 with very low 0 so not masked out   
+    da_mask = xr.where(ds != ds.nodatavals, 1, 0)
+    da_mask = da_mask.to_array(dim='mask').min('mask')
     ds_result = ds_result.where(da_mask, np.nan)
     ds_result = ds_result.where(ds_result != 0, 0.00001)  
     del da_mask
@@ -1385,11 +1076,126 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, repl
     ])
 
     # notify and return
-    print('> SDM process completed successfully.')
+    print('SDM process completed successfully.')
     return ds_result
 
 
-def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', nodata_value=-9999):
+def split_train_test(df_records, test_ratio=0.1, shuffle=True, equalise_test_set=False):
+    """
+    Split dataframe dataframe into a training and testing set by a user-specified ratio.
+    The default is 10% of records set aside for testing.
+
+    Parameters
+    ----------
+    df_records : pandas dataframe
+        A pandas dataframe type containing values extracted from env variables for 
+        presence and absence locations.
+    test_ratio : float
+        The ratio of samples that will be assigned as the test set e.g. 0.1 = 10% of 
+        samples. Default is 0.1 (10%.)
+    shuffle : bool
+        Shuffle the dataset randomly to reduce bias.
+    presence_only : bool
+        Limit test set to presence records only to presence like MaxEnt.
+    equalise_test_set : bool
+        Reduce number of absence records to meet same number of presence. Imbalance can
+        occur between presence and absence if large number of absence are generated prior.
+   
+    Returns
+    ----------
+    df_train : pandas dataframe
+        A pandas dataframe containing training set.
+    df_test : pandas dataframe
+        A pandas dataframe containing testing set.
+    """
+    
+    # imports
+    from sklearn.model_selection import train_test_split
+
+    # check if we have a numpy record array
+    if not isinstance(df_records, pd.DataFrame):
+        raise TypeError('Presence/absence dataframe is not a pandas dataframe type.')
+    elif not isinstance(test_ratio, float):
+        raise TypeError('Test ratio must be a float.')
+    elif test_ratio <= 0 or test_ratio >= 1:
+        raise ValueError('Test ratio must be between 0 and 1.')
+
+    
+    # prepare stratify option - keeps testing 1s and 0s in proportion to full dataset
+    df_stratify = df_records['pres_abse']
+        
+    # split in to train and test, with ratio, and shuffle
+    df_train, df_test = train_test_split(df_records, 
+                                         test_size=test_ratio, 
+                                         shuffle=shuffle, 
+                                         stratify=df_stratify)
+    
+    # equalise records if requested (make num absence = num presence)
+    if equalise_test_set:
+        # slice test set into presence and absence sets
+        df_test_p = df_test[df_test['pres_abse'] == 1]
+        df_test_a = df_test[df_test['pres_abse'] == 0]
+
+        # reduce num absence recocrds if lower than presence
+        if (df_test_p.shape[0] < df_test_a.shape[0]):    
+            
+            # sample randomly to match presence num
+            df_test_a_sample = df_test_a.sample(n=df_test_p.shape[0])
+            
+            # get absence records that were not sampled
+            df_merged = df_test_a.merge(df_test_a_sample, how='left', indicator=True)
+            df_merged = df_merged.query('_merge == "left_only"').drop(['_merge'], axis=1)
+            
+            # append omitted absence records back on to train set
+            df_train.append(df_merged, ignore_index=True)
+                        
+            # merge test presence and absence subset records together
+            df_test = df_test_p.append(df_test_a, ignore_index=True)
+            
+    return df_train, df_test
+
+
+def split_y_x(df_records, y_column='pres_abse'):
+    """
+    Read dataset and split into response (pres_abse values) and predictor (env raster values) 
+    variables. Required for ExtraTrees/RandomForest regression.
+
+    Parameters
+    ----------
+    df_records: pandas dataframe
+        A single dataframe with variable names and values extracted from raster.
+    y_column: string
+        The name of the column that holds presence and absence binary values (1s and 0s). 
+        Default is pres_abse.
+
+    Returns
+    ----------
+    np_y :numpy array
+        A numpy array with binary 1s and 0s of species presence.
+    np_x : numpy array
+        A numpy array with env variable values.
+    """
+    
+    # check for records array
+    if not isinstance(df_records, pd.DataFrame):
+        raise TypeError('Presence/absence dataframe is not a pandas dataframe.')
+    elif not isinstance(y_column, str):
+        raise TypeError('Response (y) column name must be a string.')
+    elif y_column not in df_records:
+        raise ValueError('There is no column called {0} in dataframe.'.format(y_column))
+
+    try:
+        # get response (y) and predictors (x) as numpy arrays
+        np_y = np.array(df_records[y_column].astype('int8'))
+        np_x = np.array(df_records.drop(columns=y_column, errors='ignore'))
+
+    except:
+        raise ValueError('Could not seperate response from predictors.')
+
+    return np_y, np_x
+
+
+def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', nodata_value=-999):
     """
     Builds lek matrices required to generate response curves. Based on Lek et al. 1995, 1996. 
     Original code was implemented in paper Roberts et al. (2020). Sensitivity Analysis of the 
@@ -1417,19 +1223,13 @@ def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', noda
         
     # check if df records is pandas dataframe
     if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Records are not in pandas dataframe type.')
-
-    # check if raster list is a list type
-    if not isinstance(rast_cate_list, list):
-        raise TypeError('> Raster categorical list is not a list.')
-
-    # check if nodata value is numeric
-    if not isinstance(remove_col, (str)):
-        raise TypeError('> Remove column value is not a string.')
-
-    # check if nodata value is numeric
-    if not isinstance(nodata_value, (int, float)):
-        raise TypeError('> NoData value is not a number.')
+        raise TypeError('Records are not in pandas dataframe type.')
+    elif not isinstance(rast_cate_list, list):
+        raise TypeError('Raster categorical list is not a list.')
+    elif not isinstance(remove_col, (str)):
+        raise TypeError('Remove column value is not a string.')
+    elif not isinstance(nodata_value, (int, float)):
+        raise TypeError('NoData value is not a number.')
 
     # drop presence/absence column, get col names, and num cols
     df_vars = df_records.drop(columns=remove_col, errors='ignore')
@@ -1558,108 +1358,11 @@ def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', noda
             cont_matrices.append(matrix.T)
     
     except:
-        print('> Error occurred during lek matrix creation. Aborting.')
+        print('Error occurred during lek matrix creation. Aborting.')
         return [], []
 
     # return
     return cont_matrices, cate_matrices
-
-    
-
-
-def generate_vif_scores(df_records, rast_cate_list):
-    """
-    Calculate variance inflaction factor scores and presents them. Categorical variables
-    are excluded.
-
-    How to interperate vif scores:
-        1 = No multicollinearity.
-        1 - 5 = Moderate multicollinearity.
-        > 5 = High multicollinearity.
-        > 10 = This predictor should be removed from the model.
-
-    Parameters
-    ----------
-    df_records : pandas dataframe
-        A dataframe with rows (observations) and columns (continuous and categorical vars).
-    rast_cate_list : list or string 
-        A list or string of raster paths of continous and categorical layers.
-    """
-
-    # check if presence is numpy rec array
-    if not isinstance(df_records, pd.DataFrame):
-        raise TypeError('> Presence-absence data is not a pandas dataframe type.')
-
-    # check if any cols are in dataframe
-    if df_records.shape[0] == 0 or df_records.shape[1] == 0:
-        raise ValueError('> Presence-absence pandas dataframe has rows and/or columns.')
-
-    # check if pres_abse column in dataframe
-    if 'pres_abse' not in df_records:
-         raise ValueError('> No pres_abse column exists in pandas dataframe.')
-
-    if not isinstance(rast_cate_list, (list, str)):
-        raise TypeError('Raster categorical filepath list must be a list or single string.')
-
-    # select presence records only
-    df_presence = df_records.loc[df_records['pres_abse'] == 1]
-
-    # check if any rows came back, if so, drop pres_abse column
-    if df_presence.shape[0] != 0:
-        df_presence = df_presence.drop(columns='pres_abse')
-    else:
-        raise ValueError('> No presence records exist in pandas dataframe.')
-
-    # iterate categorical names, drop if any exist, ignore if error
-    for rast_path in rast_cate_list:
-        cate_name = os.path.basename(rast_path)
-        cate_name = os.path.splitext(cate_name)[0]
-        df_presence = df_presence.drop(columns=cate_name, errors='ignore')
-
-    try:
-        # create empty dataframe
-        df_vif_scores = pd.DataFrame(columns=['Variable', 'VIF Score'])
-
-        # init a lin reg model
-        linear_model = LinearRegression()
-
-        # loop
-        for col in df_presence.columns:
-
-            # get response and predictors
-            y = np.array(df_presence[col])
-            x = np.array(df_presence.drop(columns=col, errors='ignore'))
-
-            # fit lin reg model and predict
-            linear_model.fit(x, y)
-            preds = linear_model.predict(x)
-
-            # calculate to coeff of determination
-            ss_tot = sum((y - np.mean(y))**2)
-            ss_res = sum((y - preds)**2)
-            r2 = 1 - (ss_res / ss_tot)
-
-            # set r2 == 1 to 0.9999 in order to prevent % by 0 error
-            if r2 == 1:
-                r2 = 0.9999
-
-            # calculate vif 
-            vif = 1 / (1 - r2)
-            vif = vif.round(3)
-
-            # add to dataframe
-            vif_dict = {'Variable': str(col), 'VIF Score': vif}
-            df_vif_scores = df_vif_scores.append(vif_dict, ignore_index=True) 
-
-    except:
-        raise ValueError('> Could not generate and show vif results.')
-
-    # check if vif results exist, print if so
-    if len(df_vif_scores) > 0:
-        print('- ' * 30)
-        print(df_vif_scores.sort_values(by='VIF Score', ascending=True))
-        print('- ' * 30)
-        print('')        
 
         
 def plot_mvi_scores(var_names, np_vis):
@@ -1674,21 +1377,15 @@ def plot_mvi_scores(var_names, np_vis):
         A array of importance scores from modelling.
     """
 
-    # check var names list
+    # checks
     if not isinstance(var_names, list):
-        raise TypeError('> The var names variable is not a list.')
-
-    # check var names is not empty
-    if not var_names:
-        raise TypeError('> The var names variable is empty.')
-
-    # check vi scores array
-    if not isinstance(np_vis, np.ndarray):
-        raise TypeError('> The vi scores is not a numpy array.')
-
-    # check vi scores dimensionality
-    if np_vis.shape[0] <= 1:
-        raise TypeError('> The vi scores variable must have more than 1 model iteration.')    
+        raise TypeError('The var names variable is not a list.')
+    elif not var_names:
+        raise TypeError('The var names variable is empty.')
+    elif not isinstance(np_vis, np.ndarray):
+        raise TypeError('The vi scores is not a numpy array.')
+    elif np_vis.shape[0] <= 1:
+        raise TypeError('The vi scores variable must have more than 1 model iteration.')    
 
     # get mean vi scores
     np_vis_mean = np.mean(np_vis, axis=0)
@@ -1720,9 +1417,7 @@ def plot_training_oob_accuracy(np_train_accuracy):
     # check train accuracy array
     if not isinstance(np_train_accuracy, np.ndarray):
         raise TypeError('> The training accuracy is not a numpy array.')
-
-    # check vi scores dimensionality
-    if np_train_accuracy.shape[0] <= 1:
+    elif np_train_accuracy.shape[0] <= 1:
         raise TypeError('> The training accuracy variable must have more than 1 model iteration.')    
 
     # get mean train accuracy
@@ -1763,32 +1458,31 @@ def generate_roc_curve(y_true, y_prob, num_retain=101):
         fpr and tpr.
     """
     
+    #imports 
+    from sklearn.metrics import roc_curve
+    
     # check y_true type
     if not isinstance(y_true, np.ndarray):
-        raise TypeError('> The y true values are not of type numpy array.')
-        
-    # check y_score type
-    if not isinstance(y_prob, np.ndarray):
-        raise TypeError('> The y score values are not of type numpy array.')
-        
-    # check dimensionality
-    if y_true.ndim  != 1 and y_prob.ndim  != 1:
-        raise ValueError('> The y true and/or y score arrays are not 1-dimensional.')
+        raise TypeError('The y true values are not of type numpy array.')
+    elif not isinstance(y_prob, np.ndarray):
+        raise TypeError('The y score values are not of type numpy array.')
+    elif y_true.ndim  != 1 and y_prob.ndim  != 1:
+        raise ValueError('The y true and/or y score arrays are not 1-dimensional.')
                
     try:
         # generate roc curve
         np_fpr, np_tpr, np_thresholds = roc_curve(y_true, y_prob)
         
     except:
-        raise ValueError('> Could not calculate roc curve.')
+        raise ValueError('Could not calculate roc curve.')
         
     # check if anything came out
     if len(np_fpr) == 0 or len(np_tpr) == 0 or len(np_thresholds) == 0:
-        raise ValueError('> Nothing came out of roc curve.')
+        raise ValueError('Nothing came out of roc curve.')
         
     # check if lengths are equal
     if np_fpr.shape[0] != np_tpr.shape[0]:
-        raise ValueError('> The fpr and tpr arrays are not equal in size.')
+        raise ValueError('The fpr and tpr arrays are not equal in size.')
         
     # create new range of values for x
     np_fpr_out = np.linspace(0, 1.0, num_retain)
@@ -1812,20 +1506,14 @@ def plot_roc_curve(np_fpr, np_tpr):
         A array of arrays holding tpr values of multiple model runs.
     """
     
-    # check fpr array
+    # checks
     if not isinstance(np_fpr, np.ndarray):
         raise TypeError('> The fpr variable is not a numpy array.')
-        
-    # check tpr array
-    if not isinstance(np_tpr, np.ndarray):
+    elif not isinstance(np_tpr, np.ndarray):
         raise TypeError('> The tpr variable is not a numpy array.')
-        
-    # check fpr dimensionality
-    if np_fpr.shape[0] <= 1:
+    elif np_fpr.shape[0] <= 1:
         raise TypeError('> The fpr variable must have more than 1 model iteration.')    
-        
-    # check tpr dimensionality
-    if np_tpr.shape[0] <= 1:
+    elif np_tpr.shape[0] <= 1:
         raise TypeError('> The tpr variable must have more than 1 model iteration.')
         
     # set up broad figure and plot
@@ -1896,40 +1584,36 @@ def calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred):
         A array holding predictions of multiple model runs.  
     """
     
-    # check if y true is instance of numpy array
+    #imports
+    from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import average_precision_score
+    from sklearn.metrics import brier_score_loss
+    from sklearn.metrics import log_loss
+    from sklearn.metrics import f1_score
+    from sklearn.metrics import matthews_corrcoef
+    from sklearn.metrics import normalized_mutual_info_score
+    from sklearn.metrics import cohen_kappa_score
+    from scipy.stats import pointbiserialr
+    
+    
+    # checks
     if not isinstance(np_y_true, np.ndarray):
         raise ValueError('> The response labels are not a numpy array.')
-
-    # check if y prob is instance of numpy array
-    if not isinstance(np_y_prob, np.ndarray):
+    elif not isinstance(np_y_prob, np.ndarray):
         raise ValueError('> The response probabilities are not a numpy array.')
-
-    # check if y pred is instance of numpy array
-    if not isinstance(np_y_pred, np.ndarray):
+    elif not isinstance(np_y_pred, np.ndarray):
         raise ValueError('> The response predictions are not a numpy array.')
-
-    # check if y true is 1d
-    if np_y_true.ndim != 1:
+    elif np_y_true.ndim != 1:
         raise ValueError('> The response labels are not 1-dimensional.')
-
-    # check if y prob is 1d
-    if np_y_prob.ndim != 1:
+    elif np_y_prob.ndim != 1:
         raise ValueError('> The response probabilities are not 1-dimensional.')
-
-    # check if y true is 1d
-    if np_y_pred.ndim != 1:
+    elif np_y_pred.ndim != 1:
         raise ValueError('> The response predictions are not 1-dimensional.')
-
-    # check if all arrays are same size
-    if np_y_true.size != np_y_pred.size and np_y_prob != np_y_pred:
+    elif np_y_true.size != np_y_pred.size and np_y_prob != np_y_pred:
         raise ValueError('> The arrays do not have the same sizes.')
-
-    # check if y true values are 1 or 0
-    if np.min(np_y_true) != 0 or np.max(np_y_true) != 1:
+    elif np.min(np_y_true) != 0 or np.max(np_y_true) != 1:
         raise ValueError('> The response labels are not binary 0 and 1.')
-
-    # check if y preds values are 1 or 0
-    if np.min(np_y_pred) != 0 or np.max(np_y_pred) != 1:
+    elif np.min(np_y_pred) != 0 or np.max(np_y_pred) != 1:
         raise ValueError('> The response predictions are not binary 0 and 1.')
 
     # remove any nan or infinite values from y true labels
@@ -2087,25 +1771,15 @@ def plot_continuous_response_curves(x_names, x_values, y_means, ncols=3):
     # check predictor names type and dimensionality
     if not isinstance(x_names, np.ndarray) and x_names.ndim != 1:
         raise TypeError('> Predictor variable names not in numpy array and/or not 1-dimensional.')
-
-    # check predictor values type and dimensionality
-    if not isinstance(x_values, np.ndarray) and not x_values.ndim >= 1:
+    elif not isinstance(x_values, np.ndarray) and not x_values.ndim >= 1:
         raise TypeError('> Predictor variable values not in numpy array and/or not 1 or 2-dimensional.')
-
-    # check response means values type and dimensionality
-    if not isinstance(y_means, np.ndarray) and not y_means.ndim >= 1:
+    elif not isinstance(y_means, np.ndarray) and not y_means.ndim >= 1:
         raise TypeError('> Response means not in numpy array and/or not 1 or 2-dimensional.')   
-    
-    # check if preds and means arrays match first dimension of name array
-    if x_values.shape[0] != len(x_names) or y_means.shape[0] != len(x_names):
+    elif x_values.shape[0] != len(x_names) or y_means.shape[0] != len(x_names):
         raise TypeError('> Unequal number of predictors was provided.')
-
-    # check if predictor values and response means are equal
-    if x_values.shape[1] != y_means.shape[1]:
+    elif x_values.shape[1] != y_means.shape[1]:
         raise TypeError('> Unequal number of elements provided.')
-
-    # check if ncols is adequate
-    if not isinstance(ncols, int) or ncols < 1:
+    elif not isinstance(ncols, int) or ncols < 1:
         raise ValueError('> Number of columns must be an integer greater than 0.')
 
     # get number of continuous variables
@@ -2186,20 +1860,14 @@ def plot_categorical_response_bars(x_names, x_values, y_responses, ncols=3):
         Number of columns on plot.
     """
 
-    # check predictor names type and dimensionality
+    # checks
     if not isinstance(x_names, np.ndarray) and x_names.ndim != 1:
         raise TypeError('> Predictor variable names not in numpy array and/or not 1-dimensional.')
-
-    # check predictor values type
-    if not isinstance(x_values, np.ndarray) and not x_values.ndim >= 1:
+    elif not isinstance(x_values, np.ndarray) and not x_values.ndim >= 1:
         raise TypeError('> Class labels not in numpy array and/or not 1 or 2-dimensional.')
-
-    # check response means values type and dimensionality
-    if not isinstance(y_responses, np.ndarray) and not y_responses.ndim >= 1:
+    elif not isinstance(y_responses, np.ndarray) and not y_responses.ndim >= 1:
         raise TypeError('> Response means not in numpy array and/or not 1 or 2-dimensional.')
-
-    # check if ncols is adequate
-    if not isinstance(ncols, int) or ncols < 1:
+    elif not isinstance(ncols, int) or ncols < 1:
         raise ValueError('> Number of columns must be an integer greater than 0.')
 
     # get number of continuous variables
