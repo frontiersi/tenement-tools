@@ -911,13 +911,21 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
 
     # notify
     print('Standardising to invariant targets, rescaling via fuzzy sigmoidal.')
-
+    
     # get low, high inflection point via hardcoded percentile
     li = ds.median('time').quantile(q=0.001, skipna=True)
     hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
     
+    # create masks for values outside requested range. inefficient...
+    mask_a = xr.where(ds > li, True, False)
+    mask_b = xr.where(ds < hi, True, False)
+        
     # do inc sigmoidal
     ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
+    
+    # replace out of range values
+    ds = ds.where(mask_a, 0)
+    ds = ds.where(mask_b, 1)
     
     # drop quantile tag the method adds, if exists
     ds = ds.drop('quantile', errors='ignore')
@@ -1006,8 +1014,16 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05, inplace=True):
     li = ds.median('time').quantile(q=0.001, skipna=True)
     hi = ds.where(ds_targets).quantile(dim=['x', 'y'], q=0.99, skipna=True)
     
+    # create masks for values outside requested range. inefficient...
+    mask_a = xr.where(ds > li, True, False)
+    mask_b = xr.where(ds < hi, True, False)
+    
     # do inc sigmoidal
     ds = np.square(np.cos((1 - ((ds - li) / (hi - li))) * (np.pi / 2)))
+    
+    # replace out of range values
+    ds = ds.where(mask_a, 0)
+    ds = ds.where(mask_b, 1)
     
     # drop quantile tag the method adds, if exists
     ds = ds.drop('quantile', errors='ignore')
