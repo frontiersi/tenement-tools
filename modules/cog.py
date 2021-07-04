@@ -13,6 +13,261 @@ import threading
 import itertools
 import warnings
 
+
+import pyproj
+from functools import lru_cache
+
+
+
+def get_next_url(json):
+    """
+    Small helper function to parse json and
+    look for 'next' url. Used during stac
+    queries.
+    
+    Parameters
+    -------------
+    json : dict
+        A dictionary of json elements.
+    
+    """
+    
+    # parse json doc and look for link ref
+    for link in json.get('links'):
+        if link.get('rel') == 'next':
+            return link.get('href')
+        
+    # else, go home empty handed
+    return None
+
+# meta, move checks up to top? make the year comparitor cleaner
+def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=False, sort_time=True, limit=250):
+    """
+    bbox BBOX BBOX BBOX BBOX
+    Bounding box (min lon, min lat, max lon, max lat)
+    (default: None)
+    
+    datetime DATETIME   Single date/time or begin and end date/time (e.g.,
+                        2017-01-01/2017-02-15) (default: None)
+    """
+    
+    # imports
+    import requests
+    
+    # set headers
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept-Encoding': 'gzip',
+        'Accept': 'application/geo+json'
+    }
+    
+    # notify
+    print('Beginning STAC search for items. This can take awhile.')
+            
+    # check stac_endpoint
+    if stac_endpoint is None:
+        raise ValueError('Must provide a STAC endpoint.')
+
+    # prepare collection list
+    if collections is None:
+        collections = []
+    if not isinstance(collections, (list)):
+        collections = [collections]
+        
+    # iter each collection. stac doesnt return more than one
+    feats = []
+    for collection in collections:
+        
+        # notify
+        print('Searching collection: {}'.format(collection))
+        
+        # set up fresh query
+        query = {}
+
+        # collections
+        if isinstance(collection, str):
+            query.update({'collections': collection})
+
+        # bounding box
+        if isinstance(bbox, list) and len(bbox) == 4:
+            query.update({'bbox': bbox})
+
+        # start and end date. consider slc for ls7
+        if isinstance(start_dt, str) and isinstance(end_dt, str):
+            if collection == 'ga_ls7e_ard_3' and not slc_off:
+                print('> Excluding SLC-off times.')
+                new_end_dt = end_dt if int(end_dt[:4]) < 2003 else '2003-05-31'  # this needs work
+                dt = '{}/{}'.format(start_dt, new_end_dt)
+            else:
+                dt = '{}/{}'.format(start_dt, end_dt)
+            query.update({'datetime': dt})
+
+        # query limit
+        query.update({'limit': limit})
+
+        # perform initial post query
+        res = requests.post(stac_endpoint, headers=headers, json=query)
+
+        # if response, add feats to list
+        if res.ok:
+            feats += [f for f in res.json().get('features')]
+            next_url = get_next_url(res.json())
+        else:
+            raise ValueError('Could not connect to DEA endpoint.')
+
+        # keep appending next page to list if exists
+        while next_url is not None:
+            next_res = requests.get(next_url)
+            if not next_res.ok:
+                raise ValueError('Could not connect to DEA endpoint.')
+
+            # add to larger feats list and get next if exists
+            feats += [f for f in next_res.json().get('features')]
+            next_url = get_next_url(next_res.json())
+            
+    # sort by time (low to high)
+    if sort_time:
+        print('Sorting result by time (old to new).')
+        f_sort = lambda feat: feat['properties'].get('datetime', '')
+        feats = sorted(feats, key=f_sort)
+    
+    # notify and return
+    print('Found a total of {} scenes.'.format(len(feats)))
+    return feats
+
+# checks, meta
+def get_affine(transform):
+    """
+    Small helper function to computer affine
+    from asset transform array.
+    """
+    
+    # imports
+    import affine
+    
+    # checks
+    
+    # compute affine
+    return affine.Affine(*transform[:6]) # ignore scale, shift
+    
+
+# checks, meta
+def reporject_bbox(source_epsg=4326, dest_epsg=None, bbox=None):
+    """
+    Basic function to reproject given coordinate
+    bounding box (in WGS84).
+    """
+    
+    # imports
+    from rasterio.warp import transform_bounds
+
+    # checks
+    
+    # reproject bounding box
+    l, b, r, t = bbox
+    return transform_bounds(src_crs=source_epsg, 
+                            dst_crs=dest_epsg, 
+                            left=l, bottom=b, right=r, top=t)
+
+# meta, checks
+@lru_cache(maxsize=64)
+def cached_transform(from_epsg, to_epsg, skip_equivalent=True, always_xy=True):
+    """
+    A cached version of pyproject transform. The 
+    transform operation is slow, so caching it
+    during 100x operations speeds up the process
+    considerablly. LRU cache implements this.
+    """
+    
+    # checks
+    
+    # transform from epsg to epsg
+    return pyproj.Transformer.from_crs(from_epsg, 
+                                       to_epsg, 
+                                       skip_equivalent, 
+                                       always_xy)
+
+# meta, checks
+def bbox_from_affine(aff, ysize, xsize, from_epsg, to_epsg):
+    """
+    Calculate bounding box from affine transform.
+    """
+    
+    # affine calculation
+    x_nw, y_nw = aff * (0, 0)
+    x_sw, y_sw = aff * (0, ysize)
+    x_se, y_se = aff * (xsize, ysize)
+    x_ne, y_ne = aff * (xsize, 0)
+
+    # set x and y extents
+    x_ext = [x_nw, x_sw, x_se, x_ne]
+    y_ext = [y_nw, y_sw, y_se, y_ne]
+
+    # transform if different crs', else just use existing
+    if from_epsg != to_epsg:
+        transformer = cached_transform(from_epsg, to_epsg)
+        x_ext_proj, y_ext_proj = transformer.transform(x_ext, y_ext, errcheck=True)
+    else:
+        x_ext_proj = x_ext
+        y_ext_proj = y_ext
+        
+    # prepare and return bbox (l, b, r, t)
+    bbox = [min(x_ext_proj), min(y_ext_proj), max(x_ext_proj), max(y_ext_proj)]
+    return bbox
+
+# meta, check
+def bounds_overlap(*bounds):
+    """
+    """
+    
+    # get same element across each array
+    min_x_vals, min_y_vals, max_x_vals, max_y_vals = zip(*bounds)
+    
+    overlaps = max(min_x_vals) < min(max_x_vals) and max(min_y_vals) < min(max_y_vals)
+    return overlaps
+
+
+#meta, check
+def snap_bounds(bounds, resolution):
+    """
+    """
+    
+    # imports
+    import math
+    
+    # checks
+    #
+    
+    # get coords and resolution
+    min_x, min_y, max_x, max_y = bounds
+    res_x, res_y = resolution
+    
+    # snap!
+    min_x = math.floor(min_x / res_x) * res_x
+    max_x = math.ceil(max_x / res_x) * res_x
+    min_y = math.floor(min_y / res_y) * res_y
+    max_y = math.ceil(max_y / res_y) * res_y
+
+    # out we go
+    snapped_bounds = [min_x, min_y, max_x, max_y]
+    return snapped_bounds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # V these are from rio_reader # # # #
 
 class ThreadLocalRioDataset:
