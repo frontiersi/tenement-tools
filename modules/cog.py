@@ -4,7 +4,8 @@ import rasterio
 import dask
 import numpy as np
 import pandas as pd
-import dask.array as da
+#import dask.array as da
+import dask.array as dask_array
 import xarray as xr
 from rasterio import windows
 from rasterio.enums import Resampling
@@ -228,7 +229,7 @@ def bounds_overlap(*bounds):
 
 
 #meta, check
-def snap_bounds(bounds, resolution):
+def snap_bbox(bounds, resolution):
     """
     """
     
@@ -372,19 +373,19 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 
                 # reproject bounds and out_bounds to user epsg
                 if bounds_latlon is not None and out_bounds is None:
-                    bounds = cog.reporject_bbox(4326, out_epsg, bounds_latlon)
+                    bounds = reporject_bbox(4326, out_epsg, bounds_latlon)
                     out_bounds = bounds
 
                 # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
                 if asset_transform is None or asset_shape is None or asset_epsg is None:
                     raise ValueError('No feature-level transform and shape metadata.')
                 else:
-                    asset_affine = cog.get_affine(asset_transform)
-                    asset_bbox_proj = cog.bbox_from_affine(asset_affine,
-                                                           asset_shape[0],
-                                                           asset_shape[1],
-                                                           asset_epsg,
-                                                           out_epsg)
+                    asset_affine = get_affine(asset_transform)
+                    asset_bbox_proj = bbox_from_affine(asset_affine,
+                                                       asset_shape[0],
+                                                       asset_shape[1],
+                                                       asset_epsg,
+                                                       out_epsg)
                 
                 # compute bounds
                 if bounds is None:
@@ -394,13 +395,13 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                     if out_bounds is None:
                         out_bounds = asset_bbox_proj
                     else:
-                        #bound_union = cog.union_bounds(asset_bbox_proj, out_bounds)
+                        #bound_union = union_bounds(asset_bbox_proj, out_bounds)
                         #out_bounds = bound_union
                         raise ValueError('Need to implement union.')
     
                 else:
                     # skip if asset bbox does not overlap with bounds
-                    overlaps = cog.bounds_overlap(asset_bbox_proj, bounds)
+                    overlaps = bounds_overlap(asset_bbox_proj, bounds)
                     if asset_bbox_proj is not None and not overlaps:
                         continue # move to next asset
                     
@@ -422,12 +423,12 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
         
     # snap boundary coordinates
     if snap_bounds:
-        out_bounds = cog.snap_bounds(out_bounds, 
-                                     out_resolution)
+        out_bounds = snap_bbox(out_bounds, 
+                               out_resolution)
      
     # transform and get shape for top-level
-    transform = cog.do_transform(out_bounds, out_resolution)
-    shape = cog.get_shape(out_bounds, out_resolution)
+    transform = do_transform(out_bounds, out_resolution)
+    shape = get_shape(out_bounds, out_resolution)
         
     # get table of nans where any feats/assets where asset missing/out bounds
     isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
@@ -441,15 +442,14 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
         assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
         
     # create final top-level raster metadata dict
-    data = {
+    meta = {
         'epsg': out_epsg,
         'bounds': out_bounds,
-        'resolution': out_resolution,
+        'resolutions_xy': out_resolution,
         'shape': shape,
         'transform': transform,
         'feats': feats,
         'assets': assets,
-        'asset_table': asset_table,
         'vrt_params': {
             'crs': out_epsg,
             'transform': transform,
@@ -460,10 +460,103 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     
     # notify and return
     print('Translated raw STAC data successfully.')
-    return data
+    return meta, asset_table
 
 
+# checks, meta, errors_as_nodata param, play with method - do we need this sophistication?
+# asset_entry_to_reader_and_window = change name
+def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest',
+                    dtype='int16', fill_value=-999, rescale=True):
+    
+    """
+    Data is of type dictionary with everything that comes out
+    of prepare_data.
+    """
+       
+    # imports 
+    import itertools
+    import warnings
+    from rasterio.enums import Resampling
+    
+    # notify
+    print('Converting data into dask array.')
+    
+    # check if meta and array provided
+    if meta is None or asset_table is None:
+        raise ValueError('Must provide metadata and assets.')
+        
+    # checks
+    if resampling not in ['nearest', 'bilinear']:
+        raise ValueError('Resampling method not supported.')
+        
+    # set resampler
+    if resampling == 'nearest':
+        resampling = Resampling.nearest
+    else:
+        resampling = Resampling.bilinear
+    
+    # check type of dtype
+    if isinstance(dtype, str):
+        dtype = np.dtype(dtype)
 
+    # check fill value
+    #if fill_value is None and errors_as_nodata:
+        #raise ValueError('cant do')
+        
+    # check if we can use fillvalue
+    if fill_value is not None and not np.can_cast(fill_value, dtype):
+        raise ValueError('Fill value incompatible with output dtype.')
+                
+    # set errors or empty tuple (not none)
+    #errors_as_nodata = errors_as_nodata or ()
+
+    # see stackstac for explanation of this logic here
+    
+    # make urls into dask array with 1-element chunks (i.e. 1 chunk per asset (i.e.e band))
+    da_asset_table = dask_array.from_array(asset_table, 
+                                           chunks=1, 
+                                           #inline_array=True # need high ver of dask
+                                           name='asset_table_' + dask.base.tokenize(asset_table))
+    
+    # map to blocks
+    ds = da_asset_table.map_blocks(asset_entry_to_reader_and_window,
+                                   meta,
+                                   resampling,
+                                   dtype,
+                                   fill_value,
+                                   rescale,
+                                   #gdal_env,
+                                   #errors_as_nodata,
+                                   #reader,
+                                   meta=da_asset_table._meta)
+    
+    # generate a fake array from shape and chunksize
+    shape = meta.get('shape')
+    name = 'slices_' + dask.base.tokenize(chunksize, shape)
+    chunks = dask_array.core.normalize_chunks(chunksize, shape)
+    keys = itertools.product([name], *(range(len(b)) for b in chunks))
+    slices = dask_array.core.slices_from_chunks(chunks)
+    
+    # stick slices into an array to use dask blockwise logic
+    fake_slices = dask_array.Array(dict(zip(keys, slices)), 
+                                   name, 
+                                   chunks, 
+                                   meta=ds._meta)
+    
+    # apply blockwise
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore", category=dask_array.core.PerformanceWarning)
+    rasters = dask_array.blockwise(fetch_raster_window,
+                                   'tbyx',
+                                   ds,
+                                   'tb',
+                                   fake_slices,
+                                   'yx',
+                                   meta=np.ndarray((), dtype=dtype))
+        
+    # notify and return
+    print('Converted data successfully.')
+    return rasters
 
 
 
@@ -771,9 +864,27 @@ def fetch_raster_window(asset_entry, slices):
 
 
 
-def items_to_dask(asset_table, spec, chunksize=512, resampling=Resampling.nearest,
+def items_to_dask(meta, asset_table, chunksize=512, resampling='nearest',
                   dtype=np.dtype('int16'), fill_value=-999, rescale=True, reader=None,
                   gdal_env=None, errors_as_nodata=()):
+    
+    """
+    Data is of type dictionary with everything that comes out
+    of prepare_data.
+    """
+       
+    # imports 
+    from rasterio.enums import Resampling
+    if resampling == 'nearest':
+        resampling = Resampling.nearest
+    elif resampling == 'bilinear':
+        resampling = Resampling.bilinear
+    else:
+        raise ValueError('Resampling method not supported.')
+        
+    # TEMP
+    spec = meta
+    
     
     if fill_value is None and errors_as_nodata:
         raise ValueError('cant do')
