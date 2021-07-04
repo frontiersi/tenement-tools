@@ -96,7 +96,7 @@ def binary_mask(ds, remove_lt=None, remove_gt=None, inplace=True):
                         (ds >= remove_gt), False, True)
     
 
-def inc_sigmoid(ds, a, b, inplace=True):
+def inc_sigmoid(ds, a=None, b=None, inplace=True):
     """
     Apply a fuzzy membership function to data
     using increasing sigmoidal function. Requires a
@@ -122,23 +122,29 @@ def inc_sigmoid(ds, a, b, inplace=True):
     
     """
     
+    # check inputs
+    if a is None or b is None:
+        raise ValueError('Must provide values for a and b.')
+    
+    # create copy
     if not inplace:
         ds = ds.copy(deep=True)
-            
+    
     # create masks to handle out of bound values 
-    mask_a = xr.where((ds > a) & (ds < b), 1.0, 0.0)
-    mask_b = xr.where(ds > b, 1.0, 0.0)
+    mask_lt_a = xr.where(ds < a, True, False)
+    mask_gt_b = xr.where(ds > b, True, False)
     
     # perform inc sigmoidal
     ds = np.cos((1 - ((ds - a) / (b - a))) * (np.pi / 2))**2
     
-    # apply masks (0 all < a, add 1 all > b)
-    ds = (ds * mask_a) + mask_b
+    # mask out out of bounds values
+    ds = ds.where(~mask_lt_a, 0.0)
+    ds = ds.where(~mask_gt_b, 1.0)
     
     return ds
 
 
-def dec_sigmoid(ds, c, d, inplace=True):
+def dec_sigmoid(ds, c=None, d=None, inplace=True):
     """
     Apply a fuzzy membership function to data
     using decreasing sigmoidal function. Requires a
@@ -163,22 +169,76 @@ def dec_sigmoid(ds, c, d, inplace=True):
     ds : xarray dataset or array.
     """
     
+    # check inputs
+    if c is None or d is None:
+        raise ValueError('Must provide values for c and d.')
+    
+    # create copy
+    if not inplace:
+        ds = ds.copy(deep=True)
+                    
+    # create masks to handle out of bound values 
+    mask_lt_c = xr.where(ds < c, True, False)
+    mask_gt_d = xr.where(ds > d, True, False)
+    
+    # perform dec sigmoidal
+    ds = np.cos(((ds - c) / (d - c)) * (np.pi / 2))**2
+    
+    # mask out out of bounds values
+    ds = ds.where(~mask_lt_c, 1.0)
+    ds = ds.where(~mask_gt_d, 0.0)
+
+    return ds
+
+
+def bell_sigmoid(ds, a=None, bc=None, d=None, inplace=True):
+    """
+    Apply a fuzzy membership function to data
+    using bell-shaped sigmoidal function. Requires a
+    low left inflection (a), a mid-point (bc), and a low 
+    right inflection (d) point to set the bounds in which to 
+    rescale all values to. Values at or closer to the bc
+    inflection point will be boosted, where as values on 
+    right and left sides will be reduced. The output dataset 
+    will have values rescaled to 0-1.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y dims.
+    a : int
+        Lower left slope inflection point. 
+    bc : int
+        Mid slope inflection point.
+    d : int
+        Lower right slope inflection point.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # check inputs
+    if a is None or bc is None or d is None:
+        raise ValueError('Must provide values for a, bc and d.')
+    
+    # create copy
     if not inplace:
         ds = ds.copy(deep=True)
         
-    # not sure if need this - 0 value acts odd
-    if c == 0:
-        print('Zero provided for c, setting to 0.0001 to avoid errors.')
-        c = 0.0001
-            
     # create masks to handle out of bound values 
-    mask_c = xr.where(ds < c, 1.0, 0.0)
-    mask_d = xr.where((ds > c) & (ds < d), 1.0, 0.0)
-    
-    # perform inc sigmoidal
-    ds = np.cos(((ds - c) / (d - c)) * (np.pi / 2))**2
-    
-    # apply masks (0 all < a, add 1 all > b)
-    ds = (ds * mask_d) + mask_c
-    
+    mask_lt_bc = xr.where((ds >= a) & (ds <= bc), True, False)
+    mask_gt_bc = xr.where((ds > bc) & (ds <= d), True, False)
+
+    # perform inc sigmoidal (left side of bell curve)
+    left = np.cos((1 - ((ds - a) / (bc - a))) * (np.pi / 2))**2
+    left = left.where(mask_lt_bc, 0.0)
+
+    # perform dec sigmoidal (right side of bell curve)
+    right = right = np.cos(((ds - bc) / (d - bc)) * (np.pi / 2))**2
+    right = right.where(mask_gt_bc, 0.0)
+
+    # sum
+    ds = left + right
+
     return ds
