@@ -252,6 +252,226 @@ def snap_bounds(bounds, resolution):
     snapped_bounds = [min_x, min_y, max_x, max_y]
     return snapped_bounds
 
+# meta, checks
+def do_transform(bounds, resolution):
+    """
+    Small helper function to do 
+    """
+    
+    # imports
+    from affine import Affine
+    
+    # checks
+    
+    # perform affine transform (xscale, 0, xoff, 0, yscale, yoff)
+    transform = Affine(resolution[0],
+                       0.0,
+                       bounds[0],
+                       0.0,
+                       -resolution[1],
+                       bounds[3])
+    
+    # return
+    return transform
+
+
+# meta, checks
+def get_shape(bounds, resolution):
+    """
+    """
+    
+    # checks
+    
+    # get coords and resolution
+    min_x, min_y, max_x, max_y = bounds
+    res_x, res_y = resolution
+    
+    # calc shape i.e., width heihjt
+    w = int((max_x - min_x + (res_x / 2)) / res_x)
+    h = int((max_y - min_y + (res_y / 2)) / res_y)
+    
+    # pack and return
+    hw = [h, w]
+    return hw
+
+
+# todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
+def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, 
+                 resolution=30, snap_bounds=True, force_dea_http=True):
+    """
+    """
+    
+    # notify
+    print('Translating raw STAC data into numpy format.')
+        
+    # checks
+    if bounds_latlon is not None and bounds is not None:
+        raise ValueError('Cannot provide both bounds latlon and bounds.')
+        
+    # check epsg
+    if epsg != 3577:
+        raise ValueError('EPSG 3577 only supported at this stage.')
+            
+    # set epsg, bounds
+    out_epsg = epsg
+    out_bounds = bounds
+
+    # prepare resolution tuple
+    if resolution is None:
+        raise ValueError('Must set a resolution value.')
+    elif not isinstance(resolution, tuple):
+        resolution = (resolution, resolution)
+    
+    # set output res
+    out_resolution = resolution
+        
+    # prepare and check assets list
+    if assets is None:
+        assets = []
+    if not isinstance(assets, list):
+        assets = [assets]
+    if len(assets) == 0:
+        raise ValueError('Must request at least one asset.')
+                
+    # todo check data type, get everything if empty list
+    #asset_ids = assets
+        
+    # create an numpy asset table to store info
+    asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
+    asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
+
+    # check if feats exist
+    if len(feats) == 0:
+        raise ValueError('No items to prepare.')
+        
+    # iter feats
+    for feat_idx, feat in enumerate(feats):
+        
+        # get top level meta
+        feat_props = feat.get('properties')
+        feat_epsg = feat_props.get('proj:epsg')
+        feat_bbox = feat_props.get('proj:bbox')
+        feat_shape = feat_props.get('proj:shape')
+        feat_transform = feat_props.get('proj:transform')        
+    
+        # unpack assets
+        feat_bbox_proj = None
+        for asset_idx, asset_name in enumerate(assets):
+            asset = feat.get('assets').get(asset_name)
+            
+            # get asset level meta, if not exist, use top level
+            if asset is not None:
+                asset_epsg = asset.get('proj:epsg', feat_epsg)
+                asset_bbox = asset.get('proj:bbox', feat_bbox)
+                asset_shape = asset.get('proj:shape', feat_shape)
+                asset_transform = asset.get('proj:transform', feat_transform)
+                asset_affine = None
+                
+                # prepare crs - todo handle when no epsg given. see stackstac
+                out_epsg = int(out_epsg)
+                
+                # reproject bounds and out_bounds to user epsg
+                if bounds_latlon is not None and out_bounds is None:
+                    bounds = cog.reporject_bbox(4326, out_epsg, bounds_latlon)
+                    out_bounds = bounds
+
+                # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
+                if asset_transform is None or asset_shape is None or asset_epsg is None:
+                    raise ValueError('No feature-level transform and shape metadata.')
+                else:
+                    asset_affine = cog.get_affine(asset_transform)
+                    asset_bbox_proj = cog.bbox_from_affine(asset_affine,
+                                                           asset_shape[0],
+                                                           asset_shape[1],
+                                                           asset_epsg,
+                                                           out_epsg)
+                
+                # compute bounds
+                if bounds is None:
+                    if asset_bbox_proj is None:
+                        raise ValueError('Not enough STAC infomration to build bounds.')
+                        
+                    if out_bounds is None:
+                        out_bounds = asset_bbox_proj
+                    else:
+                        #bound_union = cog.union_bounds(asset_bbox_proj, out_bounds)
+                        #out_bounds = bound_union
+                        raise ValueError('Need to implement union.')
+    
+                else:
+                    # skip if asset bbox does not overlap with bounds
+                    overlaps = cog.bounds_overlap(asset_bbox_proj, bounds)
+                    if asset_bbox_proj is not None and not overlaps:
+                        continue # move to next asset
+                    
+                # do resolution todo: implement auto resolution capture
+                if resolution is None:
+                    raise ValueError('Need to implement auto-find resolution.')
+                    
+                # force aws s3 to https todo make this work with aws s3 bucket
+                href = asset.get('href')
+                if force_dea_http:
+                    href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
+                    
+                # add info to asset table
+                asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
+                
+        # creates row in array that has 1 row per scene, n columns per requested band where (url, [l, b, r, t])
+        href = asset["href"].replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
+        asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
+        
+    # snap boundary coordinates
+    if snap_bounds:
+        out_bounds = cog.snap_bounds(out_bounds, 
+                                     out_resolution)
+     
+    # transform and get shape for top-level
+    transform = cog.do_transform(out_bounds, out_resolution)
+    shape = cog.get_shape(out_bounds, out_resolution)
+        
+    # get table of nans where any feats/assets where asset missing/out bounds
+    isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
+    feat_isnan = isnan_table.all(axis=1)  # any items all empty?
+    asset_isnan = isnan_table.all(axis=0) # any assets all empty?
+    
+    # remove offending items. np.ix_ removes specific cells (col, row)
+    if feat_isnan.any() or asset_isnan.any():
+        asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
+        feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
+        assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
+        
+    # create final top-level raster metadata dict
+    data = {
+        'epsg': out_epsg,
+        'bounds': out_bounds,
+        'resolution': out_resolution,
+        'shape': shape,
+        'transform': transform,
+        'feats': feats,
+        'assets': assets,
+        'asset_table': asset_table,
+        'vrt_params': {
+            'crs': out_epsg,
+            'transform': transform,
+            'height': shape[0],
+            'width': shape[1]
+        }
+    }
+    
+    # notify and return
+    print('Translated raw STAC data successfully.')
+    return data
+
+
+
+
+
+
+
+
+
+
+
 
 
 
