@@ -10,3 +10,13 @@ import rasterio
 import affine
 from dateutil.parser import parse
 import threading
+import arcpy
+par_bands = arcpy.Parameter(displayName="Bands",                                     name="in_bands",                                     datatype="GPString",                                     parameterType="Required",                                     direction="Input",                                     #category='Satellite bands',                                                                          multiValue=True                                     )
+par_bands
+par_bands.filter.type
+help(par_bands.filter.type)
+help(par_bands.filter)
+par_bands.filter
+f = par_bands.filter
+f.list
+f.type

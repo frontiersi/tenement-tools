@@ -1,5 +1,10 @@
 # working
 
+# gdal, rasterio env init - todo make this dynamic
+#import os, certifi
+#os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
+#os.environ.setdefault("CURL_CA_BUNDLE", certifi.where())
+
 import rasterio
 import dask
 import numpy as np
@@ -304,7 +309,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     
     # notify
     print('Translating raw STAC data into numpy format.')
-        
+
     # checks
     if bounds_latlon is not None and bounds is not None:
         raise ValueError('Cannot provide both bounds latlon and bounds.')
