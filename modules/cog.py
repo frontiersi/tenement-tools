@@ -478,7 +478,7 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     of prepare_data.
     """
        
-    # imports 
+    # imports    
     import itertools
     import warnings
     from rasterio.enums import Resampling
