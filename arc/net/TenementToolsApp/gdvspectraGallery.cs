@@ -91,10 +91,8 @@ namespace TenementToolsApp
             // open gdvspectra likelihood tool pane
             if (gallery_item == "GDV Likelihood") {
 
-                // set toolname
+                // set toolname and create empty input array
                 string toolname = "GDVSpectra";
-
-                // create inputs and null them
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
@@ -103,7 +101,7 @@ namespace TenementToolsApp
                     Geoprocessing.OpenToolDialog(toolname, inputs);
                 } 
                 catch (Exception e) { 
-                    Debug.WriteLine("DID NOT FIND TOOL");
+                    Debug.WriteLine("Could not find GDVSpectra tool.");
                 };
             };
         }

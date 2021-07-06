@@ -128,6 +128,7 @@
     <Compile Include="gdvspectraGallery.cs" />
     <Compile Include="gdvspectraSplitButton.cs" />
     <Compile Include="Module1.cs" />
+    <Compile Include="phenolopySplitButton.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -141,6 +142,18 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\COG_Fetch_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\COG_Sync_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\COG_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\COG_Explore_32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
