@@ -26,76 +26,187 @@
           <splitButton refID="TenementToolsApp_gdvspectraSplitButton" />
           <!--<gallery refID="TenementToolsApp_gdvspectraGallery" inline="false" size="large" />-->
           <splitButton refID="TenementToolsApp_phenolopySplitButton" />
+          <!--<gallery refID="TenementToolsApp_phenolopyGallery" inline="false" size="large" />-->
+          <splitButton refID="TenementToolsApp_nicherSplitButton" />
+          <!--<gallery refID="TenementToolsApp_nicherGallery" inline="false" size="large" />-->
+          <splitButton refID="TenementToolsApp_vegfraxSplitButton" />
+          <!--<gallery refID="TenementToolsApp_vegfraxGallery" inline="false" size="large" />-->
+          <splitButton refID="TenementToolsApp_canopySplitButton" />
+          <!--<gallery refID="TenementToolsApp_canopyGallery" inline="false" size="large" />-->
+          <splitButton refID="TenementToolsApp_ensembleSplitButton" />
+          <!--<gallery refID="TenementToolsApp_ensembleGallery" inline="false" size="large" />-->
         </group>
       </groups>
       <controls>
-        <!-- 
-		  <button id="TenementToolsApp_gdvspectraSplitButton_Items_Button1" caption="GDVSpectra" className="gdvspectraSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
-		      <content group="Run wizard function" />
-		  </button>
-		  <button id="TenementToolsApp_gdvspectraSplitButton_Items_Button2" caption="gdvspectraSplitButton 2" className="gdvspectraSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
-		      <content group="Run wizard function" />
-		  </button>
-		  <button id="TenementToolsApp_gdvspectraSplitButton_Items_Button3" caption="gdvspectraSplitButton 3" className="gdvspectraSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
-		      <content group="Run individual functions" />
-		  </button>
-		  <button id="TenementToolsApp_cogSplitButton_Items_Button1" caption="cogSplitButton 1" className="cogSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
-		  </button>
-		  <button id="TenementToolsApp_cogSplitButton_Items_Button2" caption="cogSplitButton 2" className="cogSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
-		  </button>
-		  <button id="TenementToolsApp_cogSplitButton_Items_Button3" caption="cogSplitButton 3" className="cogSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
-		      <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
-		  </button>
-		  
-        <button id="TenementToolsApp_phenolopySplitButton_Items_Button1" caption="phenolopySplitButton 1" className="phenolopySplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+        <!--
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button1" caption="GDVSpectra" className="gdvspectraSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 1">
+						ToolTip<disabledText />
+					</tooltip>
+					<content group="Run wizard function" />
+				</button>
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button2" caption="gdvspectraSplitButton 2" className="gdvspectraSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 2">
+						ToolTip<disabledText />
+					</tooltip>
+					<content group="Run wizard function" />
+				</button>
+				<button id="TenementToolsApp_gdvspectraSplitButton_Items_Button3" caption="gdvspectraSplitButton 3" className="gdvspectraSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 3">
+						ToolTip<disabledText />
+					</tooltip>
+					<content group="Run individual functions" />
+				</button>
+				<button id="TenementToolsApp_cogSplitButton_Items_Button1" caption="cogSplitButton 1" className="cogSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 1">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+				<button id="TenementToolsApp_cogSplitButton_Items_Button2" caption="cogSplitButton 2" className="cogSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 2">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+				<button id="TenementToolsApp_cogSplitButton_Items_Button3" caption="cogSplitButton 3" className="cogSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 3">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+
+				<button id="TenementToolsApp_phenolopySplitButton_Items_Button1" caption="phenolopySplitButton 1" className="phenolopySplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 1">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+				<button id="TenementToolsApp_phenolopySplitButton_Items_Button2" caption="phenolopySplitButton 2" className="phenolopySplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 2">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+				<button id="TenementToolsApp_phenolopySplitButton_Items_Button3" caption="phenolopySplitButton 3" className="phenolopySplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+					<tooltip heading="Split Button 3">
+						ToolTip<disabledText />
+					</tooltip>
+				</button>
+                <button id="TenementToolsApp_nicherSplitButton_Items_Button1" caption="nicherSplitButton 1" className="nicherSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
+                </button>
+                <button id="TenementToolsApp_nicherSplitButton_Items_Button2" caption="nicherSplitButton 2" className="nicherSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
+                </button>
+                <button id="TenementToolsApp_nicherSplitButton_Items_Button3" caption="nicherSplitButton 3" className="nicherSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
+                </button>
+                <button id="TenementToolsApp_vegfraxSplitButton_Items_Button1" caption="vegfraxSplitButton 1" className="vegfraxSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
+                </button>
+                <button id="TenementToolsApp_vegfraxSplitButton_Items_Button2" caption="vegfraxSplitButton 2" className="vegfraxSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
+                </button>
+                <button id="TenementToolsApp_vegfraxSplitButton_Items_Button3" caption="vegfraxSplitButton 3" className="vegfraxSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+                  <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
+                </button>
+		
+        <button id="TenementToolsApp_canopySplitButton_Items_Button1" caption="canopySplitButton 1" className="canopySplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
           <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
         </button>
-        <button id="TenementToolsApp_phenolopySplitButton_Items_Button2" caption="phenolopySplitButton 2" className="phenolopySplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+        <button id="TenementToolsApp_canopySplitButton_Items_Button2" caption="canopySplitButton 2" className="canopySplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
           <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
         </button>
-        <button id="TenementToolsApp_phenolopySplitButton_Items_Button3" caption="phenolopySplitButton 3" className="phenolopySplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+        <button id="TenementToolsApp_canopySplitButton_Items_Button3" caption="canopySplitButton 3" className="canopySplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+          <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
+        </button>
+	  
+        <button id="TenementToolsApp_ensembleSplitButton_Items_Button1" caption="ensembleSplitButton 1" className="ensembleSplitButton_button1" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+          <tooltip heading="Split Button 1">ToolTip<disabledText /></tooltip>
+        </button>
+        <button id="TenementToolsApp_ensembleSplitButton_Items_Button2" caption="ensembleSplitButton 2" className="ensembleSplitButton_button2" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
+          <tooltip heading="Split Button 2">ToolTip<disabledText /></tooltip>
+        </button>
+        <button id="TenementToolsApp_ensembleSplitButton_Items_Button3" caption="ensembleSplitButton 3" className="ensembleSplitButton_button3" loadOnClick="true" smallImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack16.png" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonBlack32.png">
           <tooltip heading="Split Button 3">ToolTip<disabledText /></tooltip>
         </button>
 		-->
       </controls>
       <splitButtons>
+        <splitButton id="TenementToolsApp_cogSplitButton">
+          <!--
+		  <button refID="TenementToolsApp_cogSplitButton_Items_Button1" />
+		  <button refID="TenementToolsApp_cogSplitButton_Items_Button2" />
+		  <button refID="TenementToolsApp_cogSplitButton_Items_Button3" />
+		  -->
+          <gallery refID="TenementToolsApp_cogGallery" />
+        </splitButton>
         <splitButton id="TenementToolsApp_gdvspectraSplitButton">
           <!--
 					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button1" />
 					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button2" />
 					<button refID="TenementToolsApp_gdvspectraSplitButton_Items_Button3" />
-					-->
+		  -->
           <gallery refID="TenementToolsApp_gdvspectraGallery" />
         </splitButton>
-        <splitButton id="TenementToolsApp_cogSplitButton">
-          <!--
-					<button refID="TenementToolsApp_cogSplitButton_Items_Button1" />
-					<button refID="TenementToolsApp_cogSplitButton_Items_Button2" />
-					<button refID="TenementToolsApp_cogSplitButton_Items_Button3" />
-					-->
-          <gallery refID="TenementToolsApp_cogGallery" />
-        </splitButton>
         <splitButton id="TenementToolsApp_phenolopySplitButton">
-			<!--
+          <!--
           <button refID="TenementToolsApp_phenolopySplitButton_Items_Button1" />
           <button refID="TenementToolsApp_phenolopySplitButton_Items_Button2" />
           <button refID="TenementToolsApp_phenolopySplitButton_Items_Button3" />
 		  -->
+          <gallery refID="TenementToolsApp_phenolopyGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_nicherSplitButton">
+          <!-- 
+          <button refID="TenementToolsApp_nicherSplitButton_Items_Button1" />
+          <button refID="TenementToolsApp_nicherSplitButton_Items_Button2" />
+          <button refID="TenementToolsApp_nicherSplitButton_Items_Button3" />
+		  -->
+          <gallery refID="TenementToolsApp_nicherGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_vegfraxSplitButton">
+          <!--
+          <button refID="TenementToolsApp_vegfraxSplitButton_Items_Button1" />
+          <button refID="TenementToolsApp_vegfraxSplitButton_Items_Button2" />
+          <button refID="TenementToolsApp_vegfraxSplitButton_Items_Button3" />
+		  -->
+          <gallery refID="TenementToolsApp_vegfraxGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_canopySplitButton">
+          <!--
+          <button refID="TenementToolsApp_canopySplitButton_Items_Button1" />
+          <button refID="TenementToolsApp_canopySplitButton_Items_Button2" />
+          <button refID="TenementToolsApp_canopySplitButton_Items_Button3" />
+		  -->
+          <gallery refID="TenementToolsApp_canopyGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_ensembleSplitButton">
+          <!--
+          <button refID="TenementToolsApp_ensembleSplitButton_Items_Button1" />
+          <button refID="TenementToolsApp_ensembleSplitButton_Items_Button2" />
+          <button refID="TenementToolsApp_ensembleSplitButton_Items_Button3" />
+		  -->
+		<gallery refID="TenementToolsApp_ensembleGallery" />
         </splitButton>
       </splitButtons>
       <galleries>
         <gallery id="TenementToolsApp_cogGallery" caption="COG" className="cogGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//cogGalleryTemplate.xaml" templateID="cogGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\COG_32.png">
-          <tooltip heading="Tooltip Heading">
-						Functions to fetch satellite data from DEA public database.<disabledText /></tooltip>
+          <tooltip heading="Tooltip Heading">Functions to fetch satellite data from DEA public database.<disabledText /></tooltip>
         </gallery>
-        <gallery id="TenementToolsApp_gdvspectraGallery" caption="GDVSpectra" className="gdvspectraGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" templateID="gdvspectraGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
-          <tooltip heading="Tooltip Heading">
-						Functions to generate GDV likelihood.<disabledText /></tooltip>
+        <gallery id="TenementToolsApp_gdvspectraGallery" caption="GDVSpectra" className="gdvspectraGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" templateID="gdvspectraGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\GDVSpectra_Wizard_32.png">
+          <tooltip heading="Tooltip Heading">Functions to generate GDV likelihood.<disabledText /></tooltip>
+        </gallery>
+        <gallery id="TenementToolsApp_phenolopyGallery" caption="Phenolopy" className="phenolopyGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//phenolopyGalleryTemplate.xaml" templateID="phenolopyGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+          <tooltip heading="Tooltip Heading">Functions to generate vegetation phenology metrics (phenometrics).<disabledText /></tooltip>
+        </gallery>
+        <gallery id="TenementToolsApp_nicherGallery" caption="Nicher" className="nicherGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nicherGalleryTemplate.xaml" templateID="nicherGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+          <tooltip heading="Tooltip Heading">Functions to generate species distribution (or niche) model.<disabledText /></tooltip>
+        </gallery>
+        <gallery id="TenementToolsApp_vegfraxGallery" caption="VegFrax" className="vegfraxGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//vegfraxGalleryTemplate.xaml" templateID="vegfraxGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+          <tooltip heading="Tooltip Heading">Functions to generate vegetation fractional cover maps.<disabledText /></tooltip>
+        </gallery>
+        <gallery id="TenementToolsApp_canopyGallery" caption="CanoPy" className="canopyGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//canopyGalleryTemplate.xaml" templateID="canopyGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+          <tooltip heading="Tooltip Heading">Functions to prepare canopy height model rasters.<disabledText /></tooltip>
+        </gallery>
+        <gallery id="TenementToolsApp_ensembleGallery" caption="Ensemble" className="ensembleGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" templateID="ensembleGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/GenericButtonOrange32.png">
+          <tooltip heading="Tooltip Heading">Functions to combine outputs into ensemble model.<disabledText /></tooltip>
         </gallery>
       </galleries>
     </insertModule>

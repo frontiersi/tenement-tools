@@ -123,13 +123,22 @@
     <AddInContent Include="DarkImages\AddInDesktop32.png" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="canopyGallery.cs" />
+    <Compile Include="canopySplitButton.cs" />
     <Compile Include="cogGallery.cs" />
     <Compile Include="cogSplitButton.cs" />
+    <Compile Include="ensembleGallery.cs" />
+    <Compile Include="ensembleSplitButton.cs" />
     <Compile Include="gdvspectraGallery.cs" />
     <Compile Include="gdvspectraSplitButton.cs" />
     <Compile Include="Module1.cs" />
+    <Compile Include="nicherGallery.cs" />
+    <Compile Include="nicherSplitButton.cs" />
+    <Compile Include="phenolopyGallery.cs" />
     <Compile Include="phenolopySplitButton.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="vegfraxGallery.cs" />
+    <Compile Include="vegfraxSplitButton.cs" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="gdvspectraGalleryTemplate.xaml">
@@ -154,6 +163,39 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\COG_Explore_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="phenolopyGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="nicherGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="vegfraxGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="canopyGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="ensembleGalleryTemplate.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\GDVSpectra_Wizard_32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--

@@ -16,7 +16,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -24,7 +23,7 @@ using System.Windows.Media;
 
 namespace TenementToolsApp
 {
-    internal class gdvspectraGallery : Gallery
+    internal class ensembleGallery : Gallery
     {
         private bool _isInitialized;
 
@@ -40,45 +39,20 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Run All", 
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Wizard_32.png",
-                                tooltip: "Generate GDV likelihood, threshold and trends.", 
+            Add(new GalleryItem(text: "Run All",
+                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+                                tooltip: "Combine outputs into an ensemble model.",
                                 group: "Wizard"));
-
-            // add gallery item for gdv likelihood solo function
-            Add(new GalleryItem(text: "GDV Likelihood",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Generate GDV likelihood from satellite time series.", 
-                                group: "Run individual functions"));
-
-            // add gallery item for likelihood threshold solo function
-            Add(new GalleryItem(text: "Threshold Likelihood", 
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null, 
-                                tooltip: "Threshold GDV likelihood using occurrence points or standard deviation.", 
-                                group: "Run individual functions"));
-
-            // add gallery item for trend solo function
-            Add(new GalleryItem(text: "Trend Analysis",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Detect vegetation change trends using Mann-Kendall or Theil-Sen.",
-                                group: "Run individual functions"));
-
-            // add gallery item for trend solo function
-            Add(new GalleryItem(text: "Change Vector Analysis",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Peform Change Vector Analysis (CVA).",
-                                group: "Run individual functions"));
 
             // initialise
             _isInitialized = true;
-
         }
 
         protected override void OnClick(GalleryItem item)
         {
             //TODO - insert your code to manipulate the clicked gallery item here
             //System.Diagnostics.Debug.WriteLine("Remove this line after adding your custom behavior.");
-            
+
             // obtain clicked gallery item
             base.OnClick(item);
 
@@ -89,18 +63,21 @@ namespace TenementToolsApp
             //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
 
             // open gdvspectra likelihood tool pane
-            if (gallery_item == "GDV Likelihood") {
+            if (gallery_item == "Run All")
+            {
 
                 // set toolname and create empty input array
-                string toolname = "GDVSpectra";
+                string toolname = "Ensemble";
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
                 // open toolpane
-                try { 
+                try
+                {
                     Geoprocessing.OpenToolDialog(toolname, inputs);
-                } 
-                catch (Exception e) { 
+                }
+                catch (Exception e)
+                {
                     Debug.WriteLine("Could not find GDVSpectra tool.");
                 };
             };
