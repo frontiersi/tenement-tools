@@ -624,8 +624,9 @@ class ThreadLocalRioDataset:
                 height=vrt.height,
                 src_transform=vrt.src_transform,
                 transform=vrt.transform,
-                dtype=vrt.working_dtype, # disable for arcgis
-                warp_extras=vrt.warp_extras, # disable for arcgis
+                dtype='int16'
+                #dtype=vrt.working_dtype, # disable for arcgis
+                #warp_extras=vrt.warp_extras, # disable for arcgis
             )
         else:
             self._vrt_params = None
