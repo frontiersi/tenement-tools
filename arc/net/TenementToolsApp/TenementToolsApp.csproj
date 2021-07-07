@@ -195,7 +195,7 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\GDVSpectra_Wizard_32.png" />
+    <AddInContent Include="Images\GDVSpectra_Wizard_32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
