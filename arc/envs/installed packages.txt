@@ -33,3 +33,6 @@ conda install -c esri rasterio
 
 
 install anaconda, check uninstalled libraries from drop down and installr asterio
+
+check env variables (i.e. check gdal). can set and get here
+conda env config vars -h

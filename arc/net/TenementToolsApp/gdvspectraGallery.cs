@@ -47,25 +47,25 @@ namespace TenementToolsApp
 
             // add gallery item for gdv likelihood solo function
             Add(new GalleryItem(text: "GDV Likelihood",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Wizard_32.png",
                                 tooltip: "Generate GDV likelihood from satellite time series.", 
                                 group: "Run individual functions"));
 
             // add gallery item for likelihood threshold solo function
             Add(new GalleryItem(text: "Threshold Likelihood", 
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null, 
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Threshold_32.png",
                                 tooltip: "Threshold GDV likelihood using occurrence points or standard deviation.", 
                                 group: "Run individual functions"));
 
             // add gallery item for trend solo function
             Add(new GalleryItem(text: "Trend Analysis",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Trend_32.png",
                                 tooltip: "Detect vegetation change trends using Mann-Kendall or Theil-Sen.",
                                 group: "Run individual functions"));
 
             // add gallery item for trend solo function
             Add(new GalleryItem(text: "Change Vector Analysis",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_CVA_32.png",
                                 tooltip: "Peform Change Vector Analysis (CVA).",
                                 group: "Run individual functions"));
 

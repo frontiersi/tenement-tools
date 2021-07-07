@@ -195,7 +195,34 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <AddInContent Include="Images\GDVSpectra_Wizard_32.png" />
+    <Resource Include="Images\GDVSpectra_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\Phenolopy_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\VegFrax_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\CanoPy_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\Nicher_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\Ensemble_Wizard_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\GDVSpectra_Threshold_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\GDVSpectra_Trend_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\GDVSpectra_CVA_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\GDVSpectra_Thumb_32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
