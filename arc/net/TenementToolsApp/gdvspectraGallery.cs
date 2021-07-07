@@ -40,8 +40,8 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Run All", 
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Wizard_32.png",
+            Add(new GalleryItem(text: "Run All",
+                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
                                 tooltip: "Generate GDV likelihood, threshold and trends.", 
                                 group: "Wizard"));
 
