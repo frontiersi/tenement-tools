@@ -156,7 +156,6 @@ def get_affine(transform):
     # compute affine
     return affine.Affine(*transform[:6]) # ignore scale, shift
     
-
 # checks, meta
 def reporject_bbox(source_epsg=4326, dest_epsg=None, bbox=None):
     """
@@ -278,7 +277,6 @@ def do_transform(bounds, resolution):
     
     # return
     return transform
-
 
 # meta, checks
 def get_shape(bounds, resolution):

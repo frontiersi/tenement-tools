@@ -92,7 +92,7 @@ namespace TenementToolsApp
             if (gallery_item == "GDV Likelihood") {
 
                 // set toolname and create empty input array
-                string toolname = "GDVSpectra";
+                string toolname = "GDVSpectra_Likelihood";
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
