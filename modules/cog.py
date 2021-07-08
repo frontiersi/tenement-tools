@@ -232,7 +232,6 @@ def bounds_overlap(*bounds):
     overlaps = max(min_x_vals) < min(max_x_vals) and max(min_y_vals) < min(max_y_vals)
     return overlaps
 
-
 #meta, check
 def snap_bbox(bounds, resolution):
     """
@@ -1208,3 +1207,56 @@ def to_coords(items, asset_ids, spec, xy_coords='topleft',
     coords["epsg"] = spec.get('epsg')
 
     return coords, dims
+
+
+# testing
+def test(meta, asset_table):
+    
+    import rasterio
+    import dask
+    import numpy as np
+    import pandas as pd
+    #import dask.array as da
+    import dask.array as dask_array
+    import xarray as xr
+    from rasterio import windows
+    from rasterio.enums import Resampling
+    from rasterio.vrt import WarpedVRT
+    import threading
+    import itertools
+    import warnings
+    
+    xr_list = []
+    for i, asset_entry in enumerate(asset_table):
+        #asset_entry = asset_entry[0, 0]
+        #url = asset_entry['url']
+        url = asset_entry[0][0]
+        asset_bounds = asset_entry[0][1]
+        asset_window = windows.from_bounds(*asset_bounds, 
+                                           transform=meta.get('transform'))
+
+        open_env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True)
+        with open_env:
+            try:
+                ds = rasterio.open(url, sharing=False)
+                # .close() here
+            except:
+                print('Hrm something happened during open url')
+
+            with open_env:
+                vrt = WarpedVRT(ds, 
+                                sharing=False, 
+                                resampling=Resampling.nearest,
+                                **meta.get('vrt_params'))
+
+        #data = vrt.read(window=asset_window, masked=True)
+        data = xr.open_rasterio(vrt).rename({'band': 'time'})
+        data['time'] = np.array([i])
+        data = data.to_dataset(name='nbart_blue')
+        data = data.chunk(-1)
+
+        xr_list.append(data)
+        
+    ds = xr.concat(xr_list, dim='time')
+        
+    return ds
