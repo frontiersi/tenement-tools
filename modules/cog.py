@@ -1022,6 +1022,7 @@ def build_attributes(meta, fill_value, collections, slc_off, bbox):
     attrs.update({'orig_bbox': bbox})
     
     # set slc off from original query
+    slc_off = 'True' if slc_off else 'False'
     attrs.update({'orig_slc_off': slc_off})
         
     return attrs
