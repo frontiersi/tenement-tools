@@ -9,21 +9,339 @@ import rasterio
 import dask
 import numpy as np
 import pandas as pd
-#import dask.array as da
-import dask.array as dask_array
 import xarray as xr
+
+import threading
+import dask.array as da
+import dask.array as dask_array
 from rasterio import windows
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
-import threading
+
 import itertools
 import warnings
-
 
 import pyproj
 from functools import lru_cache
 
+# meta
+class COGReader:
+    """
+    Method is a very basic version of stackstac and rasterio.
+    """
+    
+    def __init__(self, url, meta, resampler, dtype=None, fill_value=None, rescale=True):
+        self.url = url
+        self.meta = meta
+        self.resampler = resampler
+        self.dtype = dtype
+        self.rescale = rescale
+        self.fill_value = fill_value
+        
+        # set env defaults 
+        self._env = {
+            'CPL_VSIL_CURL_ALLOWED_EXTENSIONS': 'tif',
+            'GDAL_HTTP_MULTIRANGE': 'YES',
+            'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
+            }
+        
+        # set private dataset and lock
+        self._dataset = None
+        self._dataset_lock = threading.Lock()
+        
+        
+    def _open(self):
+        """
+        """
 
+        # open efficient env
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+            try:
+                ds = rasterio.open(self.url, sharing=False)
+            except:
+                return NANReader(dtype=self.dtype, 
+                                 fill_value=self.fill_value)           
+
+            # check if 1 band, else fail
+            if ds.count != 1:
+                ds.close()
+                raise ValueError('more than 1 band in single cog. not supported.')
+                
+            # create vrt if current tif differ from requested params
+            vrt = None
+            if self.meta.get('vrt_params') != {
+                'crs': ds.crs.to_epsg(),
+                'transform': ds.transform,
+                'height': ds.height,
+                'width': ds.width
+            }:
+                vrt_meta = self.meta.get('vrt_params')
+                with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+                    vrt = WarpedVRT(ds,
+                                    sharing=False, 
+                                    resampling=self.resampler,
+                                    crs=vrt_meta.get('crs'),
+                                    transform=vrt_meta.get('transform'),
+                                    height=vrt_meta.get('height'),
+                                    width=vrt_meta.get('width'))
+
+        # apply reader
+        if ds.driver in ['GTiff']:
+            return ThreadLocalData(ds, vrt=vrt)
+        else:
+            ds.close()
+            raise TypeError('COGreader currently only supports GTiffs/COGs.')
+     
+    @property
+    def dataset(self):
+        """
+        Within the current locked thread, return dataset
+        if exists, else open one.
+        """
+        with self._dataset_lock:
+            if self._dataset is None:
+                self._dataset = self._open()
+            return self._dataset
+        
+        
+    def read(self, window, **kwargs):
+        """
+        Read a window of a dataset. Also will
+        rescale if requested. Finally, dtype is
+        converted and mask values filled to fill_value.
+        """
+        # open dataset if exist, or load and open if not
+        reader = self.dataset
+        try:
+            # read the open dataset. mask for safer scaling/offsets
+            result = reader.read(window=window, masked=True, **kwargs)
+        except:
+            return NANReader(dtype=self.dtype, 
+                             fill_value=self.fill_value)    
+    
+        # rescale to scale and offset values 
+        if self.rescale:
+            scale, offset = reader.scale_offset
+            if scale != 1 and offset != 0:
+                result *= scale
+                result += offset
+            
+        # convert type, fill mask areas with requested nodata vals
+        result = result.astype(self.dtype, copy=False)
+        result = np.ma.filled(result, fill_value=self.fill_value)
+        return result
+    
+    
+    def close(self):
+        """
+        Within the current locked thread, close
+        dataset if exists, else return None.
+        """
+        with self._dataset_lock:
+            if self._dataset is None:
+                return None
+            self._dataset.close()
+            self._dataset = None
+    
+    
+    def __del__(self):
+        """
+        Called when garbage collected after close.
+        Can get around some multi-threading issues 
+        such as "no dataset_lock" exists.
+        """
+        try:
+            self.close()
+        except:
+            pass
+    
+    
+    def __getstate__(self):
+        """
+        Get pickled meta.
+        """
+        print('Getting picked data!')
+        state = {
+            'url': self.url,
+            'meta': self.meta,
+            'resampler': self.resampler,
+            'dtype': self.dtype,
+            'fill_value': self.fill_value,
+            'rescale': self.rescale,            
+        }
+        return state
+    
+    
+    def __setstate__(self, state):
+        """
+        Set pickled meta.
+        """
+        print('Setting picked data!')
+        self.__init__(
+            url=state.get('url'),
+            meta=state.get('meta'),
+            resampler=state.get('resampler'),
+            dtype=state.get('dtype'),
+            fill_value=state.get('fill_value'),
+            rescale=state.get('rescale')
+        )
+
+# meta
+class NANReader:
+    """
+    Reader that returns a constant (nodata) value 
+    for all subsequent reads.
+    """
+    
+    # set scale offset
+    scale_offset = (1.0, 0.0)
+    
+    def __init__(self, dtype=None, fill_value=None, **kwargs):
+        self.dtype = dtype
+        self.fill_value = fill_value
+        
+        
+    def read(self, window, **kwargs):
+        """
+        """
+        
+        return nodata_for_window(window, 
+                                 self.dtype, 
+                                 self.fill_value)
+        
+      
+    def close(self):
+        pass
+    
+    
+    def __getstate__(self):
+        """
+        Get pickled dtype and fill value.
+        """
+        return (self.dtype, self.fill_value)
+    
+
+    def __setstate__(self, state):
+        """
+        Set pickled dtype and fill value.
+        """
+        self.dtype, self.fill_value = state
+    
+# meta
+class ThreadLocalData:
+    """
+    Re-open dataset.
+    """
+    
+    def __init__(self, ds, vrt=None):
+        self._url = ds.name
+        self._driver = ds.driver
+        self._open_options = ds.options
+        
+        # set env defaults 
+        self._env = {
+            'CPL_VSIL_CURL_ALLOWED_EXTENSIONS': 'tif',
+            'GDAL_HTTP_MULTIRANGE': 'YES',
+            'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
+            }
+        
+        # cache scale and offset for non-locking access
+        self.scale_offset = (ds.scales[0], ds.offsets[0])
+        
+        # set up vrt params if exist
+        if vrt is not None:
+            self._vrt_params = {
+                'crs': vrt.crs.to_string(),
+                'resampling': vrt.resampling,
+                'tolerance': vrt.tolerance,
+                'src_nodata': vrt.src_nodata,
+                'nodata': vrt.nodata,
+                'width': vrt.width,
+                'height': vrt.height,
+                'src_transform': vrt.src_transform,
+                'transform': vrt.transform,
+                #'dtype': vrt.working_dtype,    # currently not avail in arcgis 2.8 rasterio
+                #'warp_extras': vrt.warp_extras # currently not avail in arcgis 2.8 rasterio
+            }
+        else:
+            self._vrt_params = None
+            
+        # set up local threading data
+        self._threadlocal = threading.local()
+        self._threadlocal.ds = ds
+        self._threadlocal.vrt = vrt      
+        
+        # lock!
+        self._lock = threading.Lock()
+        
+        
+    def _open(self):
+        """
+        Open COG url and VRT if required.
+        """
+        # open efficient env and url
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+            result = ds = rasterio.open(self._url, 
+                                        sharing=False, 
+                                        driver=self._driver,
+                                        **self._open_options)
+            
+            # open efficient env and vrt
+            vrt = None
+            if self._vrt_params:
+                with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+                    result = vrt = WarpedVRT(ds,
+                                             sharing=False, 
+                                             **self._vrt_params)
+                    
+        # in current lock, store ds and vrt
+        with self._lock:
+            self._threadlocal.ds = ds
+            self._threadlocal.vrt = vrt
+            
+        return result
+    
+    @property
+    def dataset(self):
+        """
+        Within the current locked thread, return vrt
+        if exists, else ds. If neither, open a ds or vrt.
+        """
+        try:
+            with self._lock:
+                if self._threadlocal.vrt:
+                    return self._threadlocal.vrt
+                else:
+                    self._threadlocal.ds
+        except AttributeError():
+            return self._open()
+        
+        
+    def read(self, window, **kwargs):
+        """
+        Read from current thread's dataset, opening
+        a new copy of the dataset on first access
+        from each thread.
+        """
+        with rasterio.Env(VSI_CACHE=False, **self._env):
+            return self.dataset.read(1, window=window, **kwargs)
+        
+        
+    def close(self):
+        """
+        Release every thread's reference to its dataset,
+        allowing them to close. 
+        """
+        with self._lock:
+            self._threadlocal = threading.local()
+            
+    
+    def __getstate__(self):
+        raise RuntimeError('I shouldnt be getting pickled...')
+
+        
+    def __setstate__(self, state):
+        raise RuntimeError('I shouldnt be getting un-pickled...')
 
 def get_next_url(json):
     """
@@ -297,6 +615,19 @@ def get_shape(bounds, resolution):
     hw = [h, w]
     return hw
 
+# meta
+def get_nodata_for_window(window, dtype, fill_value):
+    """
+    Fill window with constant no data value if error
+    occurred during cog reader.
+    """
+    
+    if fill_value is None:
+        raise ValueError('Fill value must be anything but None.')
+        
+    # get hight, width of window
+    h, w = int(window.height), int(window.width)
+    return np.full((h, w), fill_value, dtype)
 
 # todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
 def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, 
@@ -464,9 +795,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     print('Translated raw STAC data successfully.')
     return meta, asset_table
 
-
-# checks, meta, errors_as_nodata param, play with method - do we need this sophistication?
-# asset_entry_to_reader_and_window = change name
+# checks, meta, todos, mpve fetch raster window func into here?
 def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest',
                     dtype='int16', fill_value=-999, rescale=True):
     
@@ -478,8 +807,7 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     # imports    
     import itertools
     import warnings
-    from rasterio.enums import Resampling
-    
+
     # notify
     print('Converting data into dask array.')
     
@@ -493,9 +821,9 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
         
     # set resampler
     if resampling == 'nearest':
-        resampling = Resampling.nearest
+        resampler = Resampling.nearest
     else:
-        resampling = Resampling.bilinear
+        resampler = Resampling.bilinear
     
     # check type of dtype
     if isinstance(dtype, str):
@@ -518,18 +846,15 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     da_asset_table = dask_array.from_array(asset_table, 
                                            chunks=1, 
                                            #inline_array=True # need high ver of dask
-                                           name='asset_table_' + dask.base.tokenize(asset_table))
+                                           name='assets_' + dask.base.tokenize(asset_table))
     
     # map to blocks
-    ds = da_asset_table.map_blocks(asset_entry_to_reader_and_window,
+    ds = da_asset_table.map_blocks(apply_cog_reader,
                                    meta,
-                                   resampling,
+                                   resampler,
                                    dtype,
                                    fill_value,
                                    rescale,
-                                   #gdal_env,
-                                   #errors_as_nodata,
-                                   #reader,
                                    meta=da_asset_table._meta)
     
     # generate a fake array from shape and chunksize
@@ -560,14 +885,201 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     print('Converted data successfully.')
     return rasters
 
+# cogs
+def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
+    """
+    For each dask url/bounds chunk, apply the local
+    threaded cog reader classes. 
+    """
+    
+    # remove added array dim
+    asset_chunk = asset_chunk[0, 0]
+    
+    # get url
+    url = asset_chunk['url']
+    if url is None:
+        return None
+    
+    # get requested bounds
+    win = windows.from_bounds(*asset_chunk['bounds'],
+                              transform=meta.get('transform'))
+    
+    # wrap in cog reader
+    cog_reader = COGReader(
+        url=url,
+        meta=meta,
+        resampler=resampler,
+        dtype=dtype,
+        fill_value=fill_value,
+        rescale=rescale
+    )
+    
+    # return reader and window
+    return (cog_reader, win)
 
+# checks, meta
+def build_coords(feats, assets, meta, pix_loc='topleft'):
+    """
+    Very basic version of stackstac. We are only concerned with
+    times, bands, ys and xs for our product.
+    """
+    
+    # parse datetime from stac features
+    times = [f.get('properties').get('datetime') for f in feats]
+    times = pd.to_datetime(times, infer_datetime_format=True, errors='coerce')
+    
+    # timezone can exist, remove it if so (xarray dont likey)
+    times = times.tz_convert(None) if times.tz is not None else times
+        
+    # prepare xr dims and coords
+    dims = ['time', 'band', 'y', 'x']
+    coords = {
+        'time': times,
+        'band': assets
+    }
+    
+    # set pixel coordinate position
+    if pix_loc == 'center':
+        pixel_center = True
+    elif pix_loc == 'topleft':
+        pixel_center = False
+    else:
+        raise ValueError('Pixel position not supported')
+        
+    # generate coordinates
+    if meta.get('transform').is_rectilinear:
+        
+        # we can just use arange for this - quicker
+        min_x, min_y, max_x, max_y = meta.get('bounds')
+        res_x, res_y = meta.get('resolutions_xy')
+        
+        # correct if pixel center
+        if pixel_center:
+            min_x = min_x + (res_x / 2)
+            max_x = max_x + (res_x / 2)
+            min_y = min_y + (res_y / 2)
+            max_y = max_y + (res_y / 2)
+            
+        # gen x, y ranges
+        h, w = meta.get('shape')
+        x_range = pd.Float64Index(np.linspace(min_x, max_x, w, endpoint=False))
+        y_range = pd.Float64Index(np.linspace(max_y, min_y, h, endpoint=False))
+        
+    else:
+        # get offset dependong on pixel position
+        off = 0.5 if pixel_center else 0.0
 
+        # gen x, y ranges
+        h, w = meta.get('shape')
+        x_range, _ = meta.get('transform') * (np.arange(w) + off, np.zeros(w) + off)
+        _, y_range = meta.get('transform') * (np.zeros(h) + off, np.arange(h) + off)
+        
+    # set coords
+    coords['y'] = y_range
+    coords['x'] = x_range
+    
+    # get properties as coords
+    # not needed
+    
+    # get band as coords
+    # not needed
+    
+    return coords, dims
 
+# checks, meta
+def build_attributes(meta, fill_value, collections, slc_off, bbox):
+    """
+    """
+    
+    # set up attributes dict
+    attrs = {}
+    
+    # set output crs 
+    crs = 'EPSG:{}'.format(meta.get('epsg'))
+    attrs.update({'crs': crs})
+    
+    # set output transform
+    transform = tuple(meta.get('transform'))
+    attrs.update({'transform': transform})
+    
+    # set output grid mapping
+    attrs.update({'grid_mapping': 'spatial_ref'})
+    
+    # set output resolution depending on type
+    res = meta.get('resolutions_xy')
+    res = res[0] if res[0] == res[1] else res
+    attrs.update({'res': res})
+    
+    # set no data values
+    attrs.update({'nodatavals': fill_value})
+    
+    # set collections from original query
+    collections = tuple(collections)
+    attrs.update({'orig_collections': collections})
+    
+    # set original bbox
+    bbox = tuple(bbox)
+    attrs.update({'orig_bbox': bbox})
+    
+    # set slc off from original query
+    attrs.update({'orig_slc_off': slc_off})
+        
+    return attrs
 
+# checks, meta
+def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
+    """
+    Takes a xarray dataset (typically as dask)
+    and computes mask band. From mask band,
+    calculates percentage of valid vs invalid
+    pixels per date. Returns a list of every
+    date that is above the max invalid threshold.
+    """
+    
+    # notify
+    print('Removing dates where too many invalid pixels.')
 
+    # check if x and y dims
+    # todo
 
+    # get 
+    min_valid = 1 - (max_invalid / 100)
 
+    # get total num pixels for one slice
+    num_pix = ds['x'].size * ds['y'].size
 
+    # subset mask band
+    mask = ds[mask_band]
+
+    # if dask, compute it
+    if bool(mask.chunks):
+        print('Mask band is currently dask. Computing, please wait.')
+        mask = mask.compute()
+
+    # set all valid classes to 1, else 0
+    mask = xr.where(mask.isin(valid_class), 1.0, 0.0)
+    
+    # convert to float32 if nodata value is nan
+    if nodata_value is np.nan:
+        ds = ds.astype('float32')    
+
+    # mask invalid pixels with user value
+    print('Filling invalid pixels with nan')
+    ds = ds.where(mask == 1.0, nodata_value)
+    
+    # calc percentage of valdi to total and get invalid dates
+    mask = mask.sum(['x', 'y']) / num_pix
+    valid_dates = mask['time'].where(mask >= min_valid, drop=True)
+
+    # remove any non-valid times from dataset
+    ds = ds.where(ds['time'].isin(valid_dates), drop=True)
+
+    # drop mask band if requested
+    if drop_fmask:
+        print('Dropping mask band.')
+        ds = ds.drop_vars(mask_band)
+        
+    return ds
 
 
 
