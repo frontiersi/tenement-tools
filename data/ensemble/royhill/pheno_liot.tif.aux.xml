@@ -1,0 +1,76 @@
+<PAMDataset>
+  <Metadata>
+    <MDI key="DataType">Scientific</MDI>
+  </Metadata>
+  <Metadata domain="xml:ESRI:mdinfo" format="xml">
+    <MultidimensionalInfo xsi:type="typens:MultidimensionalInfo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:typens="http://www.esri.com/schemas/ArcGIS/2.7.0">
+      <Names xsi:type="typens:ArrayOfString">
+        <String>Layout</String>
+        <String>Variables</String>
+        <String>DimensionAttributes</String>
+        <String>DimensionValues</String>
+      </Names>
+      <Values xsi:type="typens:ArrayOfAnyType">
+        <AnyType xsi:type="xs:int">1</AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty">
+            <PropertySetProperty xsi:type="typens:PropertySetProperty">
+              <Key>liot_values</Key>
+              <Value xsi:type="typens:PropertySet">
+                <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty">
+                  <PropertySetProperty xsi:type="typens:PropertySetProperty">
+                    <Key>Unit</Key>
+                    <Value xsi:type="xs:string" />
+                  </PropertySetProperty>
+                  <PropertySetProperty xsi:type="typens:PropertySetProperty">
+                    <Key>crs</Key>
+                    <Value xsi:type="xs:string">EPSG:3577</Value>
+                  </PropertySetProperty>
+                  <PropertySetProperty xsi:type="typens:PropertySetProperty">
+                    <Key>nodatavals</Key>
+                    <Value xsi:type="xs:string">nan</Value>
+                  </PropertySetProperty>
+                  <PropertySetProperty xsi:type="typens:PropertySetProperty">
+                    <Key>coordinates</Key>
+                    <Value xsi:type="xs:string">spatial_ref</Value>
+                  </PropertySetProperty>
+                </PropertyArray>
+              </Value>
+            </PropertySetProperty>
+          </PropertyArray>
+        </AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty" />
+        </AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty" />
+        </AnyType>
+      </Values>
+    </MultidimensionalInfo>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <Description>Band_1</Description>
+    <Histograms>
+      <HistItem>
+        <HistMin>-26.36104965209961</HistMin>
+        <HistMax>18.23259925842285</HistMax>
+        <BucketCount>256</BucketCount>
+        <IncludeOutOfRange>1</IncludeOutOfRange>
+        <Approximate>0</Approximate>
+        <HistCounts>1|2|3|8|22|23|17|9|14|6|9|6|5|8|5|4|8|12|18|15|7|9|10|9|8|10|10|9|5|11|4|13|5|7|8|14|12|4|5|8|7|10|10|7|6|13|14|18|9|15|15|10|19|11|13|13|7|15|17|14|15|19|12|17|13|14|14|18|11|18|14|11|12|16|16|16|13|16|15|9|12|16|8|15|8|6|8|10|13|24|18|18|24|13|15|12|15|23|19|9|14|15|12|17|12|14|12|11|11|15|19|14|20|17|16|12|27|19|16|13|10|15|15|26|17|18|33|23|24|20|22|18|30|22|23|24|24|25|22|20|29|30|22|34|33|32|26|29|28|31|33|48|40|76|123|190|624|2003|3544|4688|5406|6723|7636|9158|11266|14322|17662|21810|26043|31412|38174|46014|55541|64524|72695|78784|81485|81517|77572|71815|65960|58643|52120|45537|39432|33803|29551|25637|22313|19361|16979|14528|12588|10570|9236|8013|6685|5850|5111|4370|3804|3264|2883|2522|2232|1904|1723|1565|1431|1287|1084|1016|941|860|753|687|621|573|521|448|439|374|310|297|268|215|182|159|128|98|101|75|64|59|40|37|24|29|28|26|21|18|11|18|12|12|9|5|7|5|4|4|4|1|0|1</HistCounts>
+      </HistItem>
+    </Histograms>
+    <Metadata>
+      <MDI key="BandName">Band_1</MDI>
+      <MDI key="RepresentationType">ATHEMATIC</MDI>
+      <MDI key="STATISTICS_COVARIANCES">2.895168327618658</MDI>
+      <MDI key="STATISTICS_EXCLUDEDVALUES"></MDI>
+      <MDI key="STATISTICS_MAXIMUM">18.232599258423</MDI>
+      <MDI key="STATISTICS_MEAN">4.8971888950211</MDI>
+      <MDI key="STATISTICS_MINIMUM">-26.3610496521</MDI>
+      <MDI key="STATISTICS_SKIPFACTORX">1</MDI>
+      <MDI key="STATISTICS_SKIPFACTORY">1</MDI>
+      <MDI key="STATISTICS_STDDEV">1.7015194173499</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

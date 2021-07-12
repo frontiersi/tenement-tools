@@ -1,0 +1,64 @@
+<PAMDataset>
+  <Metadata>
+    <MDI key="DataType">Scientific</MDI>
+  </Metadata>
+  <Metadata domain="xml:ESRI:mdinfo" format="xml">
+    <MultidimensionalInfo xsi:type="typens:MultidimensionalInfo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:typens="http://www.esri.com/schemas/ArcGIS/2.7.0">
+      <Names xsi:type="typens:ArrayOfString">
+        <String>Layout</String>
+        <String>Variables</String>
+        <String>DimensionAttributes</String>
+        <String>DimensionValues</String>
+      </Names>
+      <Values xsi:type="typens:ArrayOfAnyType">
+        <AnyType xsi:type="xs:int">1</AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty">
+            <PropertySetProperty xsi:type="typens:PropertySetProperty">
+              <Key>sdm_mean</Key>
+              <Value xsi:type="typens:PropertySet">
+                <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty">
+                  <PropertySetProperty xsi:type="typens:PropertySetProperty">
+                    <Key>Unit</Key>
+                    <Value xsi:type="xs:string" />
+                  </PropertySetProperty>
+                </PropertyArray>
+              </Value>
+            </PropertySetProperty>
+          </PropertyArray>
+        </AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty" />
+        </AnyType>
+        <AnyType xsi:type="typens:PropertySet">
+          <PropertyArray xsi:type="typens:ArrayOfPropertySetProperty" />
+        </AnyType>
+      </Values>
+    </MultidimensionalInfo>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <Description>Band_1</Description>
+    <Histograms>
+      <HistItem>
+        <HistMin>9.999999747378752e-06</HistMin>
+        <HistMax>1</HistMax>
+        <BucketCount>256</BucketCount>
+        <IncludeOutOfRange>1</IncludeOutOfRange>
+        <Approximate>0</Approximate>
+        <HistCounts>1081336|537565|370183|285402|228828|188753|158765|134715|117797|104370|93224|84537|76047|70234|64286|59925|55755|51399|48173|45251|42776|39844|38092|35978|33780|16059|31226|29689|27753|26604|25305|23821|22772|21874|20746|19799|19336|18609|17494|16942|16160|15418|14808|14381|13733|13274|12877|12320|11965|11212|11003|5367|10543|10083|9724|9354|8842|8758|8663|8247|7939|7725|7484|7220|7111|6873|6736|6537|6371|6189|5954|5949|5730|5745|5646|5443|2714|5100|5030|4986|4889|4772|4416|4495|4395|4361|4291|4264|4091|3992|3902|3858|3664|3740|3537|3519|3402|3393|3323|3259|3205|3168|1566|3107|3038|2913|2894|2806|2809|2743|2671|2581|2566|2491|2546|2456|2483|2421|2365|2393|2261|2221|2159|2162|2124|2085|2032|996|1999|1964|1925|1891|1811|1849|1759|1772|1718|1709|1720|1661|1562|1498|1512|1516|1479|1433|1440|1479|1370|1387|1337|1279|1296|652|1286|1274|1186|1202|1158|1082|1150|1103|1132|1046|1058|1104|993|985|955|963|914|879|906|859|867|830|803|838|429|784|788|786|739|686|741|732|735|711|682|689|645|639|646|618|537|598|585|577|547|566|519|488|511|263|522|453|469|438|448|440|399|422|399|345|371|332|339|344|290|311|290|280|284|248|251|248|205|208|195|90|177|143|159|138|137|131|120|105|85|93|66|65|49|66|45|43|43|30|19|9|6|3|3|1|0|95</HistCounts>
+      </HistItem>
+    </Histograms>
+    <Metadata>
+      <MDI key="BandName">Band_1</MDI>
+      <MDI key="RepresentationType">ATHEMATIC</MDI>
+      <MDI key="STATISTICS_COVARIANCES">0.01385535336830367</MDI>
+      <MDI key="STATISTICS_EXCLUDEDVALUES"></MDI>
+      <MDI key="STATISTICS_MAXIMUM">1</MDI>
+      <MDI key="STATISTICS_MEAN">0.065123195899987</MDI>
+      <MDI key="STATISTICS_MINIMUM">9.9999997473788e-06</MDI>
+      <MDI key="STATISTICS_SKIPFACTORX">1</MDI>
+      <MDI key="STATISTICS_SKIPFACTORY">1</MDI>
+      <MDI key="STATISTICS_STDDEV">0.11770876504451</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>
