@@ -3,6 +3,17 @@
 # imports 
 import arcpy
 
+# meta, checks 
+def datetime_to_string(dt):
+    
+    # imports
+    from datetime import datetime
+    
+    # get year, month, day as strings with zero padding
+    y, m, d = str(dt.year), str(dt.month).zfill(2), str(dt.day).zfill(2)
+    return '{}-{}-{}'.format(y, m, d)   
+
+
 # meta, checks
 def get_selected_layer_extent(lyr):
     """

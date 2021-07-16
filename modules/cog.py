@@ -377,6 +377,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     
     # imports
     import requests
+    from datetime import datetime
     
     # set headers
     headers = {
@@ -398,13 +399,17 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     if not isinstance(collections, (list)):
         collections = [collections]
         
+    # get dt objects of date strings
+    start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+    end_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+        
     # iter each collection. stac doesnt return more than one
     feats = []
     for collection in collections:
         
         # notify
         print('Searching collection: {}'.format(collection))
-        
+                
         # set up fresh query
         query = {}
 
@@ -418,12 +423,20 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
 
         # start and end date. consider slc for ls7
         if isinstance(start_dt, str) and isinstance(end_dt, str):
+            
             if collection == 'ga_ls7e_ard_3' and not slc_off:
-                print('> Excluding SLC-off times.')
-                new_end_dt = end_dt if int(end_dt[:4]) < 2003 else '2003-05-31'  # this needs work
-                dt = '{}/{}'.format(start_dt, new_end_dt)
+                print('Excluding SLC-off times.')
+                
+                # fix date if after slc data ended
+                slc_dt = '2003-05-31'
+                start_slc_dt = slc_dt if not start_dt_obj.year < 2003 else start_dt
+                end_slc_dt = slc_dt if not end_dt_obj.year < 2003 else end_dt
+                dt = '{}/{}'.format(start_slc_dt, end_slc_dt)
+                
             else:
                 dt = '{}/{}'.format(start_dt, end_dt)
+            
+            # update query
             query.update({'datetime': dt})
 
         # query limit
