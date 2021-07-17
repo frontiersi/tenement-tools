@@ -23,3 +23,5 @@ f.type
 from osgeo import gdal
 gdal.__
 gdal.__version__
+import arcpy
+arcpy.AddMessage('Hey')
