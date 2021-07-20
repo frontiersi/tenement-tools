@@ -1109,3 +1109,12 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
     return df_samples 
 
 
+# meta, checks
+def resample_xr(ds_from, ds_to, resampling='nearest', ):
+    """
+    """
+    
+    # checks
+    
+    # resample from one res to another
+    return ds_from.interp(x=ds_to['x'], y=ds_to['y'], method=resampling)
