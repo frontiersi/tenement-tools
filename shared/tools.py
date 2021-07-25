@@ -1110,7 +1110,7 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
 
 
 # meta, checks
-def resample_xr(ds_from, ds_to, resampling='nearest', ):
+def resample_xr(ds_from, ds_to, resampling='nearest'):
     """
     """
     

@@ -168,3 +168,49 @@ def prepare_fill_value_type(in_fill_value):
     except:
         print('Could not determine fill value. Setting to np.nan.')
         return np.nan
+
+
+# meta, checks
+def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
+    """
+    helper func that takes an arcmap project, finds lyr in
+    active map, and applies specific colormap to lyr.
+    """
+    
+    # check aprx
+    
+    # get cmap if exists, precipitation if not
+    try:
+        cmap = aprx.listColorRamps(cmap_name)[0]
+    except:
+        print('Requested cmap does not exist. Using default.')
+        cmap = aprx.listColorRamps('Precipitation')[0]
+        
+    # get active map
+    m = aprx.activeMap
+    
+    # check if map found
+    # todo
+    
+    # get requested lyr
+    lyr = m.listLayers(lyr_name)
+    if len(lyr) != 1:
+        raise ValueError('Requested layer not found.')
+    elif not lyr[0].isRasterLayer:
+        raise TypeError('Requested layer is not a raster type.')
+        
+    # prepare lyr and symbology objects
+    lyr = lyr[0]
+    sym = lyr.symbology
+    
+    # set symbology parameters
+    sym.colorizer.stretchType = 'PercentClip'
+    sym.colorizer.colorRamp = cmap
+    sym.colorizer.minPercent = cutoff_pct
+    sym.colorizer.maxPercent = cutoff_pct   
+    sym.colorizer.invertColorRamp = False
+    
+    # set symbology of requested layer
+    lyr.symbology = sym
+              
+    return lyr
