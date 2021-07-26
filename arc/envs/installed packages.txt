@@ -25,6 +25,9 @@ conda install dask=2.30.0
 conda install -c esri rasterio --dry-run
 conda install -c esri rasterio
 
+# need pyproj
+conda install pyproj
+
 # note, in arcgis, you will need to set gdal folder
 #os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
 
