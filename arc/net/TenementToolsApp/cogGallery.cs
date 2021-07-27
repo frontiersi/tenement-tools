@@ -100,8 +100,20 @@ namespace TenementToolsApp
             }
             else if (gallery_item == "Explore Data")
             {
-                // temp: warn not yet implemented
-                ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Explore Data not yet implemented.");
+                string toolname = "COG_Explore";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find COG Explore tool.");
+                };
+
             };
         }
     }
