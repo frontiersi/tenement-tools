@@ -296,16 +296,29 @@ def read_shapefile(shp_path=None):
         # read shapefile as layer
         shp = ogr.Open(shp_path, 0)
         lyr = shp.GetLayer()
-
-        # get epsg code
-        epsg = int(lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1))
-
+        srs = lyr.GetSpatialRef()
+        
         # get num feats
         num_feats = lyr.GetFeatureCount()
 
     except Exception:
-        raise TypeError('Could not read shapefile records. Is the file corrupt?')
+        raise TypeError('Could not read shapefile records. Is the file corrupt?')        
+     
+    try:
+        # set empty epsg, get epsg if authority exists
+        epsg = None
+        epsg = int(lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1))
+    except:
+        pass
         
+    # try back up if authority failed
+    if epsg is None:
+        srs = lyr.GetSpatialRef().GetAttrValue('PROJCS', 0)
+        if isinstance(srs, str):
+            srs = srs.lower()
+            if 'albers' in srs and 'australia' in srs:
+                epsg = 3577
+
     # check shapefile parameters
     if epsg != 3577:
         raise ValueError('Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
