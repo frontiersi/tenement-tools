@@ -9,6 +9,10 @@ conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool
 # alternatively, clone to specifc folder
 #conda create --name arcgispro-dev --clone arcgispro-py3 -p C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev
 
+# also try
+#conda create --name deeplearning --clone arcgispro-py3 --pinned
+
+
 # activate env
 activate arcgispro-py3-dev-tool
 #activate C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev
