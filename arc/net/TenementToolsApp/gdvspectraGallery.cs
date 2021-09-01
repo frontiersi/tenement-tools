@@ -103,6 +103,46 @@ namespace TenementToolsApp
                 catch (Exception e) { 
                     Debug.WriteLine("Could not find GDVSpectra tool.");
                 };
+            }
+
+            // open gdvspectra threshold tool pane
+            else if (gallery_item == "GDV Threshold")
+            {
+
+                // set toolname and create empty input array
+                string toolname = "GDVSpectra_Threshold";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find GDVSpectra tool.");
+                };
+            }
+
+            // open gdvspectra threshold tool pane
+            else if (gallery_item == "Trend Analysis")
+            {
+
+                // set toolname and create empty input array
+                string toolname = "GDVSpectra_Trend";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find GDVSpectra tool.");
+                };
             };
         }
     }
