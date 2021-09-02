@@ -106,7 +106,7 @@ namespace TenementToolsApp
             }
 
             // open gdvspectra threshold tool pane
-            else if (gallery_item == "GDV Threshold")
+            else if (gallery_item == "Threshold Likelihood")
             {
 
                 // set toolname and create empty input array
