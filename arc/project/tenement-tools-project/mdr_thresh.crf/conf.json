@@ -76,7 +76,7 @@
       "mode" : 1,
       "skipX" : 1,
       "skipY" : 1,
-      "count" : 1288
+      "count" : 1272
     }
   ],
   "histograms" : [
@@ -85,7 +85,7 @@
       "min" : 0.5,
       "max" : 2.5,
       "counts" : [
-        644,
+        636,
         0,
         0,
         0,
