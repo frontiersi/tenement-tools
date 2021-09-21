@@ -24,9 +24,6 @@ import os, sys
 import numpy as np
 import xarray as xr
 
-#sys.path.append('../../shared')
-#import tools
-
 
 def binary_mask(ds, remove_lt=None, remove_gt=None, inplace=True):
     """
