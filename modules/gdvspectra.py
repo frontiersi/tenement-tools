@@ -1403,51 +1403,7 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         if 'time' in ds.dims:
             print('AUC: {0} for time: {1}.'.format(round(auc, 3), da['time'].values))
         else:
-            print('AUC: {0} for whole dataset.'.format(round(auc, 3)))
-           
-        
-        for e in fpr:
-            print(e)
-        print('\n')
-        for e in tpr:
-            print(e)
-        print('\n')
-        print(auc)
-        print('\n')
-        print(cut_off)
-
-        
-
-        # show
-        print('- ' * 30)
-        plt.show()
-        print('- ' * 30)
-        print('')
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-        
-        
+            print('AUC: {0} for whole dataset.'.format(round(auc, 3)))       
 
     # concat array back together
     if len(thresh_list) > 1:
