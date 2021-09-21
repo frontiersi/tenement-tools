@@ -1,6 +1,13 @@
-"""
-Functions to fetch satellite data.
-"""
+# satfetcher
+'''
+This script contains functions for loading various types of
+raster data. This includes fetching satellite from Digital Earth
+Australia's ODC sandbox instance. Also handles local rasters (geotiffs)
+and netcdf files. 
+
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
 
 # import required libraries
 import os, sys
@@ -11,12 +18,41 @@ import xarray as xr
 sys.path.append('../../shared')
 import satfetcher, tools
 
-# # # # # DEA # # #
-# todo - metadata, checks
+
 def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None, 
                  time_range=None, min_gooddata=0.90, use_dask=False):
     """
+    A helper function to load digital earth australia (dea) data for
+    landsat or sentinel 2 platforms. Requires the datacube library, so
+    only used when in ODC. Basically, mostly here now for testing.
+    
+    Parameters
+    ----------
+    platform: str
+        Select whether landsat or sentinel platform.
+    bands : list 
+        Define names of bands for current platform. For example,
+        nbart_blue, nbart_green, nbart_red, etc.
+    x_extent : tuple of floats
+        A tuple of floats representing min and max x extents.
+    y_extent : tuple of floats
+        A tuple of floats representing min and max y extents.
+    time_range : tuple of strings
+        A tuple of strings for start and end date range. Must be in
+        format YYYY-MM-DD, or YYYY-MM, or YYYY.
+    min_gooddata : float 
+        Minimum good data pixels required to accept a landsat or
+        sentinel scene. Example: 0.90 is 90% good pixels.
+    use_dask : bool
+        Whether the xarray dataset returned is dask or computed data.
+        Dask recommended to reduce memory issues.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
+    
+    
     try:
         # imports
         import datacube
@@ -29,14 +65,6 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
 
     # notify user
     print('Loading DEA ODC ARD satellite data.')
-    
-    # check if platform landsat or sentinel
-    
-    # check if bands
-    
-    # check lon extent, lat extent
-    
-    # check time
         
     # set up allowed bands for landsat
     landsat_dea_bands = [
@@ -119,10 +147,32 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
     print('Satellite imagery fetched successfully.')
     return ds
 
-# todo - metadata, checks
+
 def load_dea_dem(x_extent=None, y_extent=None, resolution=30, use_dask=False):
     """
+    A helper function to load digital earth australia (dea) data for
+    SRTM digital elevation platform. Requires the datacube library, so
+    only used when in ODC. Basically, mostly here now for testing.
+    
+    Parameters
+    ----------
+    x_extent : tuple of floats
+        A tuple of floats representing min and max x extents.
+    y_extent : tuple of floats
+        A tuple of floats representing min and max y extents.
+    resolution : int
+        Pixel size resolution. Set the ouput dataset resolution.
+        If does not match the DEA product's resolution, resampling
+        will occur under the hood.
+    use_dask : bool
+        Whether the xarray dataset returned is dask or computed data.
+        Dask recommended to reduce memory issues.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
+    
     try:
         # imports
         import datacube
@@ -178,6 +228,10 @@ def conform_dea_ard_band_names(ds, platform=None):
     ds: xarray Dataset
         A two-dimensional or multi-dimensional array containing spectral 
         bands that will be renamed.
+    platform : str
+        There are differences in band naming between landsat and sentinel
+        platforms. Set the name of the current dataset's platform to consider
+        these differences.
 
     Returns
     -------
@@ -258,8 +312,7 @@ def conform_dea_ard_band_names(ds, platform=None):
     print('Satellite band names conformed successfully.')
     return ds
 
-# # # # # LOCAL DATA # # #
-# meta
+
 def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-9999):
     """
     Read a list of rasters (e.g. tif) and convert them into an xarray dataset, 
@@ -386,7 +439,6 @@ def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-99
     return ds
     
     
-# meta
 def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
     """
     Read a netcdf file (e.g. nc) and convert into an xarray dataset.
