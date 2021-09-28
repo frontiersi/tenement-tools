@@ -18,6 +18,8 @@ Tenement Tools relies on several Python 3 libraries that are not enabled in ArcG
 8. Install pyproj library: <code>conda install pyproj</code>
 ArcGIS Pro will now be using the cloned Python virtual environment to run all its geoprocessors, including Tenement Tools. If you no longer need to use the cloned environment, simply use the ArcGIS Pro Package Manager within the application to turn the default environment back on: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/work-with-python-environments.htm.
 
-
 #### 3. Download Tenement Tools
 Everything needed to run the development version of Tenement Tools is on this GitHub page. Click the green "Code" button above, then click "Download Zip" (or pull the repo via Git). Unzip the folder, rename it from <code>tenement-tools-main</code> to <code>tenement-tools</code>, and place it into: <code>C:\Users\<YOUR USERNAME>\Documents\GitHub</code>.
+
+#### 4. Add the Tenement Tools plug-in to ArcGIS Pro
+Heya
