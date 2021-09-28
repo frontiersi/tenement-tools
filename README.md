@@ -24,3 +24,11 @@ Everything needed to run the development version of Tenement Tools is on this Gi
 
 #### 4. Add the Tenement Tools plug-in to ArcGIS Pro
 In order to enable the Tenement Tools UI ribbon in ArcGIS Pro, the plug-in must be added to the ArcGIS Pro AddIns folder. In the tenement-tools folder unzipped above, copy the folder located in <code>tenement-tools\arc\plugin\backup_20210926\AddIns\ArcGISPro</code> (the folder one with random numbers and letters)and paste it into the ArcGIS AddIns folder, typically located here: <code>C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro</code>.
+
+#### 5. Add the Tenement Tools Python Toolbox to ArcGIS
+Finally, we need to add the ArcGIS Pro Python Toolbox to ArcGIS so the UI has access to the Tenement Tools analyses code. Open ArcGIS Pro and create a new project (or open an existing one). Open the Catalog Panel (if you can't see it, click the View tab at the top of the ribbon, then click Catalog Pane). Right-click the Toolboxes icon and click Add Toolbox. Navigate to the toolbox folder from the unzipped tenement-tools folder here: <code>tenement-tools\arc\toolbox</code>, click the toolbox called tenement-tools-toolbox.pyt and click Ok. This will add the toolbox to ArcGIS Pro.
+  
+Congratulations, you have added the development version of Tenement Tools to ArcMap Pro!
+  
+  
+  
