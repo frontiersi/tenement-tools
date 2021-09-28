@@ -22,4 +22,4 @@ ArcGIS Pro will now be using the cloned Python virtual environment to run all it
 Everything needed to run the development version of Tenement Tools is on this GitHub page. Click the green "Code" button above, then click "Download Zip" (or pull the repo via Git). Unzip the folder, rename it from <code>tenement-tools-main</code> to <code>tenement-tools</code>, and place it into: <code>C:\Users\<YOUR USERNAME>\Documents\GitHub</code>.
 
 #### 4. Add the Tenement Tools plug-in to ArcGIS Pro
-Heya
+In order to enable the Tenement Tools UI ribbon in ArcGIS Pro, the plug-in must be added to the ArcGIS Pro AddIns folder. In the tenement-tools folder unzipped above, copy the folder located in <code>tenement-tools\arc\plugin\backup_20210926\AddIns\ArcGISPro</code> (the folder one with random numbers and letters)and paste it into the ArcGIS AddIns folder, typically located here: <code>C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro</code>.
