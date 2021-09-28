@@ -8,6 +8,6 @@ First, download and install ArcGIS Pro 2.8. This can be obtained from your organ
 
 #### 2. Clone the default ArcGIS Pro Python 3 virtual environment
 Tenement Tools relies on several Python 3 libraries that are not enabled in ArcGIS Pro 2.8 by default. In order to enable them, the default Python 3 virtual environment must be cloned and these extra libraries installed into the clone. ESRI has made this process relatively painless. Follow the following steps below:
-1. heya
-2. yo
-3. hello
+1. Open the Windows Start menu and find the ArcGIS folder
+2. Run the Python Command Prompt
+3. Type _ heya
