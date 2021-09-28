@@ -28,4 +28,4 @@ In order to enable the Tenement Tools UI ribbon in ArcGIS Pro, the plug-in must 
 #### 5. Add the Tenement Tools Python Toolbox to ArcGIS
 Finally, we need to add the ArcGIS Pro Python Toolbox to ArcGIS so the UI has access to the Tenement Tools analyses code. Open ArcGIS Pro and create a new project (or open an existing one). Open the Catalog Panel (if you can't see it, click the View tab at the top of the ribbon, then click Catalog Pane). Right-click the Toolboxes icon and click Add Toolbox. Navigate to the toolbox folder from the unzipped tenement-tools folder here: <code>tenement-tools\arc\toolbox</code>, click the toolbox called tenement-tools-toolbox.pyt and click Ok. This will add the toolbox to ArcGIS Pro.
   
-Congratulations, you have added the development version of Tenement Tools to ArcMap Pro!
+Congratulations, you have added the development version of Tenement Tools to ArcMap Pro! Click the Add-In tab at the top of the application to access Tenement Tools.
