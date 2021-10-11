@@ -39,7 +39,7 @@ conda install pyproj
 #conda install geopandas
 
 
-install anaconda, check uninstalled libraries from drop down and installr asterio
+#install anaconda, check uninstalled libraries from drop down and installr asterio
 
-check env variables (i.e. check gdal). can set and get here
-conda env config vars -h
+#check env variables (i.e. check gdal). can set and get here
+#conda env config vars -h
