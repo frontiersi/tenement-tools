@@ -19,7 +19,7 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 # import required libraries
 import itertools
 import warnings
-import math
+import requests
 import threading
 import pyproj
 import affine
@@ -34,6 +34,7 @@ from rasterio.warp import transform_bounds
 from rasterio import windows
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
+from datetime import datetime
 from functools import lru_cache
 
 # meta
@@ -217,9 +218,13 @@ class NANReader:
         """
         """
         
-        return nodata_for_window(window, 
-                                 self.dtype, 
-                                 self.fill_value)
+        # todo was this: todo i can delete this safely... how come this didnt fire before though?
+        #return nodata_for_window(window, 
+                                 #self.dtype, 
+                                 #self.fill_value)
+                                 
+        # changed to this to use my func todo if error, check
+        return get_nodata_for_window(window, self.dtype, self.fill_value)
         
       
     def close(self):
@@ -399,10 +404,6 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     ----------
     feats : list of dicts of returned stac metadata items.
     """
-
-    # imports
-    import requests
-    from datetime import datetime
     
     # set headers for stac query
     headers = {
@@ -506,6 +507,225 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
 
 
 
+
+# todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
+def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, resolution=30, snap_bounds=True, force_dea_http=True):
+    """
+    Prepares raw stac metadata and assets into actual useable data for dask
+    computations. This includes preparing coordinate system, bounding boxes,
+    resolution and resampling, raster sizes and overlaps, raster snapping,
+    etc. Results in an numpy asset table of bounding box and url information, 
+    plus and metadata object for later appending to xarray dataset.
+    
+    Parameters
+    ----------
+    feats: list
+        A list of dicts of stac metadata items produced from fetch stac data
+        function.
+    assets: list
+        A list of satellite band names. Must be correct names for landsat and
+        sentinel from dea aws.
+    bound_latlon: list of int/float
+        The bounding box of area of interest for which to query for 
+        satellite data. Must be lat and lon with format: 
+        (min lon, min lat, max lon, max lat).
+    bounds : list of int/float
+        As above, but using same coordinate system specified in epsg 
+        parameter. Cannot provide both. Currently disabled.
+    epsg : int
+        Reprojects output satellite images into this coordinate system. 
+        If none provided, uses default system of dea aws. Default is
+        gda94 albers, 3577. Tenement tools will always use this.
+    resolution : int
+        Output size of raster cells. If higher or greater than raw pixel
+        size on dea aws, resampling will occur to up/down scale to user
+        provided resolution. Careful - units must be in units of provided
+        epsg. Tenement tools sets this to 30, 10 for landsat, sentinel 
+        respectively.
+    snap_bounds : bool
+        Whether to snap raster bounds to whole number intervals of resolution,
+        to prevent fraction-of-a-pixel offsets. Default is true.
+    force_dea_http : bool
+        Replace s3 aws url path for an http path. Default is true.
+        
+    Returns
+    ----------
+    feats : list of dicts of returned stac metadata items.
+    
+    """
+    
+    # notify
+    print('Translating raw STAC data into numpy format.')
+
+    # check if both bound parameters provided
+    if bounds_latlon is not None and bounds is not None:
+        raise ValueError('Cannot provide both bounds latlon and bounds.')
+    
+    # check if bounds provided - currently disabled, might remove
+    if bounds is not None:
+        raise ValueError('Bounds input currently disabled. Please use bounds_latlon.')
+        
+    # check output epsg is albers - currently only support epsg
+    if epsg != 3577:
+        raise ValueError('EPSG 3577 only supported for now.')
+            
+    # set output epsg, output bounds
+    out_epsg, out_bounds = epsg, bounds
+
+    # prepare resolution tuple
+    if resolution is None:
+        raise ValueError('Must set a resolution value.')
+    elif not isinstance(resolution, tuple):
+        resolution = (resolution, resolution)
+    
+    # set output res
+    out_resolution = resolution
+        
+    # prepare and check assets list
+    if assets is None:
+        assets = []
+    if not isinstance(assets, list):
+        assets = [assets]
+    if len(assets) == 0:
+        raise ValueError('Must request at least one asset.')
+                
+    # todo check data type, get everything if empty list
+    #asset_ids = assets
+        
+    # create an numpy asset table to store info
+    asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
+    asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
+
+    # check if feats exist
+    if len(feats) == 0:
+        raise ValueError('No items to prepare.')
+        
+    # iter feats
+    for feat_idx, feat in enumerate(feats):
+        
+        # get top level meta
+        feat_props = feat.get('properties')
+        feat_epsg = feat_props.get('proj:epsg')
+        feat_bbox = feat_props.get('proj:bbox')
+        feat_shape = feat_props.get('proj:shape')
+        feat_transform = feat_props.get('proj:transform')        
+    
+        # unpack assets
+        feat_bbox_proj = None
+        for asset_idx, asset_name in enumerate(assets):
+            asset = feat.get('assets').get(asset_name)
+            
+            # get asset level meta, if not exist, use top level
+            if asset is not None:
+                asset_epsg = asset.get('proj:epsg', feat_epsg)
+                asset_bbox = asset.get('proj:bbox', feat_bbox)
+                asset_shape = asset.get('proj:shape', feat_shape)
+                asset_transform = asset.get('proj:transform', feat_transform)
+                asset_affine = None
+                
+                # prepare crs - todo handle when no epsg given. see stackstac
+                out_epsg = int(out_epsg)
+                
+                # reproject bounds and out_bounds to user epsg
+                if bounds_latlon is not None and out_bounds is None:
+                    bounds = reproject_bbox(4326, out_epsg, bounds_latlon)
+                    out_bounds = bounds
+
+                # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
+                if asset_transform is None or asset_shape is None or asset_epsg is None:
+                    raise ValueError('No feature-level transform and shape metadata.')
+                else:
+                    asset_affine = affine.Affine(*asset_transform[:6])
+                    asset_bbox_proj = bbox_from_affine(asset_affine,
+                                                       asset_shape[0],
+                                                       asset_shape[1],
+                                                       asset_epsg,
+                                                       out_epsg)
+                
+                # compute bounds
+                if bounds is None:
+                    if asset_bbox_proj is None:
+                        raise ValueError('Not enough STAC infomration to build bounds.')
+                        
+                    if out_bounds is None:
+                        out_bounds = asset_bbox_proj
+                    else:
+                        #bound_union = union_bounds(asset_bbox_proj, out_bounds)
+                        #out_bounds = bound_union
+                        raise ValueError('Need to implement union.')
+    
+                else:
+                    # skip if asset bbox does not overlap with bounds
+                    overlaps = bounds_overlap(asset_bbox_proj, bounds)
+                    if asset_bbox_proj is not None and not overlaps:
+                        continue # move to next asset
+                    
+                # do resolution todo: implement auto resolution capture
+                if resolution is None:
+                    raise ValueError('Need to implement auto-find resolution.')
+                    
+                # force aws s3 to https todo make this work with aws s3 bucket
+                href = asset.get('href')
+                if force_dea_http:
+                    href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
+                    
+                # add info to asset table
+                asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
+                
+        # creates row in array that has 1 row per scene, n columns per requested band where (url, [l, b, r, t])
+        href = asset["href"].replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
+        asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
+        
+    # snap boundary coordinates
+    if snap_bounds:
+        out_bounds = snap_bbox(out_bounds, 
+                               out_resolution)
+     
+    # transform and get shape for top-level
+    transform = do_transform(out_bounds, out_resolution)
+    shape = get_shape(out_bounds, out_resolution)
+        
+    # get table of nans where any feats/assets where asset missing/out bounds
+    isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
+    feat_isnan = isnan_table.all(axis=1)  # any items all empty?
+    asset_isnan = isnan_table.all(axis=0) # any assets all empty?
+    
+    # remove offending items. np.ix_ removes specific cells (col, row)
+    if feat_isnan.any() or asset_isnan.any():
+        asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
+        feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
+        assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
+        
+    # create final top-level raster metadata dict
+    meta = {
+        'epsg': out_epsg,
+        'bounds': out_bounds,
+        'resolutions_xy': out_resolution,
+        'shape': shape,
+        'transform': transform,
+        'feats': feats,
+        'assets': assets,
+        'vrt_params': {
+            'crs': out_epsg,
+            'transform': transform,
+            'height': shape[0],
+            'width': shape[1]
+        }
+    }
+    
+    # notify and return
+    print('Translated raw STAC data successfully.')
+    return meta, asset_table
+
+
+
+
+
+
+
+
+
+
 # # # helper functions
 def get_next_url(json):
     """
@@ -550,7 +770,6 @@ def do_transform(bounds, resolution):
     
     # perform affine transform (xscale, 0.0, xoff, 0.0, yscale, yoff)
     return affine.Affine(resolution[0], 0.0, bounds[0], 0.0, -resolution[1], bounds[3])
-
 
 @lru_cache(maxsize=64)
 def cached_transform(from_epsg=4326, to_epsg=3577, skip_equivalent=True, always_xy=True):
@@ -628,7 +847,7 @@ def bbox_from_affine(aff, ysize, xsize, from_epsg=4326, to_epsg=3577):
     return [min(x_ext_proj), min(y_ext_proj), max(x_ext_proj), max(y_ext_proj)]
 
 
-def reporject_bbox(source_epsg=4326, dest_epsg=3577, bbox=None):
+def reproject_bbox(source_epsg=4326, dest_epsg=3577, bbox=None):
     """
     Helper function to reproject given bounding box (default wgs84)
     to requested coordinate system)
@@ -745,188 +964,41 @@ def get_shape(bounds, resolution):
     return [h, w]
 
 
-
-
-
-# meta
 def get_nodata_for_window(window, dtype, fill_value):
     """
-    Fill window with constant no data value if error
-    occurred during cog reader.
+    Helper function to create an window (i.e. a numpy array) with 
+    a specific value representing no data (i.e., np.nan or 0) if
+    error occurred during cog reader function.
+    
+    Parameters
+    -------------
+    window : rasterio window object
+        A rasterio-based window subset of actual raster or cog data.
+    dtype : str or np dtype
+        Data type of output window object
+    fill_value : various
+        Any type of numpy data type e.g., int8, int16, float16, float32, nan.
+        
+    Returns
+    ----------
+    A numpy array representing original window size but of new user-defined
+    fill value.
+
     """
     
+    # check if fill value provided
     if fill_value is None:
         raise ValueError('Fill value must be anything but None.')
         
-    # get hight, width of window
+    # get height, width of window and fill new numpy array
     h, w = int(window.height), int(window.width)
     return np.full((h, w), fill_value, dtype)
 
-# todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
-def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, 
-                 resolution=30, snap_bounds=True, force_dea_http=True):
-    """
-    """
-    
-    # notify
-    print('Translating raw STAC data into numpy format.')
 
-    # checks
-    if bounds_latlon is not None and bounds is not None:
-        raise ValueError('Cannot provide both bounds latlon and bounds.')
-        
-    # check epsg
-    if epsg != 3577:
-        raise ValueError('EPSG 3577 only supported at this stage.')
-            
-    # set epsg, bounds
-    out_epsg = epsg
-    out_bounds = bounds
 
-    # prepare resolution tuple
-    if resolution is None:
-        raise ValueError('Must set a resolution value.')
-    elif not isinstance(resolution, tuple):
-        resolution = (resolution, resolution)
-    
-    # set output res
-    out_resolution = resolution
-        
-    # prepare and check assets list
-    if assets is None:
-        assets = []
-    if not isinstance(assets, list):
-        assets = [assets]
-    if len(assets) == 0:
-        raise ValueError('Must request at least one asset.')
-                
-    # todo check data type, get everything if empty list
-    #asset_ids = assets
-        
-    # create an numpy asset table to store info
-    asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
-    asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
 
-    # check if feats exist
-    if len(feats) == 0:
-        raise ValueError('No items to prepare.')
-        
-    # iter feats
-    for feat_idx, feat in enumerate(feats):
-        
-        # get top level meta
-        feat_props = feat.get('properties')
-        feat_epsg = feat_props.get('proj:epsg')
-        feat_bbox = feat_props.get('proj:bbox')
-        feat_shape = feat_props.get('proj:shape')
-        feat_transform = feat_props.get('proj:transform')        
-    
-        # unpack assets
-        feat_bbox_proj = None
-        for asset_idx, asset_name in enumerate(assets):
-            asset = feat.get('assets').get(asset_name)
-            
-            # get asset level meta, if not exist, use top level
-            if asset is not None:
-                asset_epsg = asset.get('proj:epsg', feat_epsg)
-                asset_bbox = asset.get('proj:bbox', feat_bbox)
-                asset_shape = asset.get('proj:shape', feat_shape)
-                asset_transform = asset.get('proj:transform', feat_transform)
-                asset_affine = None
-                
-                # prepare crs - todo handle when no epsg given. see stackstac
-                out_epsg = int(out_epsg)
-                
-                # reproject bounds and out_bounds to user epsg
-                if bounds_latlon is not None and out_bounds is None:
-                    bounds = reporject_bbox(4326, out_epsg, bounds_latlon)
-                    out_bounds = bounds
 
-                # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
-                if asset_transform is None or asset_shape is None or asset_epsg is None:
-                    raise ValueError('No feature-level transform and shape metadata.')
-                else:
-                    asset_affine = affine.Affine(*asset_transform[:6])
-                    asset_bbox_proj = bbox_from_affine(asset_affine,
-                                                       asset_shape[0],
-                                                       asset_shape[1],
-                                                       asset_epsg,
-                                                       out_epsg)
-                
-                # compute bounds
-                if bounds is None:
-                    if asset_bbox_proj is None:
-                        raise ValueError('Not enough STAC infomration to build bounds.')
-                        
-                    if out_bounds is None:
-                        out_bounds = asset_bbox_proj
-                    else:
-                        #bound_union = union_bounds(asset_bbox_proj, out_bounds)
-                        #out_bounds = bound_union
-                        raise ValueError('Need to implement union.')
-    
-                else:
-                    # skip if asset bbox does not overlap with bounds
-                    overlaps = bounds_overlap(asset_bbox_proj, bounds)
-                    if asset_bbox_proj is not None and not overlaps:
-                        continue # move to next asset
-                    
-                # do resolution todo: implement auto resolution capture
-                if resolution is None:
-                    raise ValueError('Need to implement auto-find resolution.')
-                    
-                # force aws s3 to https todo make this work with aws s3 bucket
-                href = asset.get('href')
-                if force_dea_http:
-                    href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-                    
-                # add info to asset table
-                asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-                
-        # creates row in array that has 1 row per scene, n columns per requested band where (url, [l, b, r, t])
-        href = asset["href"].replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-        asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-        
-    # snap boundary coordinates
-    if snap_bounds:
-        out_bounds = snap_bbox(out_bounds, 
-                               out_resolution)
-     
-    # transform and get shape for top-level
-    transform = do_transform(out_bounds, out_resolution)
-    shape = get_shape(out_bounds, out_resolution)
-        
-    # get table of nans where any feats/assets where asset missing/out bounds
-    isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
-    feat_isnan = isnan_table.all(axis=1)  # any items all empty?
-    asset_isnan = isnan_table.all(axis=0) # any assets all empty?
-    
-    # remove offending items. np.ix_ removes specific cells (col, row)
-    if feat_isnan.any() or asset_isnan.any():
-        asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
-        feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
-        assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
-        
-    # create final top-level raster metadata dict
-    meta = {
-        'epsg': out_epsg,
-        'bounds': out_bounds,
-        'resolutions_xy': out_resolution,
-        'shape': shape,
-        'transform': transform,
-        'feats': feats,
-        'assets': assets,
-        'vrt_params': {
-            'crs': out_epsg,
-            'transform': transform,
-            'height': shape[0],
-            'width': shape[1]
-        }
-    }
-    
-    # notify and return
-    print('Translated raw STAC data successfully.')
-    return meta, asset_table
+
 
 # checks, meta, todos, mpve fetch raster window func into here?
 def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest',
