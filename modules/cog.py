@@ -528,7 +528,8 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     bound_latlon: list of int/float
         The bounding box of area of interest for which to query for 
         satellite data. Must be lat and lon with format: 
-        (min lon, min lat, max lon, max lat).
+        (min lon, min lat, max lon, max lat). Recommended that users
+        use wgs84.
     bounds : list of int/float
         As above, but using same coordinate system specified in epsg 
         parameter. Cannot provide both. Currently disabled.
@@ -550,12 +551,16 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
         
     Returns
     ----------
-    feats : list of dicts of returned stac metadata items.
-    
+    meta : a dictionary of dea aws metadata for appending to xr dataset later
+    asset_table : a numpy table with rows of url and associated cleaned bounding box
     """
     
     # notify
-    print('Translating raw STAC data into numpy format.')
+    print('Converting raw STAC data into numpy format.')
+    
+    # set input epsg used by bounds_latlon. for now, we hardcode to wgs84
+    # may change and make dynamic later, for now suitable
+    in_bounds_epsg = 4326
 
     # check if both bound parameters provided
     if bounds_latlon is not None and bounds is not None:
@@ -568,19 +573,16 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     # check output epsg is albers - currently only support epsg
     if epsg != 3577:
         raise ValueError('EPSG 3577 only supported for now.')
-            
-    # set output epsg, output bounds
-    out_epsg, out_bounds = epsg, bounds
-
+        
     # prepare resolution tuple
     if resolution is None:
         raise ValueError('Must set a resolution value.')
     elif not isinstance(resolution, tuple):
         resolution = (resolution, resolution)
+            
+    # set output epsg, output bounds, output resolution
+    out_epsg, out_bounds, out_resolution = epsg, bounds, resolution
     
-    # set output res
-    out_resolution = resolution
-        
     # prepare and check assets list
     if assets is None:
         assets = []
@@ -589,10 +591,10 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     if len(assets) == 0:
         raise ValueError('Must request at least one asset.')
                 
-    # todo check data type, get everything if empty list
-    #asset_ids = assets
+    # check data types of assets?
+    # we always get rasters of int16 from dea aws... leave for now
         
-    # create an numpy asset table to store info
+    # create an numpy asset table to store info, make use of object type for string
     asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
     asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
 
@@ -600,10 +602,10 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     if len(feats) == 0:
         raise ValueError('No items to prepare.')
         
-    # iter feats
+    # iter feats, work on bbox, projection, get url
     for feat_idx, feat in enumerate(feats):
         
-        # get top level meta
+        # get feat level meta
         feat_props = feat.get('properties')
         feat_epsg = feat_props.get('proj:epsg')
         feat_bbox = feat_props.get('proj:bbox')
@@ -615,7 +617,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
         for asset_idx, asset_name in enumerate(assets):
             asset = feat.get('assets').get(asset_name)
             
-            # get asset level meta, if not exist, use top level
+            # get asset level meta, if not exist, use feat level
             if asset is not None:
                 asset_epsg = asset.get('proj:epsg', feat_epsg)
                 asset_bbox = asset.get('proj:bbox', feat_bbox)
@@ -623,24 +625,31 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 asset_transform = asset.get('proj:transform', feat_transform)
                 asset_affine = None
                 
-                # prepare crs - todo handle when no epsg given. see stackstac
+                # note: in future, may want to handle using asset epsg 
+                # here instead of forcing albers. for now, all good.
+                
+                # cast output epsg if in case string
                 out_epsg = int(out_epsg)
                 
                 # reproject bounds and out_bounds to user epsg
                 if bounds_latlon is not None and out_bounds is None:
-                    bounds = reproject_bbox(4326, out_epsg, bounds_latlon)
+                    bounds = reproject_bbox(in_bounds_epsg, out_epsg, bounds_latlon)
                     out_bounds = bounds
 
-                # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
-                if asset_transform is None or asset_shape is None or asset_epsg is None:
-                    raise ValueError('No feature-level transform and shape metadata.')
-                else:
+                # below could be expanded in future. we always have asset transform, shape
+                # but what if we didnt? would need to adapt this to handle. lets leave for now
+                # compute bbox from asset level shape and geotransform
+                if asset_transform is not None or asset_shape is not None or asset_epsg is not None:
                     asset_affine = affine.Affine(*asset_transform[:6])
                     asset_bbox_proj = bbox_from_affine(asset_affine,
                                                        asset_shape[0],
                                                        asset_shape[1],
                                                        asset_epsg,
                                                        out_epsg)
+                else:
+                    raise ValueError('No feature-level transform and shape metadata.')
+
+                # TODO THIS IS WHERE I AM UP TO
                 
                 # compute bounds
                 if bounds is None:
