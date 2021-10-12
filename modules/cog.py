@@ -1,27 +1,39 @@
-# working
+# cog
+'''
+This script contains functions for searching the digital earth australia (dea)
+public aws bucket using stac, preparing cog data into dask arrays for lazy 
+loading, and computation into a local netcdf with bands as variables, x, y
+and time dimensions. This script is a simplified, python 3.8-compatible and 
+dea-focused version of the excellent stackstac python library 
+(http://github.com/gjoseph92/stackstac). We highly recommended you use
+stackstac if you need to use any aws bucket other than the dea public database,
+and to cite them when they have a white paper available if using in research.
 
-# gdal, rasterio env init - todo make this dynamic
-#import os, certifi
-#os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
-#os.environ.setdefault("CURL_CA_BUNDLE", certifi.where())
+See associated Jupyter Notebook cog.ipynb for a basic tutorial on the
+main functions and order of execution.
 
-import rasterio
-import dask
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
+
+# import required libraries
+import itertools
+import warnings
+import math
+import threading
+import pyproj
+import affine
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-import threading
+import dask
 import dask.array as da
 import dask.array as dask_array
+import rasterio
+from rasterio.warp import transform_bounds
 from rasterio import windows
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
-
-import itertools
-import warnings
-
-import pyproj
 from functools import lru_cache
 
 # meta
@@ -343,43 +355,56 @@ class ThreadLocalData:
     def __setstate__(self, state):
         raise RuntimeError('I shouldnt be getting un-pickled...')
 
-def get_next_url(json):
-    """
-    Small helper function to parse json and
-    look for 'next' url. Used during stac
-    queries.
-    
-    Parameters
-    -------------
-    json : dict
-        A dictionary of json elements.
-    
-    """
-    
-    # parse json doc and look for link ref
-    for link in json.get('links'):
-        if link.get('rel') == 'next':
-            return link.get('href')
-        
-    # else, go home empty handed
-    return None
 
-# meta, move checks up to top? make the year comparitor cleaner
+# # # core functions
 def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=False, sort_time=True, limit=250):
     """
-    bbox BBOX BBOX BBOX BBOX
-    Bounding box (min lon, min lat, max lon, max lat)
-    (default: None)
+    Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac/search'),
+    a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of
+    dates, etc. and a bounding box in lat/lon and queries for all available metadata on the 
+    digital earth australia (dea) aws bucket for these parameters. If any data is found for
+    provided search query, a list of dictionaries containing image/band urls and other 
+    vrt-friendly information is returned for further processing.
     
-    datetime DATETIME   Single date/time or begin and end date/time (e.g.,
-                        2017-01-01/2017-02-15) (default: None)
+    Parameters
+    ----------
+    stac_endpoint: str
+        A string url for a stac endpoint. We are focused on 
+        https://explorer.sandbox.dea.ga.gov.au/stac/search for this
+        tool.
+    collections : list of strings 
+        A list of strings of dea aws product names, e.g., ga_ls5t_ard_3.
+    start_dt : date
+         A datetime object in format YYYY-MM-DD. This is the starting date
+         of required satellite imagery.
+    end_dt : date
+         A datetime object in format YYYY-MM-DD. This is the ending date
+         of required satellite imagery.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat).
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Default is False - images where SLC turned off
+        are not included.
+    sort_time : bool
+        Ensure the returned satellite data items are sorted by time in
+        list of dictionaries.
+    limit : int
+        Limit number of dea aws items per page in query. Recommended to use
+        250. Max is 999. 
+     
+    Returns
+    ----------
+    feats : list of dicts of returned stac metadata items.
     """
-    
+
     # imports
     import requests
     from datetime import datetime
     
-    # set headers
+    # set headers for stac query
     headers = {
         'Content-Type': 'application/json',
         'Accept-Encoding': 'gzip',
@@ -389,7 +414,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     # notify
     print('Beginning STAC search for items. This can take awhile.')
             
-    # check stac_endpoint
+    # check stac endpoint provided
     if stac_endpoint is None:
         raise ValueError('Must provide a STAC endpoint.')
 
@@ -403,7 +428,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
     end_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
         
-    # iter each collection. stac doesnt return more than one
+    # iter each stac collection
     feats = []
     for collection in collections:
         
@@ -413,15 +438,19 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
         # set up fresh query
         query = {}
 
-        # collections
+        # add collection to query
         if isinstance(collection, str):
             query.update({'collections': collection})
+        else:
+            raise TypeError('Collection must be a string.')
 
-        # bounding box
+        # add bounding box to query if correct
         if isinstance(bbox, list) and len(bbox) == 4:
             query.update({'bbox': bbox})
+        else:
+            raise TypeError('Bounding box must contain four numbers.')
 
-        # start and end date. consider slc for ls7
+        # add start and end date to query. correct slc for ls7 if exists, requested
         if isinstance(start_dt, str) and isinstance(end_dt, str):
             
             if collection == 'ga_ls7e_ard_3' and not slc_off:
@@ -432,14 +461,17 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
                 start_slc_dt = slc_dt if not start_dt_obj.year < 2003 else start_dt
                 end_slc_dt = slc_dt if not end_dt_obj.year < 2003 else end_dt
                 dt = '{}/{}'.format(start_slc_dt, end_slc_dt)
-                
+         
             else:
                 dt = '{}/{}'.format(start_dt, end_dt)
             
             # update query
             query.update({'datetime': dt})
+            
+        else:
+            raise TypeError('Start/end date must be of string type.')
 
-        # query limit
+        # add query limit
         query.update({'limit': limit})
 
         # perform initial post query
@@ -472,61 +504,105 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     print('Found a total of {} scenes.'.format(len(feats)))
     return feats
 
-# checks, meta
-def get_affine(transform):
-    """
-    Small helper function to computer affine
-    from asset transform array.
-    """
-    
-    # imports
-    import affine
-    
-    # checks
-    
-    # compute affine
-    return affine.Affine(*transform[:6]) # ignore scale, shift
-    
-# checks, meta
-def reporject_bbox(source_epsg=4326, dest_epsg=None, bbox=None):
-    """
-    Basic function to reproject given coordinate
-    bounding box (in WGS84).
-    """
-    
-    # imports
-    from rasterio.warp import transform_bounds
 
-    # checks
-    
-    # reproject bounding box
-    l, b, r, t = bbox
-    return transform_bounds(src_crs=source_epsg, 
-                            dst_crs=dest_epsg, 
-                            left=l, bottom=b, right=r, top=t)
 
-# meta, checks
+# # # helper functions
+def get_next_url(json):
+    """
+    Small helper function to parse json and look for 'next' url in 
+    stac item. Used to move through pages in stac queries.
+    
+    Parameters
+    -------------
+    json : dict
+        A dictionary of json elements returned from stac.
+    
+    Returns
+    ----------
+    A url.
+    """
+    
+    # parse json doc and look for link ref
+    for link in json.get('links'):
+        if link.get('rel') == 'next':
+            return link.get('href')
+        
+    # else return nothing
+    return None
+
+
+def do_transform(bounds, resolution):
+    """
+    Helper function to generate an affine transformation on raw
+    transformation obtained from stac metadata.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+        Two or more lists of bounding box coordinates.
+    resolution : tuple or list of int
+        Pixel cell size in tuple e.g., (30, 30) for 30 squarem.
+        
+    Returns
+    ----------
+    An affine transformation object .
+    """
+    
+    # perform affine transform (xscale, 0.0, xoff, 0.0, yscale, yoff)
+    return affine.Affine(resolution[0], 0.0, bounds[0], 0.0, -resolution[1], bounds[3])
+
+
 @lru_cache(maxsize=64)
-def cached_transform(from_epsg, to_epsg, skip_equivalent=True, always_xy=True):
+def cached_transform(from_epsg=4326, to_epsg=3577, skip_equivalent=True, always_xy=True):
     """
-    A cached version of pyproject transform. The 
-    transform operation is slow, so caching it
-    during 100x operations speeds up the process
-    considerablly. LRU cache implements this.
+    Helper function to perform a cached pyproj transform. Transforms
+    are computationally slow, so caching it during 100s of identical
+    operations speeds us up considerablly. Implemented via
+    LRU cache.
+        
+    Parameters
+    -------------
+    from_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    to_epsg : int
+        As above, except for destination epsg. Default is gda albers.
+    skip_equivalent : bool
+        Whether to skip re-cache of already cached operations. Obviously,
+        we set this to True.
+    always_xy : bool
+        Whether transform method will accept and return traditional GIS
+        coordinate order e.g. lon, lat and east, north. Set to True.
+        
+    Returns
+    ----------
+    Cached pyproject transformer object.
     """
-    
-    # checks
-    
-    # transform from epsg to epsg
-    return pyproj.Transformer.from_crs(from_epsg, 
-                                       to_epsg, 
-                                       skip_equivalent, 
-                                       always_xy)
 
-# meta, checks
-def bbox_from_affine(aff, ysize, xsize, from_epsg, to_epsg):
+    # transform from epsg to epsg
+    return pyproj.Transformer.from_crs(from_epsg, to_epsg, skip_equivalent, always_xy)
+
+
+def bbox_from_affine(aff, ysize, xsize, from_epsg=4326, to_epsg=3577):
     """
-    Calculate bounding box from affine transform.
+    Calculate bounding box from pre-existing affine transform.
+    
+    Parameters
+    -------------
+    aff : affine object or list of numerics 
+        A pre-existing affine transform array, usually produced
+        by pyproj or similar.
+    ysize : int
+        Number of cells on y-axis.
+    xsize : int
+        Number of cells on x-axis.
+    from_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    to_epsg : int
+        As above, except for destination epsg. Default is gda albers.
+        
+    Returns
+    ----------
+    A list of int/floats of bbox.
     """
     
     # affine calculation
@@ -539,94 +615,138 @@ def bbox_from_affine(aff, ysize, xsize, from_epsg, to_epsg):
     x_ext = [x_nw, x_sw, x_se, x_ne]
     y_ext = [y_nw, y_sw, y_se, y_ne]
 
-    # transform if different crs', else just use existing
+    # transform if from/to epsg differs, else dont transform
     if from_epsg != to_epsg:
         transformer = cached_transform(from_epsg, to_epsg)
         x_ext_proj, y_ext_proj = transformer.transform(x_ext, y_ext, errcheck=True)
+    
     else:
         x_ext_proj = x_ext
         y_ext_proj = y_ext
         
     # prepare and return bbox (l, b, r, t)
-    bbox = [min(x_ext_proj), min(y_ext_proj), max(x_ext_proj), max(y_ext_proj)]
-    return bbox
+    return [min(x_ext_proj), min(y_ext_proj), max(x_ext_proj), max(y_ext_proj)]
 
-# meta, check
+
+def reporject_bbox(source_epsg=4326, dest_epsg=3577, bbox=None):
+    """
+    Helper function to reproject given bounding box (default wgs84)
+    to requested coordinate system)
+    
+    Parameters
+    -------------
+    source_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    dest_epsg : int
+        As above, except for destination epsg. Default is gda94 albers.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat).
+    
+    Returns
+    ----------
+    pbbox : list of reprojected coordinates of bbox.
+    """
+    
+    # deconstruct original bbox array
+    l, b, r, t = bbox
+    
+    # reproject from source epsg to destination epsg
+    pbbox = transform_bounds(src_crs=source_epsg,
+                             dst_crs=dest_epsg, 
+                             left=l, bottom=b, right=r, top=t)
+                             
+    # return
+    return pbbox
+
+
 def bounds_overlap(*bounds):
     """
+    Helper function to check if bounds within list overlap.
+    Used to discard assets that may not overlap with user
+    defined bbox, or other assets bboxes.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+       Two or more lists of bounding box coordinates
+    
+    Returns
+    ----------
+    A boolean indicating whether bounds overlap.
     """
     
-    # get same element across each array
+    # zip up same coordinates across each array
     min_x_vals, min_y_vals, max_x_vals, max_y_vals = zip(*bounds)
     
-    overlaps = max(min_x_vals) < min(max_x_vals) and max(min_y_vals) < min(max_y_vals)
-    return overlaps
+    # check if overlaps occur and return
+    return max(min_x_vals) < min(max_x_vals) and max(min_y_vals) < min(max_y_vals)
 
-#meta, check
+
 def snap_bbox(bounds, resolution):
     """
+    Helper function to 'snap' bounding box, e.g., to
+    the ceiling and floor depending on min and max values
+    with consideration with resolution.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+        Two or more lists of bounding box coordinates.
+    resolution : tuple or list of int
+        Pixel cell size in tuple e.g., (30, 30) for 30 squarem.
+        
+    Returns
+    ----------
+    A 'snapped' bounding box.
     """
     
-    # imports
-    import math
-    
-    # checks
-    #
-    
-    # get coords and resolution
+    # unpack coords, resolution from inputs
     min_x, min_y, max_x, max_y = bounds
     res_x, res_y = resolution
     
-    # snap!
-    min_x = math.floor(min_x / res_x) * res_x
-    max_x = math.ceil(max_x / res_x) * res_x
-    min_y = math.floor(min_y / res_y) * res_y
-    max_y = math.ceil(max_y / res_y) * res_y
+    # snap bounds!
+    min_x = np.floor(min_x / res_x) * res_x
+    max_x = np.ceil(max_x / res_x) * res_x
+    min_y = np.floor(min_y / res_y) * res_y
+    max_y = np.ceil(max_y / res_y) * res_y
 
-    # out we go
-    snapped_bounds = [min_x, min_y, max_x, max_y]
-    return snapped_bounds
+    # return new snapped bbox
+    return [min_x, min_y, max_x, max_y]
 
-# meta, checks
-def do_transform(bounds, resolution):
-    """
-    Small helper function to do 
-    """
-    
-    # imports
-    from affine import Affine
-    
-    # checks
-    
-    # perform affine transform (xscale, 0, xoff, 0, yscale, yoff)
-    transform = Affine(resolution[0],
-                       0.0,
-                       bounds[0],
-                       0.0,
-                       -resolution[1],
-                       bounds[3])
-    
-    # return
-    return transform
 
-# meta, checks
 def get_shape(bounds, resolution):
     """
+    Helper function to get the shape (i.e., h, w) of a 
+    bounds, with respect to resolution size.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+        Two or more lists of bounding box coordinates.
+    resolution : tuple or list of int
+        Pixel cell size in tuple e.g., (30, 30) for 30 squarem.
+        
+    Returns
+    ----------
+    The size of the bounds as list e.g., (h, w)
     """
-    
-    # checks
-    
-    # get coords and resolution
+
+    # unpack coords and resolution
     min_x, min_y, max_x, max_y = bounds
     res_x, res_y = resolution
     
-    # calc shape i.e., width heihjt
+    # calc shape (width and height) from bounds and resolution
     w = int((max_x - min_x + (res_x / 2)) / res_x)
     h = int((max_y - min_y + (res_y / 2)) / res_y)
     
-    # pack and return
-    hw = [h, w]
-    return hw
+    # return
+    return [h, w]
+
+
+
+
 
 # meta
 def get_nodata_for_window(window, dtype, fill_value):
@@ -726,7 +846,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 if asset_transform is None or asset_shape is None or asset_epsg is None:
                     raise ValueError('No feature-level transform and shape metadata.')
                 else:
-                    asset_affine = get_affine(asset_transform)
+                    asset_affine = affine.Affine(*asset_transform[:6])
                     asset_bbox_proj = bbox_from_affine(asset_affine,
                                                        asset_shape[0],
                                                        asset_shape[1],
