@@ -30,7 +30,7 @@ conda install -c esri rasterio --dry-run
 conda install -c esri rasterio
 
 # need pyproj
-conda install pyproj
+conda install pyproj=2.6.1.post1
 
 # note, in arcgis, you will need to set gdal folder
 #os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
