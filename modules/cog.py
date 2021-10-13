@@ -23,6 +23,7 @@ import requests
 import threading
 import pyproj
 import affine
+import osr
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -845,6 +846,7 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     return rasters
 
 
+
 # # # core data functions
 def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
     """
@@ -1026,9 +1028,212 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
     print('Created coordinates and dimensions successfully.')
     return coords, dims
   
+# ADD OTHER ATTRIBUTES NEEDED BY UPDATE FUNC
+def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
+    """
+    Takes a newly constructed xr dataset and associated stac metadata attributes
+    and appends attributes to the xr dataset itself. This is useful information
+    for context in arcmap, but also needed in the dataset update methodology
+    for nrt methodology. A heavily modified version of the work done by the 
+    great stackstac folk: http://github.com/gjoseph92/stackstac. 
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        An xr dataset object that holds the lazy-loaded raster images obtained
+        from the majority of this code base. Attributes are appended to this
+        object.
+    meta : dict
+        A dictionary of the dea stac metadata associated with the current
+        query and satellite data.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes.
+    collections : list
+        A list of names for the requested satellite dea collections. For example,
+        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
+        just dded to attributes.
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Not used in analysis here, only appended to attributes.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat). Only used to append to 
+        attributes, here.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Just used here to append
+        to attributes.
+        
+    Returns
+    ----------
+    A xr dataset with new attributes appended to it.
+    """
+    
+    # notify
+    print('Preparing and appending attributes to dataset.')
+    
+    # assign spatial_ref coordinate to align with dea odc output
+    crs = int(meta.get('epsg'))
+    ds = ds.assign_coords({'spatial_ref': crs})
+        
+    # get wkt from epsg 
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(crs)
+    wkt = srs.ExportToWkt()
+    
+    # assign wkt to spatial ref attribute. note: this is designed for gda 94 albers
+    # if we ever want to include any other output crs, we will need to adapt this
+    grid_mapping_name = 'albers_conical_equal_area'
+    ds['spatial_ref'] = ds['spatial_ref'].assign_attrs({'spatial_ref': wkt, 
+                                                        'grid_mapping_name': grid_mapping_name})
+    
+    # assign global crs and grid mapping attributes
+    ds = ds.assign_attrs({'crs': 'EPSG:{}'.format(crs)})
+    ds = ds.assign_attrs({'grid_mapping': 'spatial_ref'})
+    
+    # get res from transform affine object 
+    transform = meta.get('transform')
+    res_x, res_y = transform[0], transform[4]
+    
+    # assign x coordinate attributes 
+    ds['x'] = ds['x'].assign_attrs({
+        'units': 'metre',
+        'resolution': res_x,
+        'crs': 'EPSG:{}'.format(crs)
+    })
+    
+    # assign y coordinate attributes
+    ds['y'] = ds['y'].assign_attrs({
+        'units': 'metre',
+        'resolution': res_y,
+        'crs': 'EPSG:{}'.format(crs)
+    })    
+    
+    # add attributes custom for cog fetcher
+    ds = ds.assign_attrs({'transform': tuple(transform)})
+    
+    # set output resolution depending on type
+    res = meta.get('resolutions_xy')
+    res = res[0] if res[0] == res[1] else res
+    ds = ds.assign_attrs({'res': res})
+    
+    # set no data values
+    ds = ds.assign_attrs({'nodatavals': fill_value})
+    
+    # set collections from original query
+    ds = ds.assign_attrs({'orig_collections': tuple(collections)})
+    
+    # set original bbox
+    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})
+    
+    # set slc off from original query. netcdf cannot handle boolean, so use str
+    slc_off = 'True' if slc_off else 'False'
+    ds = ds.assign_attrs({'orig_slc_off': slc_off})
+    
+    # set original resample method 
+    ds = ds.assign_attrs({'orig_resample': resampling})
+    
+    # iter each var and update attributes 
+    for data_var in ds.data_vars:
+        ds[data_var] = ds[data_var].assign_attrs({
+            'units': '1', 
+            'crs': 'EPSG:{}'.format(crs), 
+            'grid_mapping': 'spatial_ref'
+        })
+        
+    # notify and return
+    print('Attributes appended to dataset successfully.')
+    return ds
 
 
+def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
+    """
+    Takes an xr dataset and computes fmask band, if it exists. From mask band,
+    calculates percentage of valid vs invalid pixels per image date. Returns a xr
+    dataset where all images where too  many invalid pixels were detected have been
+    removed.
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        A xarray dataset with time, x, y, band dimensions.
+    valid_classes : list
+        List of valid fmask classes. For dea landsat/sentinel data,
+        1 = valid, 2 = cloud, 3 = shadow, 4 = snow, 5 = water. See:
+        https://docs.dea.ga.gov.au/notebooks/Frequently_used_code/Masking_data.html.
+        Default is 1, 4 and 5 (valid, snow, water pixels returned).
+    max_invalid : int or float
+        The maximum amount of invalid pixels per image to flag whether
+        it is invalid. In other words, a max_invalid = 5: means >= 5% invalid
+        pixels in an image will remove that image.
+    mask_band : str
+        Name of mask band in dataset. Default is oa_fmask.
+    nodata_value : numpy dtype
+        If an invalid pixel is detected, replace with this value. Numpy nan 
+        (np.nan) is recommended.
+    drop_fmask : bool
+        Once fmask images have been removed, drop the fmask band too? Default
+        is True.
+        
+    Returns
+    ----------
+    ds : xr dataset with invalid pixels masked out and images >= max_invalid
+        removed also.
+    """
+    
+    # notify
+    print('Removing dates where too many invalid pixels.')
 
+    # check if time, x, y in dataset
+    for dim in [dim for dim in list(ds.dims)]:
+        if dim not in ['time', 'x', 'y']:
+            raise ValueError('Unsupported dim: {} in dataset.'.format(dim))
+            
+    # check if fmask in dataset
+    if mask_band is None:
+        raise ValueError('Name of mask band must be provided.')
+    else:
+        if mask_band not in list(ds.data_vars):
+            raise ValueError('Requested mask band name not found in dataset.')
+
+    # calc min number of valid pixels allowed
+    min_valid = 1 - (max_invalid / 100)
+    num_pix = ds['x'].size * ds['y'].size
+
+    # subset mask band and if dask, compute it
+    mask = ds[mask_band]
+    if bool(mask.chunks):
+        print('Mask band is currently dask. Computing, please wait.')
+        mask = mask.compute()
+
+    # set all valid classes to 1, else 0
+    mask = xr.where(mask.isin(valid_class), 1.0, 0.0)
+    
+    # convert to float32 if nodata value is nan
+    if nodata_value is np.nan:
+        ds = ds.astype('float32')    
+
+    # mask invalid pixels with user value
+    print('Filling invalid pixels with requested nodata value.')
+    ds = ds.where(mask == 1.0, nodata_value)
+    
+    # calc proportion of valid pixels to get array of invalid dates
+    mask = mask.sum(['x', 'y']) / num_pix
+    valid_dates = mask['time'].where(mask >= min_valid, drop=True)
+
+    # remove any non-valid times from dataset
+    ds = ds.where(ds['time'].isin(valid_dates), drop=True)
+
+    # drop mask band if requested
+    if drop_fmask:
+        print('Dropping mask band.')
+        ds = ds.drop_vars(mask_band)
+        
+    # notify and return
+    print('Removed invalid images successfully.')
+    return ds
 
 
 
@@ -1329,180 +1534,5 @@ def get_nodata_for_window(window, dtype, fill_value):
 
 
   
-
-# checks, meta, improve dynanism
-def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
-    """
-    Takes a newly constructed xr dataset and associated stac metadata attributes
-    and appends attributes to the xr dataset itself. This is useful information
-    for context in arcmap, but also needed in the dataset update methodology
-    for nrt methodology. A heavily modified version of the work done by the 
-    great stackstac folk: http://github.com/gjoseph92/stackstac. 
-    
-    Parameters
-    -------------
-    ds : xr dataset
-        An xr dataset object that holds the lazy-loaded raster images obtained
-        from the majority of this code base. Attributes are appended to this
-        object.
-    meta : dict
-        A dictionary of the dea stac metadata associated with the current
-        query and satellite data.
-    fill_value : int or float
-        The value used to fill null or errorneous pixels with from prior methods.
-        Not used in analysis here, just included in the attributes.
-    collections : list
-        A list of names for the requested satellite dea collections. For example,
-        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
-        just dded to attributes.
-    slc_off : bool
-        Whether to include Landsat 7 errorneous SLC data. Only relevant
-        for Landsat data. Not used in analysis here, only appended to attributes.
-    bbox : list of ints/floats
-        The bounding box of area of interest for which to query for 
-        satellite data. Is in latitude and longitudes with format: 
-        (min lon, min lat, max lon, max lat). Only used to append to 
-        attributes, here.
-    resampling : str
-        The rasterio-based resampling method used when pixels are reprojected
-        rescaled to different crs from the original. Just used here to append
-        to attributes.
-        
-    Returns
-    ----------
-    A xr dataset with new attributes appended to it.
-    """
-    
-    # imports 
-    import osr
-    #import affine
-    
-    # assign spatial_ref coordinate
-    crs = int(meta.get('epsg'))
-    ds = ds.assign_coords({'spatial_ref': crs})
-        
-    # get wkt from epsg 
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(crs)
-    wkt = srs.ExportToWkt()
-    
-    # assign wkt to spatial ref 
-    grid_mapping_name = 'albers_conical_equal_area' # todo get this dynamically?
-    ds['spatial_ref'] = ds['spatial_ref'].assign_attrs({'spatial_ref': wkt, 
-                                                        'grid_mapping_name': grid_mapping_name})
-    
-    # assign global crs and grid mapping 
-    ds = ds.assign_attrs({'crs': 'EPSG:{}'.format(crs)})
-    ds = ds.assign_attrs({'grid_mapping': 'spatial_ref'})
-    
-    # get res from transform affine object 
-    transform = meta.get('transform')
-    res_x, res_y = transform[0], transform[4]
-    
-    # assign x coordinate attributes 
-    ds['x'] = ds['x'].assign_attrs({
-        'units': 'metre',
-        'resolution': res_x,
-        'crs': 'EPSG:{}'.format(crs)
-    })
-    
-    # do same for y coordinate attributes
-    ds['y'] = ds['y'].assign_attrs({
-        'units': 'metre',
-        'resolution': res_y,
-        'crs': 'EPSG:{}'.format(crs)
-    })    
-    
-    # add attributes custom for cog fetcher
-    ds = ds.assign_attrs({'transform': tuple(transform)})
-    
-    # set output resolution depending on type
-    res = meta.get('resolutions_xy')
-    res = res[0] if res[0] == res[1] else res
-    ds = ds.assign_attrs({'res': res})
-    
-    # set no data values
-    ds = ds.assign_attrs({'nodatavals': fill_value})
-    
-    # set collections from original query
-    ds = ds.assign_attrs({'orig_collections': tuple(collections)})
-    
-    # set original bbox
-    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})
-    
-    # set slc off from original query
-    slc_off = 'True' if slc_off else 'False'
-    ds = ds.assign_attrs({'orig_slc_off': slc_off})
-    
-    # set original resample method 
-    ds = ds.assign_attrs({'orig_resample': resampling})
-    
-    # iter each var and update attributes 
-    for data_var in ds.data_vars:
-        ds[data_var] = ds[data_var].assign_attrs({
-            'units': '1', 
-            'crs': 'EPSG:{}'.format(crs), 
-            'grid_mapping': 'spatial_ref'
-        })
-   
-    return ds
-
-# checks, meta
-def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
-    """
-    Takes a xarray dataset (typically as dask)
-    and computes mask band. From mask band,
-    calculates percentage of valid vs invalid
-    pixels per date. Returns a list of every
-    date that is above the max invalid threshold.
-    """
-    
-    # notify
-    print('Removing dates where too many invalid pixels.')
-
-    # check if x and y dims
-    # todo
-
-    # get 
-    min_valid = 1 - (max_invalid / 100)
-
-    # get total num pixels for one slice
-    num_pix = ds['x'].size * ds['y'].size
-
-    # subset mask band
-    mask = ds[mask_band]
-
-    # if dask, compute it
-    if bool(mask.chunks):
-        print('Mask band is currently dask. Computing, please wait.')
-        mask = mask.compute()
-
-    # set all valid classes to 1, else 0
-    mask = xr.where(mask.isin(valid_class), 1.0, 0.0)
-    
-    # convert to float32 if nodata value is nan
-    if nodata_value is np.nan:
-        ds = ds.astype('float32')    
-
-    # mask invalid pixels with user value
-    print('Filling invalid pixels with nan')
-    ds = ds.where(mask == 1.0, nodata_value)
-    
-    # calc percentage of valdi to total and get invalid dates
-    mask = mask.sum(['x', 'y']) / num_pix
-    valid_dates = mask['time'].where(mask >= min_valid, drop=True)
-
-    # remove any non-valid times from dataset
-    ds = ds.where(ds['time'].isin(valid_dates), drop=True)
-
-    # drop mask band if requested
-    if drop_fmask:
-        print('Dropping mask band.')
-        ds = ds.drop_vars(mask_band)
-        
-    return ds
-
-
-
 
 
