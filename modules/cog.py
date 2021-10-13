@@ -37,6 +37,7 @@ from rasterio.vrt import WarpedVRT
 from datetime import datetime
 from functools import lru_cache
 
+# # # rasterio reader classes
 # meta
 class COGReader:
     """
@@ -361,8 +362,8 @@ class ThreadLocalData:
         raise RuntimeError('I shouldnt be getting un-pickled...')
 
 
-# # # core functions
-def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=False, sort_time=True, limit=250):
+# # # constructor functions
+def fetch_stac_data(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, sort_time=True, limit=250):
     """
     Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac/search'),
     a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of
@@ -426,8 +427,11 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
         collections = [collections]
         
     # get dt objects of date strings
-    start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
-    end_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+    if start_dt is None or end_dt is None:
+        raise ValueError('No start or end date provided.')
+    else:
+        start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+        end_dt_obj = datetime.strptime(end_dt, "%Y-%m-%d")
         
     # iter each stac collection
     feats = []
@@ -506,10 +510,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     return feats
 
 
-
-
-# todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
-def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, resolution=30, snap_bounds=True, force_dea_http=True):
+def prepare_data(feats=None, assets=None, bounds_latlon=None, bounds=None, epsg=3577, resolution=30, snap_bounds=True, force_dea_http=True):
     """
     Prepares raw stac metadata and assets into actual useable data for dask
     computations. This includes preparing coordinate system, bounding boxes,
@@ -651,60 +652,54 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 
                 # compute bounds depending on situation
                 if bounds is None:
-                
-                    # if projected asset bbox does not exist, error
                     if asset_bbox_proj is None:
                         raise ValueError('Not enough STAC infomration to build bounds.')
                         
-                    # now, if output bounds does not exist, use projcted asset bbox or union
+                    # when output bounds does not exist, use projcted asset bbox, else dounion
                     if out_bounds is None:
                         out_bounds = asset_bbox_proj
                     else:
                         out_bounds = union_bounds(asset_bbox_proj, out_bounds)
-    
+                        
                 else:
-                    # skip if asset bbox does not overlap with bounds
+                    # skip asset if bbox does not overlap with requested bounds
                     overlaps = bounds_overlap(asset_bbox_proj, bounds)
                     if asset_bbox_proj is not None and not overlaps:
-                        continue # move to next asset
+                        continue
                     
-                # do resolution todo: implement auto resolution capture
-                if resolution is None:
-                    raise ValueError('Need to implement auto-find resolution.')
-                    
-                # force aws s3 to https todo make this work with aws s3 bucket
+                # note: may want to auto-detect resolution from bounds and affine
+                # here. for now, tenement tools requires resolution is set
+                
+                # extract url from asset
                 href = asset.get('href')
+
+                # convert aws s3 url to https if requested. note: not tested with s3 url               
                 if force_dea_http:
                     href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
                     
-                # add info to asset table
+                # add info to asset table, 1 row per scene, n columns per band, i.e. (url, [l, b, r, t]) per row
                 asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-                
-        # creates row in array that has 1 row per scene, n columns per requested band where (url, [l, b, r, t])
-        href = asset["href"].replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-        asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-        
-    # snap boundary coordinates
+
+    # snap boundary coordinates if requested
     if snap_bounds:
-        out_bounds = snap_bbox(out_bounds, 
-                               out_resolution)
+        out_bounds = snap_bbox(out_bounds, out_resolution)
      
-    # transform and get shape for top-level
+    # transform and get shape for feat level
     transform = do_transform(out_bounds, out_resolution)
     shape = get_shape(out_bounds, out_resolution)
         
-    # get table of nans where any feats/assets where asset missing/out bounds
+    # get table of nans for any feats/assets where asset missing/out bounds
     isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
-    feat_isnan = isnan_table.all(axis=1)  # any items all empty?
-    asset_isnan = isnan_table.all(axis=0) # any assets all empty?
+    feat_isnan = isnan_table.all(axis=1)
+    asset_isnan = isnan_table.all(axis=0)
     
-    # remove offending items. np.ix_ removes specific cells (col, row)
+    # remove nan feats/assets. note: ix_ looks up cells at specific col, row
     if feat_isnan.any() or asset_isnan.any():
         asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
         feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
         assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
         
-    # create final top-level raster metadata dict
+    # create feat/asset metadata attributes for xr dataset later
     meta = {
         'epsg': out_epsg,
         'bounds': out_bounds,
@@ -722,12 +717,315 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     }
     
     # notify and return
-    print('Translated raw STAC data successfully.')
+    print('Converted raw STAC data successfully.')
     return meta, asset_table
 
 
+def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest', dtype='int16', fill_value=-999, rescale=True):
+    """
+    Takes a array of prepared stac items from the prepare_data function 
+    and converts it into lazy-load friendly dask arrays prior to 
+    converson into a final xr dataset. Some of the smart dask work is
+    based on the rasterio/stackstac implementation. For more information
+    on stackstac, see: https://github.com/gjoseph92/stackstac. 
+    
+    Parameters
+    ----------
+    meta: dict
+        A dictionary of metadata attibution extracted from stac results
+        in prepare_data function.
+    asset_table: numpy array
+        A numpy array of structure (url, [bbox]) per row. Url is a 
+        url link to a specific band of a specific feature from dea public
+        data (i.e., Landsta or Sentinel raster band), and bbox is the
+        projected bbox for that scene or scene window.
+    chunksize: int
+        Rasterio lazy-loading chunk size for cog asset. The dea uses default
+        chunksize of 512, but could speed up processing by modifying this.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Default rasterio nearest
+        neighbour. Could use bilinear. We will basically always use this in 
+        tenement tools.
+    dtype : str or numpy type
+        The numpy data type for output rasters for ech dask array row.
+        We will typically use int16, to speed up downloads and reduce 
+        storage size. Thus, no data is best as -999 instead of np.nan,
+        which will cast to float32 and drastically increase data size.
+    fill_value : int or float
+        The value to use when pixel is detected or converted to no data
+        i.e. on errors or missing raster areas. Recommended that -999 is
+        used on dea landsat and sentinel data to reduce download and storage
+        concerns.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True.
+
+    Returns
+    ----------
+    rasters : a dask array of satellite rasters nearly ready for compute!
+    """
+
+    # notify
+    print('Converting data into dask array.')
+    
+    # check if meta and array provided
+    if meta is None or asset_table is None:
+        raise ValueError('Must provide metadata and asset table array.')
+        
+    # checks
+    if resampling not in ['nearest', 'bilinear']:
+        raise ValueError('Resampling method not supported.')
+        
+    # set resampler
+    if resampling == 'nearest':
+        resampler = Resampling.nearest
+    else:
+        resampler = Resampling.bilinear
+    
+    # check dtype, if string cast it, catch error if invalid
+    if isinstance(dtype, str):
+        try:
+            dtype = np.dtype(dtype)
+        except:
+            raise TypeError('Requested dtype is not valid.')        
+            
+    # check if dtypes are allowed
+    if dtype not in [np.int8, np.int16, np.int32, np.float16, np.float32, np.float64, np.nan]:
+        raise TypeError('Requested dtype is not supported. Use int or float.')
+        
+    # check if we can use fill value with select dtype
+    if fill_value is not None and not np.can_cast(fill_value, dtype):
+        raise ValueError('Fill value incompatible with output dtype.')
+        
+    # note: the following approaches are based on rasterio and stackstac
+    # methods. the explanation for this is outlined deeply in the stackstac
+    # to_dask function. check that code for a deeper explanation.
+    # extra note: this might be overkill for our 'dumb' arcgis method
+    
+    # see their documentation for a deeper explanation.
+    da_asset_table = dask_array.from_array(asset_table, 
+                                           chunks=1, 
+                                           #inline_array=True,  # our version of xr does not support inline
+                                           name='assets_' + dask.base.tokenize(asset_table))
+    
+    # map to blocks. the cog reader class is mapped to each chunk for reading
+    ds = da_asset_table.map_blocks(apply_cog_reader,
+                                   meta,
+                                   resampler,
+                                   dtype,
+                                   fill_value,
+                                   rescale,
+                                   meta=da_asset_table._meta)
+    
+    # generate fake array from shape and chunksize, see stackstac to_dask for approach
+    shape = meta.get('shape')
+    name = 'slices_' + dask.base.tokenize(chunksize, shape)
+    chunks = dask_array.core.normalize_chunks(chunksize, shape)
+    keys = itertools.product([name], *(range(len(b)) for b in chunks))
+    slices = dask_array.core.slices_from_chunks(chunks)
+    
+    # stick slices into array container to force dask blockwise logic to handle broadcasts
+    fake_slices = dask_array.Array(dict(zip(keys, slices)), 
+                                   name, 
+                                   chunks, 
+                                   meta=ds._meta)
+    
+    # apply blockwise logic
+    rasters = dask_array.blockwise(fetch_raster_window,
+                                   'tbyx',
+                                   ds,
+                                   'tb',
+                                   fake_slices,
+                                   'yx',
+                                   meta=np.ndarray((), dtype=dtype))
+        
+    # notify and return
+    print('Converted data successfully.')
+    return rasters
 
 
+# # # core data functions
+def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
+    """
+    Takes a single asset dask chunk (i.e., in our case a single satellite band)
+    and associated metadata, subsets that chunk to a rasterio window object
+    based on a projected bounds of coordinates, and wraps that chunk subset
+    into a COGReader class (which reads rasters into memory).
+    
+    Parameters
+    ----------
+    asset_chunk: dask array
+        A single chunk from a dask array of structure (url, [bbox]). 
+    meta: dict
+        A dictionary of metadata obtained from stac metadata.
+    resampler: rasterio Resampler object
+        A rasterio resampler object type of either NearestNeighbor or
+        Bilinear.
+    dtype : numpy type
+        The numpy data type for output dask chunk.
+    fill_value : int or float
+        The value to use when pixel is detected or converted to no data.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True.
+
+    Returns
+    ----------
+    cog reader and window : a tuple containing the chunk wrapped in a 
+    cog reader class with the associated rasterio window to read.
+    """
+    
+    # obtain just the asset chunk element
+    asset_chunk = asset_chunk[0, 0]
+    
+    # extract just the url from asset
+    url = asset_chunk['url']
+    if url is None:
+        return None
+        
+    # create window of chunk using embedded bounds for current chunk
+    win = windows.from_bounds(*asset_chunk['bounds'],
+                              transform=meta.get('transform'))
+    
+    # wrap window into a cog reader class
+    cog_reader = COGReader(url=url,
+                           meta=meta,
+                           resampler=resampler,
+                           dtype=dtype,
+                           fill_value=fill_value,
+                           rescale=rescale)
+    
+    # return reader and window
+    return (cog_reader, win)
+
+
+def fetch_raster_window(asset_entry, slices):
+    """
+    Takes an asset chunk and asociated fake slices created from the 
+    convert_to_dask method and fetches a window of raster data. If
+    the slice covers the window, the cogreader wrapping the asset
+    reads the current window and returns data. If no overlap exists,
+    an empty window is returned of current window shape.
+    
+    Parameters
+    ----------
+    asset_entry: dask array
+        A chunked dask array with cog reader mapped to each chunk. 
+    slices: numpy array
+        Sliced up rows and columns of dask array for parallel reading.
+
+    Returns
+    ----------
+    Data that as been read within a window. If no data, empty window
+    is returned.
+    
+    """
+    
+    # read current window from input sliced dimensions
+    current_window = windows.Window.from_slices(*slices)
+    
+    # unpack asset entry into cog reader and window if exists
+    if asset_entry is not None:
+        reader, asset_window = asset_entry
+
+        # if window being fetched overlaps with the asset, read!
+        if windows.intersect(current_window, asset_window):
+            data = reader.read(current_window)
+            return data[None, None]
+
+    # if no dataset or no intersection with window, return empty array
+    return np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
+
+# PIXEL CENTERING NEEDS CHECK HERE
+def build_coords(feats, assets, meta, pix_loc='topleft'):
+    """
+    Takes stac feats, assets and metadata outputs and
+    generates grid of spatial coordinates. Simplified implementation
+    of stackstac method: http://github.com/gjoseph92/stackstac. For tenement
+    tools, we are only ever going to need times, bands, and x, y coordinate
+    dimensions.
+    
+    Parameters
+    ----------
+    feats: list
+        A list of dicts of stac metadata items produced from fetch stac data
+        function.
+    assets: list
+        A list of satellite band names. Must be correct names for landsat and
+        sentinel from dea aws.
+    meta : dict
+        A dictionary of metadata information from stac for use in creating
+        xr dataset attribution.
+    pix_loc : str
+        Alignment of pixel cells. If topleft is used, coordinates set at topleft
+        of pixel. If center is used, centroid of pixel used. 
+        
+    Returns
+    ----------
+    coords : dict of x, y coordinate arrays
+    dims : list of dimension names
+    """
+    
+    # notify
+    print('Creating dataset coordinates and dimensions.')
+    
+    # parse datetime from stac features
+    times = [f.get('properties').get('datetime') for f in feats]
+    times = pd.to_datetime(times, infer_datetime_format=True, errors='coerce')
+    
+    # remove timezone and milliseconds if exists, xr and arcmap doesnt like
+    times = times.tz_convert(None) if times.tz is not None else times
+    times = times.strftime('%Y-%m-%dT%H:%M:%S').astype('datetime64[ns]')
+        
+    # prepare xr dims and coords
+    dims = ['time', 'band', 'y', 'x']
+    coords = {'time': times, 'band': assets}
+    
+    # set pixel coordinate position
+    if pix_loc == 'center':
+        pixel_center = True
+    elif pix_loc == 'topleft':
+        pixel_center = False
+    else:
+        raise ValueError('Pixel position not supported')
+        
+    # generate coordinates
+    if meta.get('transform').is_rectilinear:
+        
+        # as rectilinear, we can just use arange
+        min_x, min_y, max_x, max_y = meta.get('bounds')
+        res_x, res_y = meta.get('resolutions_xy')
+        
+        # correct if pixel center
+        if pixel_center:
+            min_x = min_x + (res_x / 2)
+            max_x = max_x + (res_x / 2)
+            min_y = min_y + (res_y / 2)
+            max_y = max_y + (res_y / 2)
+            
+        # gen x, y ranges
+        h, w = meta.get('shape')
+        x_range = pd.Float64Index(np.linspace(min_x, max_x, w, endpoint=False))
+        y_range = pd.Float64Index(np.linspace(max_y, min_y, h, endpoint=False))
+        
+    else:
+        # get offset depending on pixel position
+        off = 0.5 if pixel_center else 0.0
+
+        # gen x, y ranges
+        h, w = meta.get('shape')
+        x_range, _ = meta.get('transform') * (np.arange(w) + off, np.zeros(w) + off)
+        _, y_range = meta.get('transform') * (np.zeros(h) + off, np.arange(h) + off)
+        
+    # set coords
+    coords['y'] = y_range
+    coords['x'] = x_range
+
+    # notify and return
+    print('Created coordinates and dimensions successfully.')
+    return coords, dims
+  
 
 
 
@@ -1019,7 +1317,6 @@ def get_nodata_for_window(window, dtype, fill_value):
     ----------
     A numpy array representing original window size but of new user-defined
     fill value.
-
     """
     
     # check if fill value provided
@@ -1031,209 +1328,49 @@ def get_nodata_for_window(window, dtype, fill_value):
     return np.full((h, w), fill_value, dtype)
 
 
-
-
-
-
-
-# checks, meta, todos, mpve fetch raster window func into here?
-def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest',
-                    dtype='int16', fill_value=-999, rescale=True):
-    
-    """
-    Data is of type dictionary with everything that comes out
-    of prepare_data.
-    """
-       
-    # imports    
-    import itertools
-    import warnings
-
-    # notify
-    print('Converting data into dask array.')
-    
-    # check if meta and array provided
-    if meta is None or asset_table is None:
-        raise ValueError('Must provide metadata and assets.')
-        
-    # checks
-    if resampling not in ['nearest', 'bilinear']:
-        raise ValueError('Resampling method not supported.')
-        
-    # set resampler
-    if resampling == 'nearest':
-        resampler = Resampling.nearest
-    else:
-        resampler = Resampling.bilinear
-    
-    # check type of dtype
-    if isinstance(dtype, str):
-        dtype = np.dtype(dtype)
-
-    # check fill value
-    #if fill_value is None and errors_as_nodata:
-        #raise ValueError('cant do')
-        
-    # check if we can use fillvalue
-    if fill_value is not None and not np.can_cast(fill_value, dtype):
-        raise ValueError('Fill value incompatible with output dtype.')
-                
-    # set errors or empty tuple (not none)
-    #errors_as_nodata = errors_as_nodata or ()
-
-    # see stackstac for explanation of this logic here
-    
-    # make urls into dask array with 1-element chunks (i.e. 1 chunk per asset (i.e.e band))
-    da_asset_table = dask_array.from_array(asset_table, 
-                                           chunks=1, 
-                                           #inline_array=True # need high ver of dask
-                                           name='assets_' + dask.base.tokenize(asset_table))
-    
-    # map to blocks
-    ds = da_asset_table.map_blocks(apply_cog_reader,
-                                   meta,
-                                   resampler,
-                                   dtype,
-                                   fill_value,
-                                   rescale,
-                                   meta=da_asset_table._meta)
-    
-    # generate a fake array from shape and chunksize
-    shape = meta.get('shape')
-    name = 'slices_' + dask.base.tokenize(chunksize, shape)
-    chunks = dask_array.core.normalize_chunks(chunksize, shape)
-    keys = itertools.product([name], *(range(len(b)) for b in chunks))
-    slices = dask_array.core.slices_from_chunks(chunks)
-    
-    # stick slices into an array to use dask blockwise logic
-    fake_slices = dask_array.Array(dict(zip(keys, slices)), 
-                                   name, 
-                                   chunks, 
-                                   meta=ds._meta)
-    
-    # apply blockwise
-    #with warnings.catch_warnings():
-        #warnings.simplefilter("ignore", category=dask_array.core.PerformanceWarning)
-    rasters = dask_array.blockwise(fetch_raster_window,
-                                   'tbyx',
-                                   ds,
-                                   'tb',
-                                   fake_slices,
-                                   'yx',
-                                   meta=np.ndarray((), dtype=dtype))
-        
-    # notify and return
-    print('Converted data successfully.')
-    return rasters
-
-# cogs
-def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
-    """
-    For each dask url/bounds chunk, apply the local
-    threaded cog reader classes. 
-    """
-    
-    # remove added array dim
-    asset_chunk = asset_chunk[0, 0]
-    
-    # get url
-    url = asset_chunk['url']
-    if url is None:
-        return None
-    
-    # get requested bounds
-    win = windows.from_bounds(*asset_chunk['bounds'],
-                              transform=meta.get('transform'))
-    
-    # wrap in cog reader
-    cog_reader = COGReader(
-        url=url,
-        meta=meta,
-        resampler=resampler,
-        dtype=dtype,
-        fill_value=fill_value,
-        rescale=rescale
-    )
-    
-    # return reader and window
-    return (cog_reader, win)
-
-# checks, meta
-def build_coords(feats, assets, meta, pix_loc='topleft'):
-    """
-    Very basic version of stackstac. We are only concerned with
-    times, bands, ys and xs for our product.
-    """
-    
-    # parse datetime from stac features
-    times = [f.get('properties').get('datetime') for f in feats]
-    times = pd.to_datetime(times, infer_datetime_format=True, errors='coerce')
-    
-    # timezone can exist, remove it if so (xarray dont likey)
-    times = times.tz_convert(None) if times.tz is not None else times
-    
-    # strip milliseconds
-    #ds['time'] = ds.time.dt.strftime('%Y-%m-%d').astype(np.datetime64)
-    times = times.strftime('%Y-%m-%dT%H:%M:%S').astype('datetime64[ns]')
-        
-    # prepare xr dims and coords
-    dims = ['time', 'band', 'y', 'x']
-    coords = {
-        'time': times,
-        'band': assets
-    }
-    
-    # set pixel coordinate position
-    if pix_loc == 'center':
-        pixel_center = True
-    elif pix_loc == 'topleft':
-        pixel_center = False
-    else:
-        raise ValueError('Pixel position not supported')
-        
-    # generate coordinates
-    if meta.get('transform').is_rectilinear:
-        
-        # we can just use arange for this - quicker
-        min_x, min_y, max_x, max_y = meta.get('bounds')
-        res_x, res_y = meta.get('resolutions_xy')
-        
-        # correct if pixel center
-        if pixel_center:
-            min_x = min_x + (res_x / 2)
-            max_x = max_x + (res_x / 2)
-            min_y = min_y + (res_y / 2)
-            max_y = max_y + (res_y / 2)
-            
-        # gen x, y ranges
-        h, w = meta.get('shape')
-        x_range = pd.Float64Index(np.linspace(min_x, max_x, w, endpoint=False))
-        y_range = pd.Float64Index(np.linspace(max_y, min_y, h, endpoint=False))
-        
-    else:
-        # get offset dependong on pixel position
-        off = 0.5 if pixel_center else 0.0
-
-        # gen x, y ranges
-        h, w = meta.get('shape')
-        x_range, _ = meta.get('transform') * (np.arange(w) + off, np.zeros(w) + off)
-        _, y_range = meta.get('transform') * (np.zeros(h) + off, np.arange(h) + off)
-        
-    # set coords
-    coords['y'] = y_range
-    coords['x'] = x_range
-    
-    # get properties as coords
-    # not needed
-    
-    # get band as coords
-    # not needed
-    
-    return coords, dims
+  
 
 # checks, meta, improve dynanism
 def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
     """
+    Takes a newly constructed xr dataset and associated stac metadata attributes
+    and appends attributes to the xr dataset itself. This is useful information
+    for context in arcmap, but also needed in the dataset update methodology
+    for nrt methodology. A heavily modified version of the work done by the 
+    great stackstac folk: http://github.com/gjoseph92/stackstac. 
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        An xr dataset object that holds the lazy-loaded raster images obtained
+        from the majority of this code base. Attributes are appended to this
+        object.
+    meta : dict
+        A dictionary of the dea stac metadata associated with the current
+        query and satellite data.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes.
+    collections : list
+        A list of names for the requested satellite dea collections. For example,
+        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
+        just dded to attributes.
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Not used in analysis here, only appended to attributes.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat). Only used to append to 
+        attributes, here.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Just used here to append
+        to attributes.
+        
+    Returns
+    ----------
+    A xr dataset with new attributes appended to it.
     """
     
     # imports 
@@ -1365,20 +1502,7 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
         
     return ds
 
-# fix this?
-def fetch_raster_window(asset_entry, slices):
-    current_window = windows.Window.from_slices(*slices)
-    
-    if asset_entry is not None:
-        reader, asset_window = asset_entry
 
-        # check that the window we're fetching overlaps with the asset
-        if windows.intersect(current_window, asset_window):
-            data = reader.read(current_window)
-            return data[None, None]
-
-    # no dataset, or we didn't overlap
-    return np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
 
 
 
