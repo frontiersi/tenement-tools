@@ -39,10 +39,15 @@ from datetime import datetime
 from functools import lru_cache
 
 # # # rasterio reader classes
-# meta
 class COGReader:
     """
-    Method is a very basic version of stackstac and rasterio.
+    Class for a url/cog reader that returns an array of actual values
+    for a url/cog that was were not errorneous or completely empty on 
+    the dea aws side of things. Tasked with opening (lazy), reading,
+    closing, warping cog to projected bounds, etc. Smart gdal management
+    with threading, locking, designed by great team at stakstac:
+    http://github.com/gjoseph92/stackstac. This reader is applied
+    dask-based url and bounding infomration.
     """
     
     def __init__(self, url, meta, resampler, dtype=None, fill_value=None, rescale=True):
@@ -53,7 +58,7 @@ class COGReader:
         self.rescale = rescale
         self.fill_value = fill_value
         
-        # set env defaults 
+        # set default rasterio/gdal env parameters
         self._env = {
             'CPL_VSIL_CURL_ALLOWED_EXTENSIONS': 'tif',
             'GDAL_HTTP_MULTIRANGE': 'YES',
@@ -63,34 +68,43 @@ class COGReader:
         # set private dataset and lock
         self._dataset = None
         self._dataset_lock = threading.Lock()
-        
-        
+
+
     def _open(self):
         """
+        Opens a cog/url via rasterio to obtain basic info about raster. 
+        No reading is done, just a quick check of metadata. If warping
+        is required, warping is done via rasterio warpedvrt without read.
         """
 
-        # open efficient env
+        # init rasterio env for efficient open
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
             try:
+                # open url via rasterio
                 ds = rasterio.open(self.url, sharing=False)
             except:
-                return NANReader(dtype=self.dtype, 
-                                 fill_value=self.fill_value)           
+                # if error, assign nan reader to url
+                return NANReader(dtype=self.dtype, fill_value=self.fill_value)           
 
-            # check if 1 band, else fail
+            # check if datset is only one band, else error - we dont support
             if ds.count != 1:
                 ds.close()
-                raise ValueError('more than 1 band in single cog. not supported.')
+                raise ValueError('More than one band in single cog, data not supported.')
                 
-            # create vrt if current tif differ from requested params
+            # init vrt variable
             vrt = None
-            if self.meta.get('vrt_params') != {
-                'crs': ds.crs.to_epsg(),
-                'transform': ds.transform,
-                'height': ds.height,
-                'width': ds.width
-            }:
+                
+            # check if cog meta matches uer requested meta (i.e., projection)
+            meta_no_match = self.meta.get('vrt_params') != {'crs': ds.crs.to_epsg(),
+                                                            'transform': ds.transform,
+                                                            'height': ds.height,
+                                                            'width': ds.width}
+                                                            
+            # if no match, then warp via vrt
+            if meta_no_match:
                 vrt_meta = self.meta.get('vrt_params')
+                
+                # swap to rasterio env for warping and warp speed!
                 with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
                     vrt = WarpedVRT(ds,
                                     sharing=False, 
@@ -100,39 +114,33 @@ class COGReader:
                                     height=vrt_meta.get('height'),
                                     width=vrt_meta.get('width'))
 
-        # apply reader
+        # apply cog reader to data
         if ds.driver in ['GTiff']:
             return ThreadLocalData(ds, vrt=vrt)
         else:
             ds.close()
-            raise TypeError('COGreader currently only supports GTiffs/COGs.')
+            raise TypeError('COGreader currently only supports GeoTIFFs or COGs.')
      
     @property
     def dataset(self):
-        """
-        Within the current locked thread, return dataset
-        if exists, else open one.
-        """
+        """In current locked thread, return dataset if exists, else open one."""
         with self._dataset_lock:
             if self._dataset is None:
                 self._dataset = self._open()
             return self._dataset
         
-        
+ 
     def read(self, window, **kwargs):
-        """
-        Read a window of a dataset. Also will
-        rescale if requested. Finally, dtype is
-        converted and mask values filled to fill_value.
-        """
+        """Read cog window, rescale if requested, mask fill values."""
+        
         # open dataset if exist, or load and open if not
         reader = self.dataset
         try:
-            # read the open dataset. mask for safer scaling/offsets
+            # read dataset and mask for safer scaling/offsets
             result = reader.read(window=window, masked=True, **kwargs)
         except:
-            return NANReader(dtype=self.dtype, 
-                             fill_value=self.fill_value)    
+            # on error, return no data reader instead
+            return NANReader(dtype=self.dtype, fill_value=self.fill_value)    
     
         # rescale to scale and offset values 
         if self.rescale:
@@ -141,17 +149,13 @@ class COGReader:
                 result *= scale
                 result += offset
             
-        # convert type, fill mask areas with requested nodata vals
+        # convert type, fill mask areas with requested nodata values
         result = result.astype(self.dtype, copy=False)
-        result = np.ma.filled(result, fill_value=self.fill_value)
-        return result
+        return np.ma.filled(result, fill_value=self.fill_value)
     
     
     def close(self):
-        """
-        Within the current locked thread, close
-        dataset if exists, else return None.
-        """
+        """In current locked thread, close dataset if exists, else set empty"""
         with self._dataset_lock:
             if self._dataset is None:
                 return None
@@ -160,11 +164,7 @@ class COGReader:
     
     
     def __del__(self):
-        """
-        Called when garbage collected after close.
-        Can get around some multi-threading issues 
-        such as "no dataset_lock" exists.
-        """
+        """Called when garbage collected after close. Helps multi-thread issues."""
         try:
             self.close()
         except:
@@ -172,10 +172,7 @@ class COGReader:
     
     
     def __getstate__(self):
-        """
-        Get pickled meta.
-        """
-        print('Getting picked data!')
+        """Get pickled meta."""
         state = {
             'url': self.url,
             'meta': self.meta,
@@ -188,10 +185,7 @@ class COGReader:
     
     
     def __setstate__(self, state):
-        """
-        Set pickled meta.
-        """
-        print('Setting picked data!')
+        """Set pickled meta."""
         self.__init__(
             url=state.get('url'),
             meta=state.get('meta'),
@@ -201,55 +195,51 @@ class COGReader:
             rescale=state.get('rescale')
         )
 
-# meta
+
 class NANReader:
     """
-    Reader that returns a constant (nodata) value 
-    for all subsequent reads.
+    Class for a url/cog reader that returns an array of nodata values
+    for a url/cog that was errorneous or completely empty on the dea 
+    aws side of things. Based off the great work of the stackstac library:
+    http://github.com/gjoseph92/stackstac. Is used to wrap dask array
+    urls and bounding boxes up for opening, reading, closing tasks during
+    xr dataset computation.
     """
     
-    # set scale offset
+    # set scale offset constant
     scale_offset = (1.0, 0.0)
     
     def __init__(self, dtype=None, fill_value=None, **kwargs):
         self.dtype = dtype
         self.fill_value = fill_value
-        
-        
+
+
     def read(self, window, **kwargs):
-        """
-        """
-        
-        # todo was this: todo i can delete this safely... how come this didnt fire before though?
-        #return nodata_for_window(window, 
-                                 #self.dtype, 
-                                 #self.fill_value)
-                                 
-        # changed to this to use my func todo if error, check
+        """Read cog window, fill with empty values."""
         return get_nodata_for_window(window, self.dtype, self.fill_value)
-        
-      
+
+
     def close(self):
+        """Just a pass (nothing to close)."""
         pass
-    
-    
+
+
     def __getstate__(self):
-        """
-        Get pickled dtype and fill value.
-        """
+        """Get pickled dtype and fill values."""
         return (self.dtype, self.fill_value)
-    
+
 
     def __setstate__(self, state):
-        """
-        Set pickled dtype and fill value.
-        """
+        """Set pickled dtype and fill value."""
         self.dtype, self.fill_value = state
-    
-# meta
+
+
 class ThreadLocalData:
     """
-    Re-open dataset.
+    Creates a copy of the current dataset and vrt for every thread that reads
+    from it. This is to avoid limitations of gdal and multi-threading. See
+    the method of the same name by the stackstac team, who are the originators:
+    http://github.com/gjoseph92/stackstac.
     """
     
     def __init__(self, ds, vrt=None):
@@ -279,8 +269,8 @@ class ThreadLocalData:
                 'height': vrt.height,
                 'src_transform': vrt.src_transform,
                 'transform': vrt.transform,
-                #'dtype': vrt.working_dtype,    # currently not avail in arcgis 2.8 rasterio
-                #'warp_extras': vrt.warp_extras # currently not avail in arcgis 2.8 rasterio
+                #'dtype': vrt.working_dtype,     # currently not avail in arcgis 2.8 rasterio
+                #'warp_extras': vrt.warp_extras  # currently not avail in arcgis 2.8 rasterio
             }
         else:
             self._vrt_params = None
@@ -290,30 +280,39 @@ class ThreadLocalData:
         self._threadlocal.ds = ds
         self._threadlocal.vrt = vrt      
         
-        # lock!
+        # lock thread!
         self._lock = threading.Lock()
-        
-        
+
+
     def _open(self):
         """
-        Open COG url and VRT if required.
+        Opens a cog/url via rasterio to obtain basic info about raster. 
+        No reading is done, just a quick check of metadata. If warping
+        is required, warping is done via rasterio warpedvrt without read.
         """
-        # open efficient env and url
+        
+        # init rasterio env for efficient open
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+        
+            # open url via rasterio
             result = ds = rasterio.open(self._url, 
                                         sharing=False, 
                                         driver=self._driver,
                                         **self._open_options)
             
-            # open efficient env and vrt
+            # init vrt variable
             vrt = None
+            
+            # if vrt exists...
             if self._vrt_params:
+            
+                # init rasterio env for vrt warp
                 with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
                     result = vrt = WarpedVRT(ds,
                                              sharing=False, 
                                              **self._vrt_params)
                     
-        # in current lock, store ds and vrt
+        # in current lock, set ds and vrt
         with self._lock:
             self._threadlocal.ds = ds
             self._threadlocal.vrt = vrt
@@ -322,10 +321,7 @@ class ThreadLocalData:
     
     @property
     def dataset(self):
-        """
-        Within the current locked thread, return vrt
-        if exists, else ds. If neither, open a ds or vrt.
-        """
+        """In current locked thread, return vrt if exists, else set dataset."""
         try:
             with self._lock:
                 if self._threadlocal.vrt:
@@ -337,30 +333,26 @@ class ThreadLocalData:
         
         
     def read(self, window, **kwargs):
-        """
-        Read from current thread's dataset, opening
-        a new copy of the dataset on first access
-        from each thread.
-        """
+        """Read current thead dataset, opening new copy on first thread access."""
         with rasterio.Env(VSI_CACHE=False, **self._env):
             return self.dataset.read(1, window=window, **kwargs)
-        
-        
+
+
     def close(self):
-        """
-        Release every thread's reference to its dataset,
-        allowing them to close. 
-        """
+        """Release every thread's reference to its dataset, allowing them to close."""
         with self._lock:
             self._threadlocal = threading.local()
-            
-    
+
+
     def __getstate__(self):
-        raise RuntimeError('I shouldnt be getting pickled...')
+        """Get pickled meta."""
+        raise RuntimeError('Error during get pickle.')
 
         
     def __setstate__(self, state):
-        raise RuntimeError('I shouldnt be getting un-pickled...')
+        """Set pickled meta."""
+        raise RuntimeError('Error during set pickle')
+
 
 
 # # # constructor functions
@@ -1531,8 +1523,4 @@ def get_nodata_for_window(window, dtype, fill_value):
     # get height, width of window and fill new numpy array
     h, w = int(window.height), int(window.width)
     return np.full((h, w), fill_value, dtype)
-
-
-  
-
-
+    
