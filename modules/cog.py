@@ -648,20 +648,19 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                                                        out_epsg)
                 else:
                     raise ValueError('No feature-level transform and shape metadata.')
-
-                # TODO THIS IS WHERE I AM UP TO
                 
-                # compute bounds
+                # compute bounds depending on situation
                 if bounds is None:
+                
+                    # if projected asset bbox does not exist, error
                     if asset_bbox_proj is None:
                         raise ValueError('Not enough STAC infomration to build bounds.')
                         
+                    # now, if output bounds does not exist, use projcted asset bbox or union
                     if out_bounds is None:
                         out_bounds = asset_bbox_proj
                     else:
-                        #bound_union = union_bounds(asset_bbox_proj, out_bounds)
-                        #out_bounds = bound_union
-                        raise ValueError('Need to implement union.')
+                        out_bounds = union_bounds(asset_bbox_proj, out_bounds)
     
                 else:
                     # skip if asset bbox does not overlap with bounds
@@ -942,6 +941,34 @@ def snap_bbox(bounds, resolution):
 
     # return new snapped bbox
     return [min_x, min_y, max_x, max_y]
+
+
+def union_bounds(*bounds):
+    """
+    Helper function to union all bound extents, typically
+    for asset level and outut bound extents during data
+    preparation. Essentially gets minimum bounding rectangle
+    of all bounding coordinates in input.
+    
+    Parameters
+    -------------
+    bounds : multiple lists of bounding box coordinates (e.g., bbox).
+
+    Returns
+    ----------
+    A list of unioned boundaries.
+    """
+    
+    # zip up all coordinate arrays 
+    pairs = zip(*bounds)
+    
+    # union and return
+    return [
+        min(next(pairs)),
+        min(next(pairs)),
+        max(next(pairs)),
+        max(next(pairs))
+    ]
 
 
 def get_shape(bounds, resolution):
