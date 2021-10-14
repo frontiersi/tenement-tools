@@ -16,7 +16,7 @@ def prepare_collections_list(in_platform):
     if in_platform == 'Landsat':
         return ['ga_ls5t_ard_3', 'ga_ls7e_ard_3', 'ga_ls8c_ard_3']
     elif in_platform == 'Sentinel':
-        raise ValueError('Sentinel not yet implemented.')
+        return ['s2a_ard_granule', 's2b_ard_granule']
 
 # meta, checks 
 def datetime_to_string(dt):
@@ -89,21 +89,22 @@ def prepare_band_names(in_bands, in_platform):
     for band in bands:
         if band in ['blue', 'green', 'red']:
             out_bands.append('nbart' + '_' + band)
-            
-        elif band == 'oa_mask':
-            out_bands.append('oa_fmask')
-            
+                        
         elif in_platform == 'Landsat':
             if band == 'nir':
                 out_bands.append('nbart' + '_' + band)
             elif band in ['swir1', 'swir2']:
                 out_bands.append('nbart' + '_' + band[:-1] + '_' + band[-1])
+            elif band == 'oa_mask':
+                out_bands.append('oa_fmask')
 
         elif in_platform == 'Sentinel':
-            if band == 'nir_1':
-                out_bands.append('nbart' + '_' + band)
+            if band == 'nir1':
+                out_bands.append('nbart' + '_' + band[:-1] + '_' + band[-1])
             elif band in ['swir2', 'swir3']:
                 out_bands.append('nbart' + '_' + band[:-1] + '_' + band[-1])
+            elif band == 'oa_mask':
+                out_bands.append('fmask')
 
         else:
             raise ValeuError('Reuqested band {} does not exist.'.format(band))
