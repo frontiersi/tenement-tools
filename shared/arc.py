@@ -3,9 +3,21 @@
 # imports 
 import arcpy
 
-# meta
+
 def prepare_collections_list(in_platform):
     """
+    Helper function to check if bounds within list overlap.
+    Used to discard assets that may not overlap with user
+    defined bbox, or other assets bboxes.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+       Two or more lists of bounding box coordinates
+    
+    Returns
+    ----------
+    A boolean indicating whether bounds overlap.
     """
     
     # checks
