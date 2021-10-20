@@ -1021,7 +1021,8 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
     return coords, dims
   
 # ADD OTHER ATTRIBUTES NEEDED BY UPDATE FUNC
-def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
+def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype, 
+                     snap_bounds, fill_value, rescale, cell_align, resampling):
     """
     Takes a newly constructed xr dataset and associated stac metadata attributes
     and appends attributes to the xr dataset itself. This is useful information
@@ -1038,13 +1039,12 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
     meta : dict
         A dictionary of the dea stac metadata associated with the current
         query and satellite data.
-    fill_value : int or float
-        The value used to fill null or errorneous pixels with from prior methods.
-        Not used in analysis here, just included in the attributes.
     collections : list
         A list of names for the requested satellite dea collections. For example,
         ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
         just dded to attributes.
+    bands : list
+        List of band names requested original query.
     slc_off : bool
         Whether to include Landsat 7 errorneous SLC data. Only relevant
         for Landsat data. Not used in analysis here, only appended to attributes.
@@ -1053,6 +1053,21 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
         satellite data. Is in latitude and longitudes with format: 
         (min lon, min lat, max lon, max lat). Only used to append to 
         attributes, here.
+    dtype : str
+        Name of original query dtype, e.g., int16, float32. In numpy
+        dtype that the output xarray dataset will be encoded in.
+    snap_bounds : bool
+        Whether to snap raster bounds to whole number intervals of resolution,
+        to prevent fraction-of-a-pixel offsets. Default is true. Only used
+        to append to netcdf attirbutes.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True. Only used to append to netcdf attributes.
+    cell_align: str
+        Alignmented of cell in original query. Either Too-left or Center.
     resampling : str
         The rasterio-based resampling method used when pixels are reprojected
         rescaled to different crs from the original. Just used here to append
@@ -1103,30 +1118,23 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
         'crs': 'EPSG:{}'.format(crs)
     })    
     
-    # add attributes custom for cog fetcher
-    ds = ds.assign_attrs({'transform': tuple(transform)})
+    # set range of original query parameters for future sync
+    ds = ds.assign_attrs({'transform': tuple(transform)})          # set transform info for cog fetcher
+    ds = ds.assign_attrs({'nodatavals': fill_value})               # set original no data values
+    ds = ds.assign_attrs({'orig_collections': tuple(collections)}) # set original collections
+    ds = ds.assign_attrs({'orig_bands': tuple(bands)})             # set original bands
+    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
+    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
+    ds = ds.assign_attrs({'orig_dtype': dtype})                    # set original dtype
+    ds = ds.assign_attrs({'orig_snap_bounds': str(snap_bounds)})   # set original snap bounds (as string)
+    ds = ds.assign_attrs({'orig_cell_align': cell_align})          # set original cell align
+    ds = ds.assign_attrs({'orig_resample': resampling})            # set original resample method 
     
     # set output resolution depending on type
     res = meta.get('resolutions_xy')
     res = res[0] if res[0] == res[1] else res
     ds = ds.assign_attrs({'res': res})
-    
-    # set no data values
-    ds = ds.assign_attrs({'nodatavals': fill_value})
-    
-    # set collections from original query
-    ds = ds.assign_attrs({'orig_collections': tuple(collections)})
-    
-    # set original bbox
-    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})
-    
-    # set slc off from original query. netcdf cannot handle boolean, so use str
-    slc_off = 'True' if slc_off else 'False'
-    ds = ds.assign_attrs({'orig_slc_off': slc_off})
-    
-    # set original resample method 
-    ds = ds.assign_attrs({'orig_resample': resampling})
-    
+        
     # iter each var and update attributes 
     for data_var in ds.data_vars:
         ds[data_var] = ds[data_var].assign_attrs({
