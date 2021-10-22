@@ -10,6 +10,7 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 # import required libraries
 import os, sys
 import gdal
+import dask
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -41,7 +42,7 @@ def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=Fals
     ----------
     ds : xarray dataset or array.
     """
-    
+        
     # notify
     print('Calculating indices: {0}.'.format(index))
     

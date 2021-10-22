@@ -288,6 +288,126 @@ def prepare_fill_value_type(in_fill_value):
         return np.nan
 
 
+def convert_resample_interval_code(code):
+    """Takes a resample interval code from ArcGIS UI and
+    translates it to xarray friendly format"""
+    
+    if code == 'Weekly':
+        return '1W'
+    elif code == 'Bi-monthly':
+        return '1SM'
+    elif code == 'Monthly':
+        return '1M'
+    else:
+        arcpy.AddError('Resample method not supported.')
+        raise
+
+
+def convert_smoother_code(code):
+    """Takes a smoother code from ArcGIS UI and
+    translates it to xarray friendly format"""
+    
+    if code == 'Savitsky-Golay':
+        return 'savitsky'
+    elif code == 'Symmetrical Gaussian':
+        return 'symm_gaussian'
+    else:
+        arcpy.AddError('Smoother is not supported.')
+        raise
+
+
+def check_savitsky_inputs(window_length, polyorder):
+    """Based on scipy, savitsk golay window length 
+    must be odd, positive number, and polyorder must
+    always be lower than window_length."""
+    
+    # check window length is odd and > 0
+    if window_length <= 0:
+        arcpy.AddWarning('Savitsky window length must be > 0. Defaulting to 3.')
+        window_length = 3
+    
+    elif window_length % 2 == 0:
+        arcpy.AddWarning('Savitsky window length must be odd number. Subtracting 1.')
+        window_length = window_length - 1
+
+    # now do polyorder
+    if polyorder >= window_length:
+        arcpy.AddWarning('Savitsky polyorder must be less than window length. Correcting.')
+        polyorder = window_length - 1
+    
+    return window_length, polyorder
+
+
+def convert_fmask_codes(flags):
+    """Takes a list of arcgis dea aws satellite data
+    fmask flags (e.g., Water, Valid) and converts them
+    into their DEA AWS numeric code equivalent."""
+    
+    out_flags = []
+    for flag in flags:
+        if flag == 'NoData':
+            out_flags.append(0)
+        elif flag == 'Valid':
+            out_flags.append(1)
+        elif flag == 'Cloud':
+            out_flags.append(2)
+        elif flag == 'Shadow':
+            out_flags.append(3)
+        elif flag == 'Snow':
+            out_flags.append(4)
+        elif flag == 'Water':
+            out_flags.append(5)
+            
+    return out_flags
+
+
+def get_name_of_mask_band(bands):
+    """For a list of band names from a DEA AWS 
+    data cube NetCDF, check if expected mask band
+    exists and return it. Error if not found."""
+    
+    if 'oa_fmask' in bands:
+        return 'oa_fmask'
+    elif 'fmask' in bands:
+        return 'fmask'
+    else:
+        arcpy.AddError('Expected mask band not found.')
+        raise
+
+
+def get_platform_from_dea_attrs(attr_dict):
+    """We can get the name of our DEA AWS data cubes 
+    platform if we extract the collections information
+    and check the code at the start of the collection name.
+    We need this a lot, so lets create a helper!"""
+    
+    # try and get collection from attribute... fail if empty
+    collections = attr_dict.get('orig_collections')
+    if collections is None:
+        arcpy.AddError('Input NetCDF has no collection attribute.')
+        raise
+        
+    # grab collections whether string or tuple/list
+    if isinstance(collections, (list, tuple)) and len(collections) > 0:
+        platform = collections[0]
+    elif isinstance(collections, str):
+        platform = collections
+    else:
+        arcpy.AddError('Input NetCDF ha attributes but no values in collections.')
+        raise
+        
+    # parse dea aws platform code from collections attirbute
+    if platform[:5] == 'ga_ls':
+        platform = 'Landsat'
+    elif platform[:2] == 's2':
+        platform = 'Sentinel'
+    else:
+        arcpy.AddError('Platform in NetCDF is not supported.')
+        raise
+        
+    return platform
+
+
 def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     """
     For current ArcGIS Project which runs this function,
