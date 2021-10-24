@@ -70,6 +70,16 @@ def datetime_to_string(dt):
     return '{}-{}-{}'.format(y, m, d)   
 
 
+def datetime_to_numpy(dt):
+    """
+    Quick function to convert a datetime
+    object into a numpy format datetime64 for use in
+    indexing and querying xr time dimensions.
+    """
+    
+    return np.datetime64(dt).astype(datetime)
+
+
 def get_selected_layer_extent(lyr):
     """
     Basic function that takes a arcpy feature layer 
