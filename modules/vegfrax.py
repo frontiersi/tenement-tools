@@ -908,8 +908,6 @@ def perform_prediction(ds_input, estimator):
     # imports
     import dask.array as dask_array
     from sklearn.ensemble import RandomForestRegressor
-    from dask_ml.wrappers import ParallelPostFit
-    import joblib
     
     # check ds in dataset or dataarray
     if not isinstance(ds_input, (xr.Dataset, xr.DataArray)):
@@ -971,12 +969,21 @@ def perform_prediction(ds_input, estimator):
 
         return ds_out
 
-    # predict via parallel, or if missing, regular compute
-    if is_dask == True:
-        estimator = ParallelPostFit(estimator)
-        with joblib.parallel_backend('dask'):
-            ds_out = predict(ds_input, estimator)
-    else:
+    try:
+        # predict via parallel if libraries dont error
+        import joblib
+        from dask_ml.wrappers import ParallelPostFit
+    
+        # if dask and parallel, use optimal, else just regular compute
+        if is_dask == True:
+            estimator = ParallelPostFit(estimator)
+            with joblib.parallel_backend('dask'):
+                ds_out = predict(ds_input, estimator)
+        else:
+            ds_out = predict(ds_input, estimator).compute()
+            
+    except:
+        # libs not found, skip parallel
         ds_out = predict(ds_input, estimator).compute()
 
     # return

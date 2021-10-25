@@ -32,11 +32,12 @@ conda install -c esri rasterio
 # need pyproj=2.6.1.post1
 pip install pyproj
 
+# need scikit-learn
+conda install -c conda-forge scikit-learn 
+
 # note, in arcgis, you will need to set gdal folder
 #os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
 
-# install geopandas
-#conda install geopandas
 
 
 #install anaconda, check uninstalled libraries from drop down and installr asterio
