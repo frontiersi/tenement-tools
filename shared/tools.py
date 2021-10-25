@@ -689,26 +689,34 @@ def get_xr_crs(ds):
         A int containing the crs of xarray dataset.
     """
 
-    # try getting crs option 1
-    try:
-        crs = ds.crs
-        crs = int(''.join(e for e in crs if e.isdigit()))
-    except:
-        crs = None
+    # raw arcgis albers proj info
+    albers_proj = ('+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +' +
+                   'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 ' +
+                   '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True')
 
-    # try getting crs option 2
-    try:
-        if not crs:
-            crs = int(ds.geobox.crs.epsg)
-    except:
-        crs = None
+    # when crs attribute is a string
+    if isinstance(ds.crs, str):
 
-    # check if something exists
-    if not crs:
-        raise ValueError('Could not extract crs from dataset.')
+        # approach 1
+        if ds.crs.startswith('EPSG:'):
+            return int(ds.crs.split(':')[1])
 
-    # return
-    return crs
+        # approach 2
+        if hasattr(ds, 'geobox'):
+            return int(ds.geobox.crs.epsg)
+
+        # approach 3
+        if ds.crs == albers_proj:
+            return 3577
+        
+    # when a iterable...
+    if isinstance(ds.crs, (tuple, list)):
+        
+        # approach 1
+        return int(''.join(e for e in ds.crs if e.isdigit()))
+
+    # error if we get here...
+    raise ValueError('Could not extract crs from dataset.')
 
 
 def get_xr_extent(ds):

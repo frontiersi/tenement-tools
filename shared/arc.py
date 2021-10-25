@@ -77,7 +77,7 @@ def datetime_to_numpy(dt):
     indexing and querying xr time dimensions.
     """
     
-    return np.datetime64(dt).astype(datetime)
+    return np.datetime64(dt)
 
 
 def get_selected_layer_extent(lyr):
@@ -418,6 +418,33 @@ def get_platform_from_dea_attrs(attr_dict):
     return platform
 
 
+def prepare_vegfrax_classes(classes):
+    """
+    Unpacks a string of selected classes from ArcGIS Pro
+    interface. Will always be in format "'Class: X'; 'Class: Y'"
+    etc. We only support integer classes at this stage.
+    """
+    
+    # convert arcgis multi-value format to list of values and notify       
+    classes = classes.replace('Class: ', '').replace("'", "").split(';')
+
+    if len(classes) == 0:
+        arcpy.AddError('Not classes could be obtained from selection.')
+        raise
+
+    # convert into integers... strings not supported
+    _ = []
+    for c in classes:
+        try:
+            _.append(int(c))
+        except:
+            arcpy.AddError('Selected class not an integer. Only support integers, e.g., 1, 2, 3.')
+            raise
+
+    # return classes
+    return _
+
+
 def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     """
     For current ArcGIS Project which runs this function,
@@ -481,3 +508,5 @@ def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     
     # return coloursed layer
     return lyr
+    
+ 
