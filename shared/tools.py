@@ -708,6 +708,10 @@ def get_xr_crs(ds):
         # approach 3
         if ds.crs == albers_proj:
             return 3577
+            
+        # approach 4
+        if '+init=epsg:' in ds.crs:
+            return int(ds.crs.split(':')[-1])
         
     # when a iterable...
     if isinstance(ds.crs, (tuple, list)):
