@@ -35,6 +35,8 @@ import matplotlib.pyplot as plt
 sys.path.append('../../shared')
 import tools
 
+# increase number of pandas rows displayed
+pd.set_option('display.max_rows', 1000)
 
 def get_files_from_path(folder_path, file_type='.tif'):
     """
@@ -237,14 +239,25 @@ def generate_proximity_areas(shp_path, buff_m=100):
         shp = ogr.Open(shp_path, 0)
         lyr = shp.GetLayer()
 
-        # get epsg code
-        epsg = int(lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1))
-
+        # try and get epsg code via authority
+        epsg = lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1)
+        
+        # arcgis can sometimes miss authority, try backup method
+        if epsg is None:
+            tag = lyr.GetSpatialRef().GetAttrValue('PROJCS', 0)
+            epsg = '3577' if 'albers' in tag.lower() else None
+        
+        # final check
+        if epsg is not None:
+            epsg = int(epsg)
+        else:
+            raise AttriuteError('Could not get EPSG from shapefile. Please check.')
+        
         # get num feats
         num_feats = lyr.GetFeatureCount()
 
-    except Exception:
-        raise TypeError('> Could not read species point locations. Is the file corrupt?')
+    except:
+        raise TypeError('Could not read species point locations.')
         
     # check shapefile parameters
     if epsg != 3577:
@@ -768,7 +781,7 @@ def get_dims_order_and_length(ds):
 
 def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list, 
                  replicates=5, test_ratio=0.1, equalise_test_set=False, 
-                 shuffle_split=True, calc_accuracy_stats=False):
+                 shuffle_split=True, calc_accuracy_stats=False, plot_stats=True):
     """
     Generate a species distribution model (SDM) for given estimator and provided species occurrence
     points. Numerous parameters can be set to get more out of your data - see parameters below. Two or more
@@ -802,6 +815,8 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
         Numerous accuracy metrics can be generated for each SDM and presented if set to True. These
         metrics include response curves, general classification and probability accuracy, and 
         others.
+    plot_stats : bool
+        Whether to show plots or only text based metrics. Default is True.
 
     Returns
     ----------
@@ -975,18 +990,19 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
                 var = os.path.splitext(var)[0]
                 cate_var_names.append(var)
 
-            # plot mean viarbale importance (mvi) scores
+            # show mean viarbale importance (mvi) scores
             np_vis = np.array([d['imp_scores'] for d in result_dict_list])
             plot_mvi_scores(var_names=all_var_names, np_vis=np_vis)
             del np_vis
 
             # plot roc curve
-            np_fpr = np.array([d['fpr'] for d in result_dict_list])
-            np_tpr = np.array([d['tpr'] for d in result_dict_list])
-            plot_roc_curve(np_fpr, np_tpr)
-            del np_fpr, np_tpr
+            if plot_stats:
+                np_fpr = np.array([d['fpr'] for d in result_dict_list])
+                np_tpr = np.array([d['tpr'] for d in result_dict_list])
+                plot_roc_curve(np_fpr, np_tpr)
+                del np_fpr, np_tpr
 
-            # plot training out of the bag accuracy
+            # show training out of the bag accuracy
             np_train_acc = np.array([d['train_acc'] for d in result_dict_list])
             plot_training_oob_accuracy(np_train_acc)
             del np_train_acc
@@ -1005,60 +1021,61 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
             calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred)
             del np_y_true, np_y_pred, np_y_prob
         
-        except Exception as e:
-            print(e) # todo remove
+        except:
             print('Could not generate accuracy measurements. Aborting.')
 
         # plot continuous responses
-        cont_responses = np.array([d.get('cont_probs') for d in result_dict_list])
-        if len(cont_responses) > 0 and len(cont_matrices) > 0:
-            if len(cont_responses) == replicates:
-                try:
-                    # get continuous variable names and pred values as numpies
-                    x_names = np.array(cont_var_names)
-                    x_values = np.array([cont_matrices[i][:, i] for i in range(len(cont_matrices))])
+        if plot_stats:
+            cont_responses = np.array([d.get('cont_probs') for d in result_dict_list])
+            if len(cont_responses) > 0 and len(cont_matrices) > 0:
+                if len(cont_responses) == replicates:
+                    try:
+                        # get continuous variable names and pred values as numpies
+                        x_names = np.array(cont_var_names)
+                        x_values = np.array([cont_matrices[i][:, i] for i in range(len(cont_matrices))])
 
-                    # get mean of each continuous var response
-                    y_means = np.mean(cont_responses, axis=0)
+                        # get mean of each continuous var response
+                        y_means = np.mean(cont_responses, axis=0)
 
-                    # plot continuous responses
-                    plot_continuous_response_curves(x_names, x_values, y_means, ncols=3)
-                    del x_names, x_values, y_means
+                        # plot continuous responses
+                        plot_continuous_response_curves(x_names, x_values, y_means, ncols=3)
+                        del x_names, x_values, y_means
 
-                except:
-                    print('> Could not plot continuous response curves. Aborting response curves.')
+                    except:
+                        print('> Could not plot continuous response curves. Aborting response curves.')
+                else:
+                    print('> Continous responses does not match number of replicates.')
             else:
-                print('> Continous responses does not match number of replicates.')
-        else:
-            print('> Not enough information to plot continuous response curves.')
+                print('> Not enough information to plot continuous response curves.')
 
         # plot categorical responses
-        cate_responses = np.array([d.get('cate_probs') for d in result_dict_list])
-        if len(cate_responses) > 0 and len(cate_matrices) > 0:
-            if len(cate_responses) == replicates:
-                try:
-                    # get categorical variable names
-                    x_names = np.array(cate_var_names)
+        if plot_stats:
+            cate_responses = np.array([d.get('cate_probs') for d in result_dict_list])
+            if len(cate_responses) > 0 and len(cate_matrices) > 0:
+                if len(cate_responses) == replicates:
+                    try:
+                        # get categorical variable names
+                        x_names = np.array(cate_var_names)
 
-                    # get indexes for continuous and categoricals within full dataframe
-                    cate_mask = np.array([True if v in cate_var_names else False for v in df_records.columns.tolist()])
-                    cont_idx = np.where(cate_mask == False)[0]
-                    cate_idx = np.where(cate_mask == True)[0]
+                        # get indexes for continuous and categoricals within full dataframe
+                        cate_mask = np.array([True if v in cate_var_names else False for v in df_records.columns.tolist()])
+                        cont_idx = np.where(cate_mask == False)[0]
+                        cate_idx = np.where(cate_mask == True)[0]
 
-                    # get unique class labels
-                    x_values = np.array([cate_matrices[i][:, cate_idx[i]] for i in range(len(cate_matrices))])
+                        # get unique class labels
+                        x_values = np.array([cate_matrices[i][:, cate_idx[i]] for i in range(len(cate_matrices))])
 
-                    # put code below 
-                    plot_categorical_response_bars(x_names, x_values, cate_responses, ncols=3)
-                    del x_names, cate_mask, cont_idx, cate_idx, x_values
+                        # put code below 
+                        plot_categorical_response_bars(x_names, x_values, cate_responses, ncols=3)
+                        del x_names, cate_mask, cont_idx, cate_idx, x_values
 
-                except Exception as e:
-                    print(e)
-                    print('> Could not plot categorical response curves. Error occured. Moving on.')
+                    except Exception as e:
+                        print(e)
+                        print('> Could not plot categorical response curves. Error occured. Moving on.')
+                else:
+                    print('> Continous responses does not match number of replicates.')
             else:
-                print('> Continous responses does not match number of replicates.')
-        else:
-            print('> Not enough information to plot categorical response curves.')
+                print('> Not enough information to plot categorical response curves.')
 
     # create mask, replace with nan. replace 0 with very low 0 so not masked out   
     da_mask = xr.where(ds != ds.nodatavals, 1, 0)
@@ -1594,7 +1611,6 @@ def calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred):
     from sklearn.metrics import normalized_mutual_info_score
     from sklearn.metrics import cohen_kappa_score
     from scipy.stats import pointbiserialr
-    
     
     # checks
     if not isinstance(np_y_true, np.ndarray):

@@ -1038,3 +1038,54 @@ def resample_xr(ds_from, ds_to, resampling='nearest'):
     
     # resample from one res to another
     return ds_from.interp(x=ds_to['x'], y=ds_to['y'], method=resampling)
+    
+    
+def build_xr_attributes(ds, res=30, crs=3577):
+    """
+    Sometimes we have no choice but build our own
+    xr dataset attirbutes from scratch, assuming the input
+    data was in albers (would have recieved an error if it 
+    was not before this function). This function constructs
+    such metadata from scratch as a last resort. We avoid
+    this as much as possible.
+    """
+
+    # update grid mapping top level
+    ds.attrs.update({
+        'grid_mapping': 'spatial_ref', 
+        'crs': 'EPSG:{}'.format(crs)})
+
+    # dirty solution... but generating with pyproj fails...
+    srs = 'PROJCS["GDA_1994_Australia_Albers",GEOGCS["GCS_GDA_1994",DATUM["D_GDA_1994",SPHEROID["GRS_1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6283"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4283"]],PROJECTION["Albers_Conic_Equal_Area"],PARAMETER["standard_parallel_1",-18],PARAMETER["standard_parallel_2",-36],PARAMETER["latitude_of_center",0],PARAMETER["longitude_of_center",132],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3577"]]'
+    ds['spatial_ref'].attrs.update({
+        'spatial_ref': srs,
+        'grid_mapping_name': 'albers_conical_equal_area'
+    })
+
+    # create band level attriutes
+    for var in list(ds.data_vars):
+        ds[var].attrs = {
+            'units': 1, 
+            'crs': 'EPSG:{}'.format(crs), 
+            'grid_mapping': 'spatial_ref'
+        }
+        
+    # do x...
+    ds['x'].attrs.update({
+        'units': 'metre', 
+        'resolution': res, 
+        'crs': 'EPSG:{}'.format(crs)
+    })
+
+    # do y...
+    ds['y'].attrs.update({
+        'units': 'metre', 
+        'resolution': res * -1, 
+        'crs': 'EPSG:{}'.format(crs)
+    })
+    
+    return ds
+    
+    
+    
+    
