@@ -1065,7 +1065,7 @@ def build_xr_attributes(ds, res=30, crs=3577):
     # create band level attriutes
     for var in list(ds.data_vars):
         ds[var].attrs = {
-            'units': 1, 
+            'units': '{}'.format(1), 
             'crs': 'EPSG:{}'.format(crs), 
             'grid_mapping': 'spatial_ref'
         }
@@ -1073,14 +1073,14 @@ def build_xr_attributes(ds, res=30, crs=3577):
     # do x...
     ds['x'].attrs.update({
         'units': 'metre', 
-        'resolution': res, 
+        'resolution': '{}'.format(res), 
         'crs': 'EPSG:{}'.format(crs)
     })
 
     # do y...
     ds['y'].attrs.update({
         'units': 'metre', 
-        'resolution': res * -1, 
+        'resolution': '{}'.format(res * -1), 
         'crs': 'EPSG:{}'.format(crs)
     })
     
