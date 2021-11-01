@@ -31,7 +31,7 @@ sys.path.append('../../shared')
 import satfetcher, tools
 
 
-def prepare_data(file_list, nodataval):
+def prepare_data(file_list, var=None, nodataval=-999):
     """
     Takes a list of filepath strings in which to open into xarray
     datasets. Calls satfetcher module functions for loading.
@@ -40,6 +40,9 @@ def prepare_data(file_list, nodataval):
     ----------
     file_list: list
         A list of strings representing geotiff or netcdf filepaths.
+    var : string
+        The name of a particular variable to extract from
+        dataset with multiple variables.
     nodataval : numeric or numpy nan
         A value ion which to standardise all nodata values to in
         each provided input file.
@@ -74,6 +77,10 @@ def prepare_data(file_list, nodataval):
             print('File {} was not a tif or netcdf - skipping.'.format(lyr_fn))
             continue
             
+        # if variable given for nc, slice
+        if lyr_ext == '.nc' and var is not None:
+            ds = ds[var].to_dataset()
+            
         # check if shape correct, convert array
         if ds.to_array().shape[0] != 1:
             print('More than one variable detected - skipping.')
@@ -102,7 +109,7 @@ def apply_auto_sigmoids(items):
     Parameters
     ----------
     items: list
-        A list of arrays with elements as [path, a, bc, d, ds] .
+        A list of arrays with elements as [path, var, type, a, bc, d, ds] .
         Path represents path of raster/netcdf, a, bc, d are values
         for inflection points on sigmoidal (e.g., a is low inflection, 
         bc is mid-point or max inflection, and ds represents
@@ -124,11 +131,13 @@ def apply_auto_sigmoids(items):
         
         # fetch elements
         path = item[0]
-        a, bc, d = item[1], item[2], item[3]
-        ds = item[4]
+        var = item[1]
+        typ = item[2]
+        a, bc, d = item[3], item[4], item[5]
+        ds = item[6]
         
-        # expect 5 items and xr dataset...
-        if len(item) != 5:
+        # expect 7 items and xr dataset...
+        if len(item) != 7:
             continue
         elif ds is None:
             continue
@@ -158,7 +167,7 @@ def apply_auto_sigmoids(items):
 
         # reapply attributes and update original list item
         ds.attrs = attrs
-        item[4] = ds
+        item[6] = ds
         
     #return
     return items
@@ -359,6 +368,8 @@ def perform_dempster(ds_list):
 
     # generate plausability layer
     da_plauability = (1 - da_disbelief)
+    
+    # generate
     
     # combine into dataset
     ds = xr.merge([
