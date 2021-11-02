@@ -97,6 +97,24 @@ def prepare_data(file_list, var=None, nodataval=-999):
     return da_list
 
 
+def check_belief_disbelief_exist(in_lyrs):
+    """
+    Given a list of lists of dempster-shafer parameter
+    values, check if the type element has at least one
+    belief and disbelief type. If not, error.
+    """
+    
+    belief_disbelief_list = []
+    for lyr in in_lyrs:
+        belief_disbelief_list.append(lyr[2])
+
+    # check belief layers
+    if 'Belief' not in np.unique(belief_disbelief_list):
+        raise ValueError('Must have at least one Belief layer.')
+    elif 'Disbelief' not in np.unique(belief_disbelief_list):
+        raise ValueError('Must have at least one Disbelief layer.')
+
+
 def apply_auto_sigmoids(items):
     """
     Takes a list of arrays with elements as [path, a, bc, d, ds] 
@@ -171,6 +189,27 @@ def apply_auto_sigmoids(items):
         
     #return
     return items
+
+
+def seperate_ds_belief_disbelief(in_lyrs):
+    """
+    Takes a list of prepared dempster shafer list
+    elements and seperates into two seperate lists,
+    one for belief, one for disbelief.
+    """
+    
+    belief_list, disbelief_list = [], []
+    for lyr in in_lyrs:
+        typ = lyr[2]
+        
+        # seperate
+        if typ == 'Belief':
+            belief_list.append(lyr[6])
+        else:
+            disbelief_list.append(lyr[6])
+        
+    # gimme
+    return belief_list, disbelief_list
 
 
 def export_sigmoids(items, out_path):
@@ -369,13 +408,15 @@ def perform_dempster(ds_list):
     # generate plausability layer
     da_plauability = (1 - da_disbelief)
     
-    # generate
+    # generate belief interval
+    da_interval = (da_plauability - da_belief)
     
     # combine into dataset
     ds = xr.merge([
         da_belief.to_dataset(name='belief'), 
         da_disbelief.to_dataset(name='disbelief'), 
-        da_plauability.to_dataset(name='plausability')
+        da_plauability.to_dataset(name='plausability'),
+        da_interval.to_dataset(name='interval')
     ])
 
     return ds

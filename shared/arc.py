@@ -445,6 +445,62 @@ def prepare_vegfrax_classes(classes):
     return _
 
 
+def convert_ensemble_parameters(in_lyrs):
+    """
+    Takes list of lists from ArcGIS Pro parameters
+    for ensemble modelling tool and converts text
+    to numerics.
+    """
+    
+    clean_lyrs = []
+    for lyr in in_lyrs:
+        a, bc, d = lyr[3], lyr[4], lyr[5]
+
+        # clean a
+        if a == '' or a.lower() == 'n/a':
+            a = None
+        elif a.lower() == 'min':
+            a == 'Min'
+        elif a.lower() == 'max':
+            a == 'Max'
+        else:
+            try:
+                a = float(a)
+            except:
+                raise ValueError('Value for a is not a numeric.')
+
+        # clean bc
+        if bc == '' or bc.lower() == 'n/a':
+            bc = None
+        elif bc.lower() in ['min', 'max']:
+            raise ValueError('Can not set mid point to Min or Max.')
+        else:
+            try:
+                bc = float(bc)
+            except:
+                raise ValueError('Value for bc is not a numeric.')
+
+        # clean d
+        if d == '' or d.lower() == 'n/a':
+            d = None
+        elif d.lower() == 'min':
+            d == 'Min'
+        elif d.lower() == 'max':
+            d == 'Max'
+        else:
+            try:
+                d = float(d)
+            except:
+                raise ValueError('Value for d is not a float.')  
+
+
+        # append
+        clean_lyrs.append([lyr[0], lyr[1], lyr[2], a, bc, d])
+    
+    # gimme
+    return clean_lyrs
+
+
 def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     """
     For current ArcGIS Project which runs this function,
