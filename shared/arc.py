@@ -537,9 +537,6 @@ def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     m = aprx.activeMap
     if m is None:
         raise ValueError('No active map found. Please open a map first.')
-        
-        
-    arcpy.AddMessage(lyr_name)
     
     # get requested lyr
     lyr = m.listLayers(lyr_name)
