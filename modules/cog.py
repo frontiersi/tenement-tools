@@ -3,11 +3,13 @@
 This script contains functions for searching the digital earth australia (dea)
 public aws bucket using stac, preparing cog data into dask arrays for lazy 
 loading, and computation into a local netcdf with bands as variables, x, y
-and time dimensions. This script is a simplified, python 3.8-compatible and 
-dea-focused version of the excellent stackstac python library 
-(http://github.com/gjoseph92/stackstac). We highly recommended you use
-stackstac if you need to use any aws bucket other than the dea public database,
-and to cite them when they have a white paper available if using in research.
+and time dimensions. This script is a simplified, python 3.7-compatible and 
+dea-focused version of the great stackstac python library 
+(http://github.com/gjoseph92/stackstac). 
+
+We highly recommended using stackstac if you need any aws bucket other 
+than the dea public database, and to cite them when they have a white paper 
+available, if using tenement-tools in research.
 
 Note: upcoming DEA ODC-STAC module provides an official stac-xarray workflow, 
 consider swapping in if GDV project continues.
