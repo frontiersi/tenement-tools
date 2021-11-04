@@ -9,8 +9,11 @@ dea-focused version of the excellent stackstac python library
 stackstac if you need to use any aws bucket other than the dea public database,
 and to cite them when they have a white paper available if using in research.
 
+Note: upcoming DEA ODC-STAC module provides an official stac-xarray workflow, 
+consider swapping in if GDV project continues.
+
 See associated Jupyter Notebook cog.ipynb for a basic tutorial on the
-main functions and order of execution.
+main functions and order of execution. https://odc-stac.readthedocs.io/en/latest/
 
 Contacts: 
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
