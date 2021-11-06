@@ -2,7 +2,7 @@
 Tenement Tools placeholder!
 
 ## Installing (alpha development build only)
-Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there are known bugs, and we hope to make the below process even easier.
+Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there are known bugs, and we hope to make the below process easier.
 
 #### 1. Download ArcGIS Pro 2.8 (skip to step 2 if already installed)
 First, download and install ArcGIS Pro 2.8. This can be obtained from your organisation's ESRI account. Full instructions are provided here: https://pro.arcgis.com/en/pro-app/latest/get-started/download-arcgis-pro.htm. Please note: this build has only been tested for ArcGIS Pro v2.8 - other versions may not be compatible.
