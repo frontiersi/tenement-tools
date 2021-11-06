@@ -30,6 +30,26 @@ import canopy
 sys.path.append('../../shared')
 import satfetcher, tools
 
+def check_belief_disbelief_exist(in_lyrs):
+    """
+    Given a list of lists of dempster-shafer parameter
+    values, check if the type element has at least one
+    belief and disbelief type. If not, invalid is flagged.
+    """
+    
+    belief_disbelief_list = []
+    for lyr in in_lyrs:
+        belief_disbelief_list.append(lyr[2])
+
+    # check belief layers
+    invalid = False
+    if 'Belief' not in np.unique(belief_disbelief_list):
+        invalid = True
+    elif 'Disbelief' not in np.unique(belief_disbelief_list):
+        invalid = True
+        
+    return invalid
+
 
 def prepare_data(file_list, var=None, nodataval=-999):
     """
@@ -65,17 +85,31 @@ def prepare_data(file_list, var=None, nodataval=-999):
         lyr_name, lyr_ext = os.path.splitext(lyr_fn)
 
         # lazy load dataset depending on tif or nc
-        if lyr_ext == '.tif':
-            ds = satfetcher.load_local_rasters(rast_path_list=lyr_path, 
-                                               use_dask=True, 
-                                               conform_nodata_to=nodataval)    
-        elif lyr_ext == '.nc':
-            ds = satfetcher.load_local_nc(nc_path=lyr_path, 
-                                          use_dask=True, 
-                                          conform_nodata_to=nodataval)
-        else:
-            print('File {} was not a tif or netcdf - skipping.'.format(lyr_fn))
-            continue
+        try:
+            if lyr_ext == '.tif':
+                ds = satfetcher.load_local_rasters(rast_path_list=lyr_path, 
+                                                   use_dask=True, 
+                                                   conform_nodata_to=nodataval)   
+            elif lyr_ext == '.nc':
+                ds = satfetcher.load_local_nc(nc_path=lyr_path, 
+                                              use_dask=True, 
+                                              conform_nodata_to=nodataval)
+        except:
+            raise ValueError('Could not load input: {}'.format(lyr_path))
+
+        # check if crs is albers, else skipping
+        try:
+            crs = tools.get_xr_crs(ds)
+        except:
+            raise ValueError('Input: {} has no crs infomration.'.format(lyr_path))
+            
+        # check crs is albers
+        if crs != 3577:
+            raise ValueError('Input: {} crs is not projected in GDA94 Albers.'.format(lyr_path))
+
+        # convert to dataset if need be
+        if isinstance(ds, xr.DataArray):
+            ds = ds.to_dataset(dim='variable')            
             
         # if variable given for nc, slice
         if lyr_ext == '.nc' and var is not None:
@@ -83,8 +117,7 @@ def prepare_data(file_list, var=None, nodataval=-999):
             
         # check if shape correct, convert array
         if ds.to_array().shape[0] != 1:
-            print('More than one variable detected - skipping.')
-            continue
+            raise ValueError('More than one band in input: {}. Only support one.'.format(lyr_path))
 
         # append 
         da_list.append(ds)
@@ -95,24 +128,6 @@ def prepare_data(file_list, var=None, nodataval=-999):
         
     # return
     return da_list
-
-
-def check_belief_disbelief_exist(in_lyrs):
-    """
-    Given a list of lists of dempster-shafer parameter
-    values, check if the type element has at least one
-    belief and disbelief type. If not, error.
-    """
-    
-    belief_disbelief_list = []
-    for lyr in in_lyrs:
-        belief_disbelief_list.append(lyr[2])
-
-    # check belief layers
-    if 'Belief' not in np.unique(belief_disbelief_list):
-        raise ValueError('Must have at least one Belief layer.')
-    elif 'Disbelief' not in np.unique(belief_disbelief_list):
-        raise ValueError('Must have at least one Disbelief layer.')
 
 
 def apply_auto_sigmoids(items):

@@ -495,7 +495,7 @@ def convert_ensemble_parameters(in_lyrs):
 
 
         # append
-        clean_lyrs.append([lyr[0], lyr[1], lyr[2], a, bc, d])
+        clean_lyrs.append([lyr[0].value, lyr[1], lyr[2], a, bc, d])
     
     # gimme
     return clean_lyrs
