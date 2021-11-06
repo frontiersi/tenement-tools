@@ -1,31 +1,27 @@
 # Tenement Tools
 Tenement Tools placeholder!
 
-## Installing (development build only)
-Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there known bugs, and we hope to **simplify the below process considerably closer to release**.
+## Installing (alpha development build only)
+Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there are known bugs, and we hope to make the below process even easier.
 
-#### 1. Download ArcGIS Pro
+#### 1. Download ArcGIS Pro 2.8 (skip to step 2 if already installed)
 First, download and install ArcGIS Pro 2.8. This can be obtained from your organisation's ESRI account. Full instructions are provided here: https://pro.arcgis.com/en/pro-app/latest/get-started/download-arcgis-pro.htm. Please note: this build has only been tested for ArcGIS Pro v2.8 - other versions may not be compatible.
 
-#### 2. Clone the default ArcGIS Pro Python 3 virtual environment
-Tenement Tools relies on several Python 3 libraries that are not enabled in ArcGIS Pro 2.8 by default. In order to enable them, the default Python 3 virtual environment must be cloned and these extra libraries installed into the clone. ESRI has made this process relatively painless. Follow the following steps below:
-1. Make sure ArcGIS Pro is not running
-2. Open the Windows Start menu and find the ArcGIS folder
-3. Run the Python Command Prompt
-4. Create the clone by entering: <code>conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool</code>
-5. Activate the cloned environment: <code>activate arcgispro-py3-dev-tool</code>
-6. Install dask library: <code>conda install dask=2.30.0</code>
-7. Install rasterio library: <code>conda install -c esri rasterio</code>
-8. Install pyproj library: <code>conda install pyproj</code>
-ArcGIS Pro will now be using the cloned Python virtual environment to run all its geoprocessors, including Tenement Tools. If you no longer need to use the cloned environment, simply use the ArcGIS Pro Package Manager within the application to turn the default environment back on: https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/work-with-python-environments.htm.
+#### 2. Download and install the latest version of tenement-tools
+To obtain the latest version of tenement tools, click the releases link on the right panel of this page, click the top version number (e.g., v0.8.0-alpha), then download tenement-tools.zip. Once downloaded, unzip the tenement-tools folder, and copy and paste it into the default ArcGIS Pro AddIns folder: C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro
 
-#### 3. Download Tenement Tools
-Everything needed to run the development version of Tenement Tools is on this GitHub page. Click the green "Code" button above, then click "Download Zip" (or pull the repo via Git). Unzip the folder, rename it from <code>tenement-tools-main</code> to <code>tenement-tools</code>, and place it into: <code>C:\Users\<YOURUSERNAME>\Documents\GitHub</code>.
-
-#### 4. Add the Tenement Tools plug-in to ArcGIS Pro
-In order to enable the Tenement Tools UI ribbon in ArcGIS Pro, the plug-in must be added to the ArcGIS Pro AddIns folder. In the tenement-tools folder unzipped above, copy the folder located in <code>tenement-tools\arc\plugin\backup_20210926\AddIns\ArcGISPro</code> (the folder one with random numbers and letters)and paste it into the ArcGIS AddIns folder, typically located here: <code>C:\Users\<YOURUSERNAME>\Documents\ArcGIS\AddIns\ArcGISPro</code>.
+#### 3. Install the custom ArcGIS Pro Python Environment
+Tenement Tools relies on several Python 3 libraries that are not enabled in ArcGIS Pro 2.8 by default. In order to enable them, a custom Python 3 virtual environment must be created. Follow these steps:
+1. Open the Windows Start menu, find the ArcGIS start menu folder, and within it click Python Command Prompt.
+2. Make sure arcgispro-py3 environment exists by entering <code>conda env list</code>. You should see it listed in the result.
+3. Create the custom environment by entering: <code>conda env create -f "C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>.
+4. When complete, activate the custom environment with: <code>activate arcgispro-py3-dev-tool-extra</code>.
+5. Close the Python Command Prompt.
+  
+#### 4. Initialise the custom ArcGIS Pro Python environment
+Start ArcGIS Pro 2.8. When loaded, click Settings and go to Python. Click the Manage Environments button at the top of the page, and change the environment to arcgispro-py3-dev-tool-extra. You have now initialised the custom environment. Restart ArcGIS Pro once you have clicked OK.
 
 #### 5. Add the Tenement Tools Python Toolbox to ArcGIS
-Finally, we need to add the ArcGIS Pro Python Toolbox to ArcGIS so the UI has access to the Tenement Tools analyses code. Open ArcGIS Pro and create a new project (or open an existing one). Open the Catalog Panel (if you can't see it, click the View tab at the top of the ribbon, then click Catalog Pane). Right-click the Toolboxes icon and click Add Toolbox. Navigate to the toolbox folder from the unzipped tenement-tools folder here: <code>tenement-tools\arc\toolbox</code>, click the toolbox called tenement-tools-toolbox.pyt and click Ok. This will add the toolbox to ArcGIS Pro.
-  
-Congratulations, you have added the development version of Tenement Tools to ArcMap Pro! Click the Add-In tab at the top of the application to access Tenement Tools.
+Finally, add the ArcGIS Pro Python Toolbox to ArcGIS so the UI has access to the underlying methods. Create a new project (or open an existing one). Open the Catalog Panel (if you can't see it, click the View tab at the top of the ribbon, then click Catalog Pane). Right-click the Toolboxes icon and click Add Toolbox. Navigate to the toolbox folder from the unzipped tenement-tools folder here: <code>tenement-tools\toolbox</code>, click the toolbox called tenement-tools-toolbox.pyt and click Ok.
+
+Congratulations, you can now try Tenement Tools. Click the Add-In tab at the top of the application to access the Tenement Tools UI.
