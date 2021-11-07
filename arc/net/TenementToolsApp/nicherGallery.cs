@@ -1,25 +1,7 @@
-﻿using ArcGIS.Core.CIM;
-using ArcGIS.Core.Data;
-using ArcGIS.Core.Geometry;
-using ArcGIS.Desktop.Catalog;
-using ArcGIS.Desktop.Core;
-using ArcGIS.Desktop.Core.Geoprocessing;
-using ArcGIS.Desktop.Editing;
-using ArcGIS.Desktop.Extensions;
-using ArcGIS.Desktop.Framework;
-using ArcGIS.Desktop.Framework.Contracts;
-using ArcGIS.Desktop.Framework.Dialogs;
-using ArcGIS.Desktop.Framework.Threading.Tasks;
-using ArcGIS.Desktop.Layouts;
-using ArcGIS.Desktop.Mapping;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Media;
+using ArcGIS.Desktop.Core.Geoprocessing;
+using ArcGIS.Desktop.Framework.Contracts;
 
 namespace TenementToolsApp
 {
@@ -39,10 +21,22 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Run All",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Generate species distribution (niche) model.",
-                                group: "Wizard"));
+            //Add(new GalleryItem(text: "Run All",
+            //icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+            //tooltip: "Generate species distribution (niche) model.",
+            //group: "Wizard"));
+
+            // add gallery item for nicher data
+            Add(new GalleryItem(text: "Nicher SDM",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Nicher_SDM_32.png",
+                                tooltip: "Generate a Species Distribution Model via species locations and topgraphic variables.",
+                                group: "Run individual functions"));
+
+            // add gallery item for nicher data
+            Add(new GalleryItem(text: "Nicher Masker",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/CanoPy_Wizard_32.png",
+                                tooltip: "Mask out SDM areas using an elevation-based mask (e.g., Canopy Height).",
+                                group: "Run individual functions"));
 
             // initialise
             _isInitialized = true;
@@ -50,8 +44,8 @@ namespace TenementToolsApp
 
         protected override void OnClick(GalleryItem item)
         {
-            //TODO - insert your code to manipulate the clicked gallery item here
-            //System.Diagnostics.Debug.WriteLine("Remove this line after adding your custom behavior.");
+            // ensure users can e-click on already selected items
+            base.AlwaysFireOnClick = true;
 
             // obtain clicked gallery item
             base.OnClick(item);
@@ -59,15 +53,12 @@ namespace TenementToolsApp
             // get name of clicked gallery item
             var gallery_item = base.SelectedItem.ToString();
 
-            // temp: tell dev what was called
-            //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
-
             // open gdvspectra likelihood tool pane
-            if (gallery_item == "Run All")
+            if (gallery_item == "Nicher SDM")
             {
 
                 // set toolname and create empty input array
-                string toolname = "Nicher_Wizard";
+                string toolname = "Nicher_SDM";
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
@@ -76,9 +67,27 @@ namespace TenementToolsApp
                 {
                     Geoprocessing.OpenToolDialog(toolname, inputs);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    Debug.WriteLine("Could not find Nicher tool.");
+                    Debug.WriteLine("Could not find Nicher SDM tool. Did you add the Tenement Tools toolbox?");
+                };
+            }
+            else if (gallery_item == "Nicher Masker")
+            {
+
+                // set toolname and create empty input array
+                string toolname = "Nicher_Masker";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception)
+                {
+                    Debug.WriteLine("Could not find Nicher Masker tool. Did you add the Tenement Tools toolbox?");
                 };
             };
         }

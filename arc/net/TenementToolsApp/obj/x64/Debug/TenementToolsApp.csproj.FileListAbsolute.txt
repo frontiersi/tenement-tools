@@ -5,3 +5,10 @@ C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.dll
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.pdb
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.csproj.AssemblyReference.cache
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\bin\Debug\TenementToolsApp.dll
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\bin\Debug\TenementToolsApp.pdb
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.g.resources
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.csproj.CoreCompileInputs.cache
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.dll
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.pdb
+C:\Users\262272G\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.csprojAssemblyReference.cache
