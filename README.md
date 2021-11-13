@@ -5,7 +5,7 @@ Tenement Tools placeholder!
 Tenement Tools requires an internet connection. If you're trying to install the plugin on an environment from behind a firewall, the following sites may need to be put on an allow list in your network's firewall settings:
 - https://conda.anaconda.org
 - https://repo.anaconda.com
-- https://data.dea.ga.gov.au/
+- https://data.dea.ga.gov.au
 
 ## Installing (alpha development build only)
 Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there are known bugs, and we hope to make the below process easier.
