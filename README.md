@@ -13,15 +13,17 @@ Tenement Tools placeholder!
   * https://data.dea.ga.gov.au
 
 ## Installing (alpha development build only)
-Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. <br/>
+Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. 
+<br/>
 Please note: the UI is incomplete, there are known bugs, and we hope to make the below process easier.
 
 #### 1. Download ArcGIS Pro 2.8 (skip to step 2 if already installed)
 First, download and install ArcGIS Pro 2.8. This can be obtained from your organisation's ESRI account. Full instructions are provided here: https://pro.arcgis.com/en/pro-app/latest/get-started/download-arcgis-pro.htm. Please note: this build has only been tested for ArcGIS Pro v2.8 - other versions may not be compatible.
 
 #### 2. Download and install the latest version of tenement-tools
-To obtain the latest version of tenement tools, click the releases link on the right panel of this page, click the top version number (e.g., v0.9.0), then download tenement-tools.zip. Also download the Tutorial.zip file if you are following the official tutorial.
-Once downloaded, unzip the tenement-tools folder, and copy and paste it into the default ArcGIS Pro AddIns folder: C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro. 
+To obtain the latest version of tenement tools, click the releases link on the right panel of this page, click the top version number (e.g., v0.9.0), then download tenement-tools.zip. Also download the Tutorial.zip file if you are following the official tutorial. 
+<br/>
+Once downloaded, unzip the tenement-tools folder, and copy and paste it into the default ArcGIS Pro AddIns folder: C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro. <br/>
 You should now have a path like: ...\AddIns\ArcGISPro\tenement-tools\...
 
 #### 3. Install the custom ArcGIS Pro Python Environment
