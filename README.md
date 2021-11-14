@@ -2,8 +2,8 @@
 Tenement Tools placeholder!
 
 ## Requirements
-•	ArcGIS Pro version 2.8 or above
-•	At least 8gb of ram (16gb recommended)
+* ArcGIS Pro version 2.8 or above
+* At least 8gb of ram (16gb recommended)
 •	Access to ArcGIS Python Command Prompt (if Pro is installed, you should have)
 •	Fast and stable internet connection
 •	Access to the following websites (IT will need open these if blocked by firewall):
