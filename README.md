@@ -14,7 +14,9 @@ Tenement Tools is currently under active development and is not suitable for use
 First, download and install ArcGIS Pro 2.8. This can be obtained from your organisation's ESRI account. Full instructions are provided here: https://pro.arcgis.com/en/pro-app/latest/get-started/download-arcgis-pro.htm. Please note: this build has only been tested for ArcGIS Pro v2.8 - other versions may not be compatible.
 
 #### 2. Download and install the latest version of tenement-tools
-To obtain the latest version of tenement tools, click the releases link on the right panel of this page, click the top version number (e.g., v0.9.0), then download tenement-tools.zip. Once downloaded, unzip the tenement-tools folder, and copy and paste it into the default ArcGIS Pro AddIns folder: C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro. You should now have a path like: ...\AddIns\ArcGISPro\tenement-tools\...
+To obtain the latest version of tenement tools, click the releases link on the right panel of this page, click the top version number (e.g., v0.9.0), then download tenement-tools.zip. Also download the Tutorial.zip file if you are following the official tutorial.
+Once downloaded, unzip the tenement-tools folder, and copy and paste it into the default ArcGIS Pro AddIns folder: C:\Users\<YOUR USERNAME>\Documents\ArcGIS\AddIns\ArcGISPro. 
+You should now have a path like: ...\AddIns\ArcGISPro\tenement-tools\...
 
 #### 3. Install the custom ArcGIS Pro Python Environment
 Tenement Tools relies on several Python 3 libraries that are not enabled in ArcGIS Pro 2.8 by default. In order to enable them, a custom Python 3 virtual environment must be created. Follow these steps:
