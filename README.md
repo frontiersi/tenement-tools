@@ -1,11 +1,17 @@
 # Tenement Tools
 Tenement Tools placeholder!
 
-## Pre-installation
-Tenement Tools requires an internet connection. If you're trying to install the plugin on an environment from behind a firewall, the following sites may need to be put on an allow list in your network's firewall settings:
-- https://conda.anaconda.org
-- https://repo.anaconda.com
-- https://data.dea.ga.gov.au
+## Requirements
+•	ArcGIS Pro version 2.8 or above
+•	At least 8gb of ram (16gb recommended)
+•	Access to ArcGIS Python Command Prompt (if Pro is installed, you should have)
+•	Fast and stable internet connection
+•	Access to the following websites (IT will need open these if blocked by firewall):
+o	https://conda.anaconda.org
+o	https://repo.anaconda.com
+o	https://conda-forge.org/
+o	https://data.dea.ga.gov.au
+
 
 ## Installing (alpha development build only)
 Tenement Tools is currently under active development and is not suitable for use in production. If you're interested in testing the current development build, please follow the steps below. Please note: the UI is incomplete, there are known bugs, and we hope to make the below process easier.
