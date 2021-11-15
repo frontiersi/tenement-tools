@@ -29,7 +29,7 @@ Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its mo
 
 Follow the below steps:
 1. From Windows Start Menu, find the ArcGIS folder and open Python Command Prompt. You won't need admin rights.
-2. Ensure you can see default env (arcgispro-py3) by running <code>conda list env</code>.
+2. Ensure you can see default env (arcgispro-py3) by running <code>conda env list</code>.
 3. Create custom env by using a provided .yml file in the tenement-tools/arc/envs folder: <br/>
    <code>conda env create -f "C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. </br>
 4. Activate the custom environment via <code>activate arcgispro-py3-dev-tool-extra</code>.
