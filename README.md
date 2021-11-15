@@ -43,6 +43,8 @@ Finally, we need to add the ArcGIS Python Toolbox. Create a new project (or open
 
 Right-click the Toolboxes icon in Catalog Pane and click Add Toolbox. Navigate to the toolbox folder in the un-zipped tenement-tools folder from step 1 and add the toolbox called tenement-tools-toolbox.pyt. Click Ok. 
 
+#### 5. Walkthrough the tutorial pdf
+A good place to start is with the Tutorial.pdf document downloaded in step 1. This will walk you through the basic tools provided by Tenement Tools.
+
+
 You will need to add this toolbox for every new ArcGIS Pro project you create.
-
-
