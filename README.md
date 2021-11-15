@@ -16,17 +16,23 @@ Tenement Tools placeholder!
 The Tenement Tools ArcGIS Pro plug-in is currently under active development and should only be used for testing. If you are interested in testing this pre-release alpha, follow the installation instructions below.
 
 #### 1. Download and install the latest version of Tenement Tools
-Download the <code>tenement-tools.zip, tutorial.zip and tutorial.pdf</code> files here: https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
+Download the <code>tenement-tools.zip</code>, <code>tutorial.zip</code> and <code>tutorial.pdf</code> files here: https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
 
-Once downloaded, extract the tenement-tools folder from tenement-tools.zip file and copy and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder typically located in your documents folder. For me, that is <code>C:\Users\[USER NAME]\Documents\ArcGIS\AddIns\ArcGISPro\[copy folder here]</code>.
+Once downloaded, extract the tenement-tools folder from tenement-tools.zip file and copy and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder typically located in your documents folder. 
+
+For me, that is <code>C:\Users\[USER NAME]\Documents\ArcGIS\AddIns\ArcGISPro\[copy folder here]</code>.
  
- Your path should now look something like: ...\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\...
+The path should now look something like: ...\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\...
 
 #### 2. Install a custom ArcGIS Pro Python Environment
-Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its modules. Follow the below steps:
+Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its modules. 
+
+Follow the below steps:
 1. From Windows Start Menu, find the ArcGIS folder and open Python Command Prompt. You won't need admin rights.
-2. Ensure you can see default env (arcgispro-py3) by running <code> conda env list</code>.
-3. Create custom env by running <code>conda env create -f "<HOME PATH>\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. You will need to change HOME PATH to our local drive.
+2. Ensure you can see default env (arcgispro-py3) by running <code>conda env list</code>.
+3. Create custom env by running:
+   <code>conda env create -f "<HOME PATH>\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. 
+   You will need to change HOME PATH to our local drive.
 4. Activate the custom environment with: <code>activate arcgispro-py3-dev-tool-extra</code>.
 5. Close the Python Command Prompt.
   
