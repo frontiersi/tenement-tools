@@ -20,7 +20,7 @@ Download the <code>tenement-tools.zip</code>, <code>tutorial.zip</code> and <cod
 
 Once downloaded, extract the tenement-tools folder from tenement-tools.zip file and copy and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder typically located in your documents folder. 
 
-For me, that is <code>C:\Users\[USER NAME]\Documents\ArcGIS\AddIns\ArcGISPro\[copy folder here]</code>.
+For me, that is <code>C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\[copy folder here]</code>.
  
 The path should now look something like: ...\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\...
 
@@ -30,10 +30,9 @@ Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its mo
 Follow the below steps:
 1. From Windows Start Menu, find the ArcGIS folder and open Python Command Prompt. You won't need admin rights.
 2. Ensure you can see default env (arcgispro-py3) by running <code>conda env list</code>.
-3. Create custom env by running:
-   <code>conda env create -f "<HOME PATH>\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. 
-   You will need to change HOME PATH to our local drive.
-4. Activate the custom environment with: <code>activate arcgispro-py3-dev-tool-extra</code>.
+3. Create custom env by using a provided .yml file in the tenement-tools/arc/envs folder: <br/>
+   <code>conda env create -f "C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. </br>
+4. Activate the custom environment via <code>activate arcgispro-py3-dev-tool-extra</code>.
 5. Close the Python Command Prompt.
   
 #### 3. Initialise the custom ArcGIS Pro Python environment
@@ -44,4 +43,6 @@ Finally, we need to add the ArcGIS Python Toolbox. Create a new project (or open
 
 Right-click the Toolboxes icon in Catalog Pane and click Add Toolbox. Navigate to the toolbox folder in the un-zipped tenement-tools folder from step 1 and add the toolbox called tenement-tools-toolbox.pyt. Click Ok. 
 
-You are now ready to test the early alpha version of Tenement Tools!
+You will need to add this toolbox for every new ArcGIS Pro project you create.
+
+
