@@ -18,9 +18,9 @@ The Tenement Tools ArcGIS Pro plug-in is currently under active development and 
 #### 1. Download and install the latest version of Tenement Tools
 Download the <code>tenement-tools.zip, tutorial.zip and tutorial.pdf</code> files here: https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
 
-Once downloaded, extract the tenement-tools folder from tenement-tools.zip file and copy and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder typically located here: <HOME PATH>\Documents\ArcGIS\AddIns\ArcGISPro\<COPY FOLDER HERE>.
+Once downloaded, extract the tenement-tools folder from tenement-tools.zip file and copy and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder typically located in your documents folder. For me, that is <code>C:\Users\[USER NAME]\Documents\ArcGIS\AddIns\ArcGISPro\[copy folder here]</code>.
  
- Your path should now look something like: <HOME PATH>\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools
+ Your path should now look something like: ...\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\...
 
 #### 2. Install a custom ArcGIS Pro Python Environment
 Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its modules. Follow the below steps:
