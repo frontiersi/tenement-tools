@@ -11,14 +11,13 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 
 # import required libraries
 import numpy as np
-#import pandas as pd
 import xarray as xr
 import rasterio
 import pystac_client
 from odc import stac
 from datetime import datetime
-#from functools import lru_cache
-
+   
+   
 def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, limit=250):
     """
     Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac'),
@@ -263,7 +262,7 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
         resolution = (resolution * -1, resolution)
     
     # check chunks
-    if chunks is None:
+    if chunks is None or chunks == -1:
         chunks = {}
     if not isinstance(chunks, dict):
         raise TypeError('Chunks must be a dictionary or None.')
@@ -282,8 +281,7 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
                        chunks=chunks,
                        group_by=group_by,
                        skip_broken_datasets=skip_broken_datasets,
-                       like=like
-                      )
+                       like=like)
         
     except:
         raise ValueError('Could not create xr dataset from stac result.')
@@ -455,9 +453,6 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
     # notify and return
     print('Removed invalid images successfully.')
     return ds
-
-
-
 
 
 # helpers
