@@ -11,14 +11,13 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 
 # import required libraries
 import numpy as np
-import pandas as pd
+#import pandas as pd
 import xarray as xr
 import rasterio
 import pystac_client
 from odc import stac
 from datetime import datetime
-from functools import lru_cache
-
+#from functools import lru_cache
 
 def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, limit=250):
     """
