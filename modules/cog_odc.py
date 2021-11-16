@@ -10,26 +10,14 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
 # import required libraries
-#import itertools
-#import warnings
-#import requests
-#import threading
-#import pyproj
-#import affine
-#import osr
-#import numpy as np
-#import pandas as pd
+import numpy as np
+import pandas as pd
 import xarray as xr
-#import dask
-#import dask.array as da
-#import dask.array as dask_array
 import rasterio
-#from rasterio.warp import transform_bounds
-#from rasterio import windows
-#from rasterio.enums import Resampling
-#from rasterio.vrt import WarpedVRT
+import pystac_client
+from odc import stac
 from datetime import datetime
-#from functools import lru_cache
+from functools import lru_cache
 
 
 def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, limit=250):
@@ -148,339 +136,167 @@ def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, en
     return items
 
 
-def prepare_data(feats=None, assets=None, bounds_latlon=None, bounds=None, epsg=3577, resolution=30, snap_bounds=True, force_dea_http=True):
+def replace_items_s3_to_https(items, from_prefix='s3://dea-public-data', to_prefix='https://data.dea.ga.gov.au'):
     """
-    Prepares raw stac metadata and assets into actual useable data for dask
-    computations. This includes preparing coordinate system, bounding boxes,
-    resolution and resampling, raster sizes and overlaps, raster snapping,
-    etc. Results in an numpy asset table of bounding box and url information, 
-    plus and metadata object for later appending to xarray dataset.
+    Iterate all items in pystac ItemCollection and replace
+    the DEA AWS s3prefix with https (from/to). ArcGIS Pro
+    doesn't seem to play nice with s3 at the moment.
     
     Parameters
     ----------
-    feats: list
-        A list of dicts of stac metadata items produced from fetch stac data
-        function.
-    assets: list
-        A list of satellite band names. Must be correct names for landsat and
-        sentinel from dea aws.
-    bound_latlon: list of int/float
+    items: pystac ItemCollection object
+        A ItemCollection from pystac typically obtained from the
+        fetch_stac_items_odc function.
+    from_prefix : string
+        The original href url prefix (e.g. s3://dea-public-data) to be 
+        replaced for each 
+        item (band).
+    to_prefix : string
+        The new href url prefix (e.g. https://data.dea.ga.gov.au) to 
+        replace original.
+     
+    Returns
+    ----------
+    items : a pystac itemcollection object with replaced
+    href prefix.
+    """
+    
+    # notify user
+    print('Replacing url prefix: {} with {}'.format(from_prefix, to_prefix))
+    
+    # check if from/to are valid
+    if not isinstance(from_prefix, str) or not isinstance(to_prefix, str):
+        raise TypeError('Both from and to prefixes have to be strings.')
+    
+    # iter items
+    for item in items:
+
+        # iter asset and using name replace href if s3
+        for asset_name in item.assets:
+            asset = item.assets.get(asset_name)
+            href = asset.href
+
+            if href.startswith(from_prefix):
+                asset.href = href.replace(from_prefix, to_prefix)
+
+    return items
+
+
+def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, chunks={}, group_by='solar_day', sort_by=True, skip_broken_datasets=True, like=None):
+    """
+    Takes a pystac ItemCollection of prepared DEA stac items from the 
+    fetch_stac_items_odc function and converts it into lazy-load (or not,
+    if chunks is None) xarray dataset with time, x, y, variable dimensions. 
+    This is provided by te great work of odc-stac, found here:
+    https://odc-stac.readthedocs.io/en/latest/.
+    
+    Parameters
+    ----------
+    items: pystac ItemCollection object
+        A ItemCollection from pystac typically obtained from the
+        fetch_stac_items_odc function.
+    bbox: list of int/floats
         The bounding box of area of interest for which to query for 
         satellite data. Must be lat and lon with format: 
         (min lon, min lat, max lon, max lat). Recommended that users
         use wgs84.
-    bounds : list of int/float
-        As above, but using same coordinate system specified in epsg 
-        parameter. Cannot provide both. Currently disabled.
-    epsg : int
+    bands : str or list
+        List of band names for requested collections.
+    crs : int
         Reprojects output satellite images into this coordinate system. 
-        If none provided, uses default system of dea aws. Default is
-        gda94 albers, 3577. Tenement tools will always use this.
-    resolution : int
+        Must be a int, later converted to 'EPSG:####' string.
+    resolution: tuple
         Output size of raster cells. If higher or greater than raw pixel
         size on dea aws, resampling will occur to up/down scale to user
         provided resolution. Careful - units must be in units of provided
         epsg. Tenement tools sets this to 30, 10 for landsat, sentinel 
         respectively.
-    snap_bounds : bool
-        Whether to snap raster bounds to whole number intervals of resolution,
-        to prevent fraction-of-a-pixel offsets. Default is true.
-    force_dea_http : bool
-        Replace s3 aws url path for an http path. Default is true.
+    chunks: dict
+        Must be a dict of dimension names and chunk size of each. For exmaple
+        {'x': 512, 'y': 512}. Set to None for optimal lazy load.
+    group_by: str
+        Whether to group scenes based on solar day (i.e. overlaps in a single
+        pass) or time.
+    skip_broken_datasets: bool
+        If an error occurs, whether to skip the errorneous data and keep
+        going or error.
+    sort_by_time: bool
+        Sort resulting xr datset by time.
+    like: xr dataset
+        If another dataset provided, will use the x, y and attributes to
+        generate a new xr dataset for new dates for within this same extent.
+        Good for sync function.
         
     Returns
     ----------
-    meta : a dictionary of dea aws metadata for appending to xr dataset later
-    asset_table : a numpy table with rows of url and associated cleaned bounding box
+    ds : xr dataset
     """
     
     # notify
-    print('Converting raw STAC data into numpy format.')
+    print('Converting raw STAC data into xarray dataset via odc-stac.')
     
-    # set input epsg used by bounds_latlon. for now, we hardcode to wgs84
-    # may change and make dynamic later, for now suitable
-    in_bounds_epsg = 4326
-
-    # check if both bound parameters provided
-    if bounds_latlon is not None and bounds is not None:
-        raise ValueError('Cannot provide both bounds latlon and bounds.')
+    # check items
+    if len(items) < 1:
+        raise ValueError('No items in provided ItemCollection.')
+        
+    # prepare band list
+    if bands is None:
+        bands = []
+    if not isinstance(bands, (list)):
+        bands = [bands]
+    if len(bands) == 1 and bands[0] is None:
+        raise ValueError('Must request at least one asset/band.')      
     
-    # check if bounds provided - currently disabled, might remove
-    if bounds is not None:
-        raise ValueError('Bounds input currently disabled. Please use bounds_latlon.')
+    # check bounding bix
+    if not isinstance(bbox, list) or len(bbox) != 4:
+        raise TypeError('Bounding box must contain four numbers.')
         
-    # check output epsg is albers - currently only support epsg
-    if epsg != 3577:
-        raise ValueError('EPSG 3577 only supported for now.')
-        
-    # prepare resolution tuple
-    if resolution is None:
-        raise ValueError('Must set a resolution value.')
-    elif not isinstance(resolution, tuple):
-        resolution = (resolution, resolution)
-            
-    # set output epsg, output bounds, output resolution
-    out_epsg, out_bounds, out_resolution = epsg, bounds, resolution
-    
-    # prepare and check assets list
-    if assets is None:
-        assets = []
-    if not isinstance(assets, list):
-        assets = [assets]
-    if len(assets) == 0:
-        raise ValueError('Must request at least one asset.')
-                
-    # check data types of assets?
-    # we always get rasters of int16 from dea aws... leave for now
-        
-    # create an numpy asset table to store info, make use of object type for string
-    asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
-    asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
-
-    # check if feats exist
-    if len(feats) == 0:
-        raise ValueError('No items to prepare.')
-        
-    # iter feats, work on bbox, projection, get url
-    for feat_idx, feat in enumerate(feats):
-        
-        # get feat level meta
-        feat_props = feat.get('properties')
-        feat_epsg = feat_props.get('proj:epsg')
-        feat_bbox = feat_props.get('proj:bbox')
-        feat_shape = feat_props.get('proj:shape')
-        feat_transform = feat_props.get('proj:transform')        
-    
-        # unpack assets
-        feat_bbox_proj = None
-        for asset_idx, asset_name in enumerate(assets):
-            asset = feat.get('assets').get(asset_name)
-            
-            # get asset level meta, if not exist, use feat level
-            if asset is not None:
-                asset_epsg = asset.get('proj:epsg', feat_epsg)
-                asset_bbox = asset.get('proj:bbox', feat_bbox)
-                asset_shape = asset.get('proj:shape', feat_shape)
-                asset_transform = asset.get('proj:transform', feat_transform)
-                asset_affine = None
-                
-                # note: in future, may want to handle using asset epsg 
-                # here instead of forcing albers. for now, all good.
-                
-                # cast output epsg if in case string
-                out_epsg = int(out_epsg)
-                
-                # reproject bounds and out_bounds to user epsg
-                if bounds_latlon is not None and out_bounds is None:
-                    bounds = reproject_bbox(in_bounds_epsg, out_epsg, bounds_latlon)
-                    out_bounds = bounds
-
-                # below could be expanded in future. we always have asset transform, shape
-                # but what if we didnt? would need to adapt this to handle. lets leave for now
-                # compute bbox from asset level shape and geotransform
-                if asset_transform is not None or asset_shape is not None or asset_epsg is not None:
-                    asset_affine = affine.Affine(*asset_transform[:6])
-                    asset_bbox_proj = bbox_from_affine(asset_affine,
-                                                       asset_shape[0],
-                                                       asset_shape[1],
-                                                       asset_epsg,
-                                                       out_epsg)
-                else:
-                    raise ValueError('No feature-level transform and shape metadata.')
-                
-                # compute bounds depending on situation
-                if bounds is None:
-                    if asset_bbox_proj is None:
-                        raise ValueError('Not enough STAC infomration to build bounds.')
-                        
-                    # when output bounds does not exist, use projcted asset bbox, else dounion
-                    if out_bounds is None:
-                        out_bounds = asset_bbox_proj
-                    else:
-                        out_bounds = union_bounds(asset_bbox_proj, out_bounds)
-                        
-                else:
-                    # skip asset if bbox does not overlap with requested bounds
-                    overlaps = bounds_overlap(asset_bbox_proj, bounds)
-                    if asset_bbox_proj is not None and not overlaps:
-                        continue
-                    
-                # note: may want to auto-detect resolution from bounds and affine
-                # here. for now, tenement tools requires resolution is set
-                
-                # extract url from asset
-                href = asset.get('href')
-
-                # convert aws s3 url to https if requested. note: not tested with s3 url               
-                if force_dea_http:
-                    href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-                    
-                # add info to asset table, 1 row per scene, n columns per band, i.e. (url, [l, b, r, t]) per row
-                asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-
-    # snap boundary coordinates if requested
-    if snap_bounds:
-        out_bounds = snap_bbox(out_bounds, out_resolution)
-     
-    # transform and get shape for feat level
-    transform = do_transform(out_bounds, out_resolution)
-    shape = get_shape(out_bounds, out_resolution)
-        
-    # get table of nans for any feats/assets where asset missing/out bounds
-    isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
-    feat_isnan = isnan_table.all(axis=1)
-    asset_isnan = isnan_table.all(axis=0)
-    
-    # remove nan feats/assets. note: ix_ looks up cells at specific col, row
-    if feat_isnan.any() or asset_isnan.any():
-        asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
-        feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
-        assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
-        
-    # create feat/asset metadata attributes for xr dataset later
-    meta = {
-        'epsg': out_epsg,
-        'bounds': out_bounds,
-        'resolutions_xy': out_resolution,
-        'shape': shape,
-        'transform': transform,
-        'feats': feats,
-        'assets': assets,
-        'vrt_params': {
-            'crs': out_epsg,
-            'transform': transform,
-            'height': shape[0],
-            'width': shape[1]
-        }
-    }
-    
-    # notify and return
-    print('Converted raw STAC data successfully.')
-    return meta, asset_table
-
-
-def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest', dtype='int16', fill_value=-999, rescale=True):
-    """
-    Takes a array of prepared stac items from the prepare_data function 
-    and converts it into lazy-load friendly dask arrays prior to 
-    converson into a final xr dataset. Some of the smart dask work is
-    based on the rasterio/stackstac implementation. For more information
-    on stackstac, see: https://github.com/gjoseph92/stackstac. 
-    
-    Parameters
-    ----------
-    meta: dict
-        A dictionary of metadata attibution extracted from stac results
-        in prepare_data function.
-    asset_table: numpy array
-        A numpy array of structure (url, [bbox]) per row. Url is a 
-        url link to a specific band of a specific feature from dea public
-        data (i.e., Landsta or Sentinel raster band), and bbox is the
-        projected bbox for that scene or scene window.
-    chunksize: int
-        Rasterio lazy-loading chunk size for cog asset. The dea uses default
-        chunksize of 512, but could speed up processing by modifying this.
-    resampling : str
-        The rasterio-based resampling method used when pixels are reprojected
-        rescaled to different crs from the original. Default rasterio nearest
-        neighbour. Could use bilinear. We will basically always use this in 
-        tenement tools.
-    dtype : str or numpy type
-        The numpy data type for output rasters for ech dask array row.
-        We will typically use int16, to speed up downloads and reduce 
-        storage size. Thus, no data is best as -999 instead of np.nan,
-        which will cast to float32 and drastically increase data size.
-    fill_value : int or float
-        The value to use when pixel is detected or converted to no data
-        i.e. on errors or missing raster areas. Recommended that -999 is
-        used on dea landsat and sentinel data to reduce download and storage
-        concerns.
-    rescale : bool
-        Whether rescaling of pixel vales by the scale and offset set on the
-        dataset. Defaults to True.
-
-    Returns
-    ----------
-    rasters : a dask array of satellite rasters nearly ready for compute!
-    """
-
-    # notify
-    print('Converting data into dask array.')
-    
-    # check if meta and array provided
-    if meta is None or asset_table is None:
-        raise ValueError('Must provide metadata and asset table array.')
-        
-    # checks
-    if resampling not in ['nearest', 'bilinear']:
-        raise ValueError('Resampling method not supported.')
-        
-    # set resampler
-    if resampling == 'nearest':
-        resampler = Resampling.nearest
+    # correct crs
+    if not isinstance(crs, int):
+        raise TypeError('the crs provided must be an integer e.g., 4326.')
     else:
-        resampler = Resampling.bilinear
-    
-    # check dtype, if string cast it, catch error if invalid
-    if isinstance(dtype, str):
-        try:
-            dtype = np.dtype(dtype)
-        except:
-            raise TypeError('Requested dtype is not valid.')        
-            
-    # check if dtypes are allowed
-    if dtype not in [np.int8, np.int16, np.int32, np.float16, np.float32, np.float64, np.nan]:
-        raise TypeError('Requested dtype is not supported. Use int or float.')
+        crs = 'EPSG:{}'.format(crs)
         
-    # check if we can use fill value with select dtype
-    if fill_value is not None and not np.can_cast(fill_value, dtype):
-        raise ValueError('Fill value incompatible with output dtype.')
+    # resolution
+    if not isinstance(resolution, (int, float)):
+        raise TypeError('Resoluton must be a single integer or float.')
+    else:
+        resolution = (resolution * -1, resolution)
+    
+    # check chunks
+    if chunks is None:
+        chunks = {}
+    if not isinstance(chunks, dict):
+        raise TypeError('Chunks must be a dictionary or None.')
         
-    # note: the following approaches are based on rasterio and stackstac
-    # methods. the explanation for this is outlined deeply in the stackstac
-    # to_dask function. check that code for a deeper explanation.
-    # extra note: this might be overkill for our 'dumb' arcgis method
-    
-    # see their documentation for a deeper explanation.
-    da_asset_table = dask_array.from_array(asset_table, 
-                                           chunks=1, 
-                                           #inline_array=True,  # our version of xr does not support inline
-                                           name='assets_' + dask.base.tokenize(asset_table))
-    
-    # map to blocks. the cog reader class is mapped to each chunk for reading
-    ds = da_asset_table.map_blocks(apply_cog_reader,
-                                   meta,
-                                   resampler,
-                                   dtype,
-                                   fill_value,
-                                   rescale,
-                                   meta=da_asset_table._meta)
-    
-    # generate fake array from shape and chunksize, see stackstac to_dask for approach
-    shape = meta.get('shape')
-    name = 'slices_' + dask.base.tokenize(chunksize, shape)
-    chunks = dask_array.core.normalize_chunks(chunksize, shape)
-    keys = itertools.product([name], *(range(len(b)) for b in chunks))
-    slices = dask_array.core.slices_from_chunks(chunks)
-    
-    # stick slices into array container to force dask blockwise logic to handle broadcasts
-    fake_slices = dask_array.Array(dict(zip(keys, slices)), 
-                                   name, 
-                                   chunks, 
-                                   meta=ds._meta)
-    
-    # apply blockwise logic
-    rasters = dask_array.blockwise(fetch_raster_window,
-                                   'tbyx',
-                                   ds,
-                                   'tb',
-                                   fake_slices,
-                                   'yx',
-                                   meta=np.ndarray((), dtype=dtype))
+    # check group_by is either time or solar_day
+    if group_by not in ['solar_day', 'time']:
+        raise ValueError('Group_by must be either solar_day or time.')
         
+    try:
+        # use the odc-stac module to build lazy xr dataset
+        ds = stac.load(items=items,
+                       bbox=bbox,
+                       bands=bands,
+                       crs=crs,
+                       resolution=resolution,
+                       chunks=chunks,
+                       group_by=group_by,
+                       skip_broken_datasets=skip_broken_datasets,
+                       like=like
+                      )
+        
+    except:
+        raise ValueError('Could not create xr dataset from stac result.')
+        
+    # sort by time if requested
+    if sort_by:
+        ds = ds.sortby('time')
+    
     # notify and return
-    print('Converted data successfully.')
-    return rasters
+    print('Created xarray dataset via odc-stac successfully.')
+    return ds
+
 
 
 
