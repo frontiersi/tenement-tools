@@ -298,17 +298,12 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
     return ds
 
 
-
-
-# SIMPLIFY
-def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype, 
-                     snap_bounds, fill_value, rescale, cell_align, resampling):
+# may need to add more
+def append_query_attrs_odc(ds, bbox, collections, bands, resolution, dtype, fill_value, slc_off, resampling):
     """
-    Takes a newly constructed xr dataset and associated stac metadata attributes
-    and appends attributes to the xr dataset itself. This is useful information
-    for context in arcmap, but also needed in the dataset update methodology
-    for nrt methodology. A heavily modified version of the work done by the 
-    great stackstac folk: http://github.com/gjoseph92/stackstac. 
+    Takes a newly constructed xr dataset and appends some of the original query
+    parameters (e.g., collections, bands, bbox, slc-off) to assist in updates later
+    on.
     
     Parameters
     -------------
@@ -316,38 +311,29 @@ def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype,
         An xr dataset object that holds the lazy-loaded raster images obtained
         from the majority of this code base. Attributes are appended to this
         object.
-    meta : dict
-        A dictionary of the dea stac metadata associated with the current
-        query and satellite data.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat). Only used to append to 
+        attributes, here.
     collections : list
         A list of names for the requested satellite dea collections. For example,
         ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
         just dded to attributes.
     bands : list
         List of band names requested original query.
+    resolution : int or float
+        A integer or float containing resolution.
+    dtype : str
+        Data type of output dataset, e.g., int16, float32. In numpy
+        dtype that the output xarray dataset will be encoded in.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes. Used to set
+        nodatavalue attribute.
     slc_off : bool
         Whether to include Landsat 7 errorneous SLC data. Only relevant
         for Landsat data. Not used in analysis here, only appended to attributes.
-    bbox : list of ints/floats
-        The bounding box of area of interest for which to query for 
-        satellite data. Is in latitude and longitudes with format: 
-        (min lon, min lat, max lon, max lat). Only used to append to 
-        attributes, here.
-    dtype : str
-        Name of original query dtype, e.g., int16, float32. In numpy
-        dtype that the output xarray dataset will be encoded in.
-    snap_bounds : bool
-        Whether to snap raster bounds to whole number intervals of resolution,
-        to prevent fraction-of-a-pixel offsets. Default is true. Only used
-        to append to netcdf attirbutes.
-    fill_value : int or float
-        The value used to fill null or errorneous pixels with from prior methods.
-        Not used in analysis here, just included in the attributes.
-    rescale : bool
-        Whether rescaling of pixel vales by the scale and offset set on the
-        dataset. Defaults to True. Only used to append to netcdf attributes.
-    cell_align: str
-        Alignmented of cell in original query. Either Too-left or Center.
     resampling : str
         The rasterio-based resampling method used when pixels are reprojected
         rescaled to different crs from the original. Just used here to append
@@ -360,72 +346,28 @@ def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype,
     
     # notify
     print('Preparing and appending attributes to dataset.')
-    
-    # assign spatial_ref coordinate to align with dea odc output
-    crs = int(meta.get('epsg'))
-    ds = ds.assign_coords({'spatial_ref': crs})
-        
-    # get wkt from epsg 
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(crs)
-    wkt = srs.ExportToWkt()
-    
-    # assign wkt to spatial ref attribute. note: this is designed for gda 94 albers
-    # if we ever want to include any other output crs, we will need to adapt this
-    grid_mapping_name = 'albers_conical_equal_area'
-    ds['spatial_ref'] = ds['spatial_ref'].assign_attrs({'spatial_ref': wkt, 
-                                                        'grid_mapping_name': grid_mapping_name})
-    
-    # assign global crs and grid mapping attributes
-    ds = ds.assign_attrs({'crs': 'EPSG:{}'.format(crs)})
-    ds = ds.assign_attrs({'grid_mapping': 'spatial_ref'})
-    
-    # get res from transform affine object 
-    transform = meta.get('transform')
-    res_x, res_y = transform[0], transform[4]
-    
-    # assign x coordinate attributes 
-    ds['x'] = ds['x'].assign_attrs({
-        'units': 'metre',
-        'resolution': res_x,
-        'crs': 'EPSG:{}'.format(crs)
-    })
-    
-    # assign y coordinate attributes
-    ds['y'] = ds['y'].assign_attrs({
-        'units': 'metre',
-        'resolution': res_y,
-        'crs': 'EPSG:{}'.format(crs)
-    })    
-    
-    # set range of original query parameters for future sync
-    ds = ds.assign_attrs({'transform': tuple(transform)})          # set transform info for cog fetcher
-    ds = ds.assign_attrs({'nodatavals': fill_value})               # set original no data values
+
+    # set resolution
+    ds = ds.assign_attrs({'res': resolution})
+
+    # set transform
+    ds = ds.assign_attrs({'transform': tuple(ds.geobox.transform)})
+
+    # set nodatavals
+    ds = ds.assign_attrs({'nodatavals': fill_value})
+
+    # create top level query parameters
+    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
     ds = ds.assign_attrs({'orig_collections': tuple(collections)}) # set original collections
     ds = ds.assign_attrs({'orig_bands': tuple(bands)})             # set original bands
-    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
-    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
     ds = ds.assign_attrs({'orig_dtype': dtype})                    # set original dtype
-    ds = ds.assign_attrs({'orig_snap_bounds': str(snap_bounds)})   # set original snap bounds (as string)
-    ds = ds.assign_attrs({'orig_cell_align': cell_align})          # set original cell align
+    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
     ds = ds.assign_attrs({'orig_resample': resampling})            # set original resample method 
-    
-    # set output resolution depending on type
-    res = meta.get('resolutions_xy')
-    res = res[0] if res[0] == res[1] else res
-    ds = ds.assign_attrs({'res': res})
-        
-    # iter each var and update attributes 
-    for data_var in ds.data_vars:
-        ds[data_var] = ds[data_var].assign_attrs({
-            'units': '1', 
-            'crs': 'EPSG:{}'.format(crs), 
-            'grid_mapping': 'spatial_ref'
-        })
-        
+
     # notify and return
     print('Attributes appended to dataset successfully.')
     return ds
+
 
 # CHECK DATA TYPE
 def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
@@ -517,3 +459,60 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
 
 
 
+
+
+# helpers
+def convert_type(ds, to_type='int16'):
+    """
+    Small helper to update an existing odc-stac derived
+    xr dataset to type int16, which is needed for tenement
+    tools.
+    """
+    
+    return ds.astype(to_type)
+
+
+def change_nodata_odc(ds, orig_value=0, fill_value=-999):
+    """
+    Takes original xr dataset  odc-stac nodata values (0) 
+    for non-mask bands and converts to int16 with -999 as 
+    NoData to match cog fetch.
+    
+    Parameters
+    ----------
+    ds: xr dataset
+        A single xr dataset object.
+    orig_value: int or float
+        A value that exists in the xr dataset that represents NoData 
+        values.
+    fill_value: int or float
+        A value to which previous nodata values are converted to.
+     
+    Returns
+    ----------
+    ds : xr dataset with modified nodata values.
+    """
+    
+    # loop all vars without mask in name
+    for var in list(ds.data_vars):
+        if 'mask' not in var.lower():
+            ds[var] = ds[var].where(ds[var] != orig_value, fill_value)
+
+    return ds
+
+
+def fix_xr_time_for_arc_cog(ds):
+    """
+    Small helper function to strip milliseconds from
+    xr dataset - arcgis pro does not play nicely
+    with milliseconds.
+    """
+    
+    # convert datetimes
+    dts = ds.time.dt.strftime('%Y-%m-%dT%H:%M:%S')
+    dts = dts.astype('datetime64[ns]')
+    
+    # strip milliseconds
+    ds['time'] = dts
+    
+    return ds
