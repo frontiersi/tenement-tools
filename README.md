@@ -32,7 +32,7 @@ Follow the below steps:
 2. Ensure you can see default env (arcgispro-py3) by running <code>conda env list</code>.
 3. Create custom env by using a provided .yml file in the tenement-tools/arc/envs folder: <br/>
    <code>conda env create -f "C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. </br>
-4. Activate the custom environment via <code>activate arcgispro-py3-dev-tool-extra</code>. Note: if you see a message abput not being able to find a path "GDAL_DRIVER_PATH=" and others, see section below.
+4. Activate the custom environment via <code>activate arcgispro-py3-dev-tool-extra</code>. Note: if you see a message abput not being able to find a path "GDAL_DRIVER_PATH=" and others, see Install Issues section below.
 5. Close the Python Command Prompt.
   
 #### 3. Initialise the custom ArcGIS Pro Python environment
@@ -49,7 +49,7 @@ Note: you will need to add this toolbox for every new ArcGIS Pro project you cre
 A good place to start is with the Tutorial.pdf document downloaded in step 1. This will walk you through the basic tools provided by Tenement Tools.
 
 
-## Install issues
+## Install Issues
 There are a few issues with the installation process that revolve around GDAL drivers and data locations. You maye see the following text when you activate the environment:
 - The system cannot find the path specified
 - set "GDAL_DRIVER_PATH='
