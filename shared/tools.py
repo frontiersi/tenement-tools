@@ -7,9 +7,14 @@ Contacts:
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
+# handle gdal for arcgis pro 2.8 and 2.9 differences
+try:
+    import gdal  # 2.8
+except:
+    from osgeo import gdal
+
 # import required libraries
 import os, sys
-import gdal
 import dask
 import numpy as np
 import pandas as pd

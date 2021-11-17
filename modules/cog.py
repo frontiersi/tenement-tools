@@ -21,6 +21,12 @@ Contacts:
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
+# handle arcgis 2.8 vs 2.9 gdal changes
+try:
+    import osr  # 2.8
+except:
+    from osgeo import osr  # 2.9
+
 # import required libraries
 import itertools
 import warnings
@@ -28,7 +34,6 @@ import requests
 import threading
 import pyproj
 import affine
-import osr
 import numpy as np
 import pandas as pd
 import xarray as xr
