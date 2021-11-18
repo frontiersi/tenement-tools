@@ -51,7 +51,7 @@ Create a new ArcGIS Pro project for the tutorial:
 - New > Map 
 
 Finally, add the Tenement Tools toolbox to the project:
-- open Catalog Pane > right-click Toolboxes icon > Add Toolbox > go to extracted folder from step 2 > toolbox folder > add tenement-tools-toolbox.pyt
+- In Catalog Pane > right-click Toolboxes icon > Add Toolbox > go to extracted folder (step 2) > toolbox folder > add tenement-tools-toolbox.pyt
 
 ### 8. Walkthrough the tutorial pdf
 A good place to start is with the Tutorial.pdf document downloaded in step 1.
