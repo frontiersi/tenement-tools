@@ -1,28 +1,41 @@
 # Tenement Tools
-Tenement Tools placeholder!
+The Tenement Tools ArcGIS Pro plug-in is currently under active development. Bugs should be expected. 
+If you would like to test the pre-release alpha version, please follow the below instructions.
 
 ## Requirements
-* Local install of ArcGIS Pro version 2.8 (just released 2.9 has issues)
-* At least 8gb of ram (16gb recommended)
-* Access to ArcGIS Python Command Prompt (comes with Pro)
+* ArcGIS Pro version >= 2.8
+* At least 8gb of ram (>=16gb recommended)
 * Fast and stable internet connection
-* Access to the following websites (IT will need open these if blocked by firewall):
+* Access to the following websites (IT may need to exclude from firewall):
   * https://conda.anaconda.org
   * https://repo.anaconda.com
   * https://conda-forge.org/
   * https://data.dea.ga.gov.au
 
-## Installing (alpha build)
-The Tenement Tools ArcGIS Pro plug-in is currently under active development and should only be used for testing. If you are interested in testing this pre-release alpha, follow the installation instructions below.
+## Setup
 
-#### 1. Download and install the latest version of Tenement Tools
-Download the <code>tenement-tools.zip</code>, <code>tutorial.zip</code> and <code>tutorial.pdf</code> files here: https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
+### 1. Download Tenement Tools plug-in and tutorial material
+Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files here: 
+- https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
 
-Once downloaded, copy the tenement-tools folder from tenement-tools.zip file and paste it into the default ArcGIS Pro AddIns\ArcGISPro folder usually located in your Windows documents folder. Note: if the AddIns\ArcGISPro folders don't exist, create them.
+### 2. Extract tenement-tools folder
+Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
+- Recommended location: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
 
-For me, that is <code>C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\COPY FOLDER HERE</code>.
- 
-The path should now look something like: ...\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc...
+### 3. Clone default ArcGIS Pro python environment
+Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro makes this easy:
+1. Open Windows Start Menu > ArcGIS folder > Python Command Prompt
+2. Enter and run <code>conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool</code>
+3. When finished, enter and run: <code>activate arcgispro-py3-dev-tool</code>
+
+### 4. Install addtional Python libraries
+Now, enter and run each of the below in order (enter 'y' if asked at end of each):
+- <code>conda install dask=2.30.0</code>
+- <code>conda install -c conda-forge rasterio=1.1.5</code>
+- <code>pip install pyproj==3.2.1</code>
+- <code>conda install -c conda-forge scikit-learn=1.0</code>
+
+
 
 #### 2. Install a custom ArcGIS Pro Python Environment
 Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its modules. 
