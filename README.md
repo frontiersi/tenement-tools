@@ -13,7 +13,6 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://data.dea.ga.gov.au
 
 ## Setup
-
 ### 1. Download Tenement Tools plug-in and tutorial material
 Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files here: 
 - https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
@@ -47,29 +46,21 @@ Now we change ArcGIS Pro software to use the custom Python environment (from ste
 
 Restart ArcGIS Pro.
 
-### 7. Create new ArcGIS Pro project
-Finally, will now create a new ArcGIS Pro project for the tutorial and add the Tenement Tools Toolbox to it:
-- New > Map > Catalog Pane > right click Toolboxes icon in Catalog Pane > Add Toolbox > select the tenement-tools-toolbox.pyt in Toolbox folder 
+### 7. Create new ArcGIS Pro project and add Tenement Tools Toolbox
+Create a new ArcGIS Pro project for the tutorial:
+- New > Map 
 
+Finally, add the Tenement Tools toolbox to the project:
+- open Catalog Pane > right-click Toolboxes icon > Add Toolbox > go to extracted folder from step 2 > toolbox folder > add tenement-tools-toolbox.pyt
 
-
-
-
-#### 4. Add the Tenement Tools Python Toolbox to ArcGIS
-Finally, we need to add the ArcGIS Python Toolbox. Create a new project (or open an existing one) and open the Catalog Panel (click the View tab > Catalog Pane if missing).
-
-Right-click the Toolboxes icon in Catalog Pane and click Add Toolbox. Navigate to the toolbox folder in the un-zipped tenement-tools folder from step 1 and add the toolbox called tenement-tools-toolbox.pyt. Click Ok. 
-
-Note: you will need to add this toolbox for every new ArcGIS Pro project you create.
-
-#### 5. Walkthrough the tutorial pdf
-A good place to start is with the Tutorial.pdf document downloaded in step 1. This will walk you through the basic tools provided by Tenement Tools.
+#### 8. Walkthrough the tutorial pdf
+A good place to start is with the Tutorial.pdf document downloaded in step 1.
 
 
 ## Install Issues
-There are a few issues with the installation process that revolve around GDAL drivers and data locations. You maye see the following text when you activate the environment:
+There are a known issues when cloning the arcgispro-py3 environment in step 3. You maye see the following when activating:
 - The system cannot find the path specified
 - set "GDAL_DRIVER_PATH='
 - rem proj-data is installed because its license was copied over.
 
-The plug-in should still work. We are currently investigating this issue.
+The plug-in should still work, regardless. We are currently investigating this issue.
