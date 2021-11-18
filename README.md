@@ -37,11 +37,11 @@ Now, enter and run each of the below in order (enter 'y' if asked at end of each
 Close the Python Command Prompt when finished.
 
 ### 5. Add the Tenement Tools plug-in to ArcGIS Pro
-Let's add the actual plug-in to ArcGIS Pro. This will enable to UI:
+Now, add the actual plug-in to ArcGIS Pro:
 - Run ArcGIS Pro > Add-In Manager > Options tab > Add Folder > Select extracted tenement-tools folder (from step 2)
 
 ### 6. Initialise the new python environment in ArcGIS Pro
-Now we change ArcGIS Pro software to use the custom Python environment (from step 4):
+Change ArcGIS Pro software to use the custom Python environment (from step 4):
 - Run ArcGIS Pro > Settings > Python > Manage Environments > Select <i>arcgispro-py3-dev-tool</i> > OK
 
 Restart ArcGIS Pro.
