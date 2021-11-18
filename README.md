@@ -35,21 +35,25 @@ Now, enter and run each of the below in order (enter 'y' if asked at end of each
 - <code>pip install pyproj==3.2.1</code>
 - <code>conda install -c conda-forge scikit-learn=1.0</code>
 
+Close the Python Command Prompt when finished.
+
+### 5. Add the Tenement Tools plug-in to ArcGIS Pro
+Let's add the actual plug-in to ArcGIS Pro. This will enable to UI:
+- Run ArcGIS Pro > Add-In Manager > Options tab > Add Folder > Select extracted tenement-tools folder (from step 2)
+
+### 6. Initialise the new python environment in ArcGIS Pro
+Now we change ArcGIS Pro software to use the custom Python environment (from step 4):
+- Run ArcGIS Pro > Settings > Python > Manage Environments > Select <i>arcgispro-py3-dev-tool</i> > OK
+
+Restart ArcGIS Pro.
+
+### 7. Create new ArcGIS Pro project
+Finally, will now create a new ArcGIS Pro project for the tutorial and add the Tenement Tools Toolbox to it:
+- New > Map > Catalog Pane > right click Toolboxes icon in Catalog Pane > Add Toolbox > select the tenement-tools-toolbox.pyt in Toolbox folder 
 
 
-#### 2. Install a custom ArcGIS Pro Python Environment
-Tenement Tools uses a custom ArcGIS Pro Python environment to run some of its modules. 
 
-Follow the below steps:
-1. From Windows Start Menu, find the ArcGIS folder and open Python Command Prompt. You won't need admin rights.
-2. Ensure you can see default env (arcgispro-py3) by running <code>conda env list</code>.
-3. Create custom env by using a provided .yml file in the tenement-tools/arc/envs folder: <br/>
-   <code>conda env create -f "C:\Users\YOUR USER NAME\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"</code>. </br>
-4. Activate the custom environment via <code>activate arcgispro-py3-dev-tool-extra</code>. Note: if you see a message abput not being able to find a path "GDAL_DRIVER_PATH=" and others, see Install Issues section below.
-5. Close the Python Command Prompt.
-  
-#### 3. Initialise the custom ArcGIS Pro Python environment
-Start ArcGIS Pro 2.8. When loaded, go to Settings > Python tab > Manage Environments button and change the current env to arcgispro-py3-dev-tool-extra. Restart ArcGIS Pro.
+
 
 #### 4. Add the Tenement Tools Python Toolbox to ArcGIS
 Finally, we need to add the ArcGIS Python Toolbox. Create a new project (or open an existing one) and open the Catalog Panel (click the View tab > Catalog Pane if missing).
