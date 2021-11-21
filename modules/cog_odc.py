@@ -250,13 +250,17 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
         raise TypeError('Bounding box must contain four numbers.')
         
     # correct crs
-    if not isinstance(crs, int):
-        raise TypeError('the crs provided must be an integer e.g., 4326.')
+    if like is not None:
+        crs = None
+    elif not isinstance(crs, int):
+        raise TypeError('The crs provided must be an integer e.g., 4326.')
     else:
         crs = 'EPSG:{}'.format(crs)
         
     # resolution
-    if not isinstance(resolution, (int, float)):
+    if like is not None:
+        resolution = None
+    elif not isinstance(resolution, (int, float)):
         raise TypeError('Resoluton must be a single integer or float.')
     else:
         resolution = (resolution * -1, resolution)
