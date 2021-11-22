@@ -1,5 +1,5 @@
 # Tenement Tools
-The Tenement Tools ArcGIS Pro plug-in is currently under active development. Bugs should be expected. 
+The Tenement Tools ArcGIS Pro plug-in is currently under active development and bugs should be expected. 
 If you would like to test the pre-release alpha version, please follow the below instructions.
 
 ## Requirements
@@ -64,3 +64,6 @@ There are a known issues when cloning the arcgispro-py3 environment in step 3. Y
 - rem proj-data is installed because its license was copied over.
 
 The plug-in should still work, regardless. We are currently investigating this issue.
+
+## Bug report
+If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au. Please provide a screenshot of the error and some context regarding when the bug occurred (e.g., which tool, what data were you using, etc).
