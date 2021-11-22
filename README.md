@@ -66,4 +66,9 @@ There are a known issues when cloning the arcgispro-py3 environment in step 3. Y
 The plug-in should still work, regardless. We are currently investigating this issue.
 
 ## Bug report
-If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au. Please provide a screenshot of the error and some context regarding when the bug occurred (e.g., which tool, what data were you using, etc).
+If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au and please provide some context regarding the bug/error: 
+- Which tool were you using when the error occurred
+- Describe the data you were using as inputs into the tool
+- What version of ArcGIS Pro are you using (e.g., 2.8, 2.9)
+- If possible, provide a screenshot of the error message
+- Any other useful information
