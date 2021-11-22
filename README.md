@@ -20,7 +20,6 @@ Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf<
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
 - Recommended location: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
-The path should now look something: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools/arc</code>
 
 ### 3. Clone default ArcGIS Pro python environment
 Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro makes this easy:
