@@ -13,6 +13,8 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://data.dea.ga.gov.au
 
 ## Setup
+The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
+
 ### 1. Download Tenement Tools plug-in and tutorial material
 Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files here: 
 - https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
@@ -72,3 +74,8 @@ If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au and pl
 - What version of ArcGIS Pro are you using (e.g., 2.8, 2.9)
 - If possible, provide a screenshot of the error message
 - Any other useful information
+
+## Known bugs
+### Map outputs from tools do not look correct/match tutorial
+A bug has been found where the output from a tool (e.g., metric layers from Phenolopy) do not visualise properly (even though the model was successful). These layers can look all red or blue, have very subdued colours, not match tutorial data. As we explore this issue, you can get around it by going to Add Data > Add Multimdemnsional Data > select the raw output NetCDF (.nc) from the tool you just ran.
+
