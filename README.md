@@ -79,3 +79,5 @@ If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au and pl
 ### Map outputs from tools do not look correct/match tutorial
 A bug has been found where the output from a tool (e.g., metric layers from Phenolopy) do not visualise properly (even though the model was successful). These layers can look all red or blue, have very subdued colours, not match tutorial data. As we explore this issue, you can get around it by going to Add Data > Add Multimdemnsional Data > select the raw output NetCDF (.nc) from the tool you just ran.
 
+### COG Fetcher Sentinel band selector is broken
+When selecting the Sentinel satellite platform the band selector checkboxes will result in errors. We will correct this in the next release.
