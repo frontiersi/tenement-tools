@@ -59,19 +59,22 @@ def prepare_data(file_list, nodataval):
     # return
     return da_list
 
+def __get_min_max__(ds, x):
+    """
+    Worker function for apply_auto_sigmoids()
+    """
+    if x == 'Min':
+        x = float(np.min(ds.to_array()))
+    elif x == 'Max':
+        x = float(np.max(ds.to_array()))
+    return x
+
 # checks, meta
 def apply_auto_sigmoids(items):
     """
     takes a list of items with elements in order [path, a, bc, d, ds].
     From that, will work out which sigmoidal to apply.
     """
-
-    def get_min_max(ds, x):
-        if x == 'Min':
-            x = float(np.min(ds.to_array()))
-        elif x == 'Max':
-            x = float(np.max(ds.to_array()))
-        return x
     
     for item in items:
         
@@ -90,9 +93,9 @@ def apply_auto_sigmoids(items):
         attrs = ds.attrs
 
         # convert min or max type inflect points
-        a = get_min_max(ds, a)
-        bc = get_min_max(ds, bc)
-        d = get_min_max(ds, d)
+        a = __get_min_max__(ds, a)
+        bc = __get_min_max__(ds, bc)
+        d = __get_min_max__(ds, d)
 
         # inc sigmoidal
         if a is not None and bc is not None and d is None:

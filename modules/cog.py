@@ -10,6 +10,8 @@ import dask
 import numpy as np
 import pandas as pd
 import xarray as xr
+import affine
+import osr
 
 import threading
 import dask.array as da
@@ -17,9 +19,14 @@ import dask.array as dask_array
 from rasterio import windows
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
+from rasterio.warp import transform_bounds
+from datetime import datetime
+from affine import Affine
 
 import itertools
 import warnings
+import requests
+import math
 
 import pyproj
 from functools import lru_cache
@@ -53,15 +60,17 @@ class COGReader:
     def _open(self):
         """
         """
-
+        # Return variable
+        result = False
         # open efficient env
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
             try:
                 ds = rasterio.open(self.url, sharing=False)
             except:
-                return NANReader(dtype=self.dtype, 
-                                 fill_value=self.fill_value)           
-
+                result = NANReader(dtype=self.dtype, 
+                                 fill_value=self.fill_value)
+        # If reult is false, that means no error above, so proceed.           
+        if result is False:
             # check if 1 band, else fail
             if ds.count != 1:
                 ds.close()
@@ -85,12 +94,14 @@ class COGReader:
                                     height=vrt_meta.get('height'),
                                     width=vrt_meta.get('width'))
 
-        # apply reader
-        if ds.driver in ['GTiff']:
-            return ThreadLocalData(ds, vrt=vrt)
-        else:
-            ds.close()
-            raise TypeError('COGreader currently only supports GTiffs/COGs.')
+            # apply reader
+            if ds.driver in ['GTiff']:
+                result = ThreadLocalData(ds, vrt=vrt)
+            else:
+                ds.close()
+                raise TypeError('COGreader currently only supports GTiffs/COGs.')
+        
+        return result
      
     @property
     def dataset(self):
@@ -115,32 +126,34 @@ class COGReader:
         try:
             # read the open dataset. mask for safer scaling/offsets
             result = reader.read(window=window, masked=True, **kwargs)
+
+            # rescale to scale and offset values 
+            if self.rescale:
+                scale, offset = reader.scale_offset
+                if scale != 1 and offset != 0:
+                    result *= scale
+                    result += offset
+                
+            # convert type, fill mask areas with requested nodata vals
+            result = result.astype(self.dtype, copy=False)
+            result = np.ma.filled(result, fill_value=self.fill_value)
         except:
-            return NANReader(dtype=self.dtype, 
+            result = NANReader(dtype=self.dtype, 
                              fill_value=self.fill_value)    
     
-        # rescale to scale and offset values 
-        if self.rescale:
-            scale, offset = reader.scale_offset
-            if scale != 1 and offset != 0:
-                result *= scale
-                result += offset
-            
-        # convert type, fill mask areas with requested nodata vals
-        result = result.astype(self.dtype, copy=False)
-        result = np.ma.filled(result, fill_value=self.fill_value)
+        
         return result
     
     
     def close(self):
         """
         Within the current locked thread, close
-        dataset if exists, else return None.
+        dataset if exists.
         """
         with self._dataset_lock:
-            if self._dataset is None:
-                return None
-            self._dataset.close()
+            if self._dataset is not None:#if self._dataset is None:
+                self._dataset.close()#return None
+            #self._dataset.close()
             self._dataset = None
     
     
@@ -160,7 +173,7 @@ class COGReader:
         """
         Get pickled meta.
         """
-        print('Getting picked data!')
+        print('Getting pickled data!')
         state = {
             'url': self.url,
             'meta': self.meta,
@@ -194,7 +207,7 @@ class NANReader:
     """
     
     # set scale offset
-    scale_offset = (1.0, 0.0)
+    #scale_offset = (1.0, 0.0) #Not needed?
     
     def __init__(self, dtype=None, fill_value=None, **kwargs):
         self.dtype = dtype
@@ -356,13 +369,16 @@ def get_next_url(json):
     
     """
     
+    result = None
+
     # parse json doc and look for link ref
     for link in json.get('links'):
-        if link.get('rel') == 'next':
-            return link.get('href')
+        if result is None:
+            if link.get('rel') == 'next':
+                result = link.get('href')
         
     # else, go home empty handed
-    return None
+    return result
 
 # meta, move checks up to top? make the year comparitor cleaner
 def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=False, sort_time=True, limit=250):
@@ -374,10 +390,6 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     datetime DATETIME   Single date/time or begin and end date/time (e.g.,
                         2017-01-01/2017-02-15) (default: None)
     """
-    
-    # imports
-    import requests
-    from datetime import datetime
     
     # set headers
     headers = {
@@ -396,7 +408,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     # prepare collection list
     if collections is None:
         collections = []
-    if not isinstance(collections, (list)):
+    elif not isinstance(collections, (list)):
         collections = [collections]
         
     # get dt objects of date strings
@@ -478,25 +490,17 @@ def get_affine(transform):
     Small helper function to computer affine
     from asset transform array.
     """
-    
-    # imports
-    import affine
-    
     # checks
     
     # compute affine
     return affine.Affine(*transform[:6]) # ignore scale, shift
     
 # checks, meta
-def reporject_bbox(source_epsg=4326, dest_epsg=None, bbox=None):
+def reproject_bbox(source_epsg=4326, dest_epsg=None, bbox=None):
     """
     Basic function to reproject given coordinate
     bounding box (in WGS84).
     """
-    
-    # imports
-    from rasterio.warp import transform_bounds
-
     # checks
     
     # reproject bounding box
@@ -566,10 +570,7 @@ def bounds_overlap(*bounds):
 def snap_bbox(bounds, resolution):
     """
     """
-    
-    # imports
-    import math
-    
+        
     # checks
     #
     
@@ -592,10 +593,7 @@ def do_transform(bounds, resolution):
     """
     Small helper function to do 
     """
-    
-    # imports
-    from affine import Affine
-    
+       
     # checks
     
     # perform affine transform (xscale, 0, xoff, 0, yscale, yoff)
@@ -675,7 +673,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     # prepare and check assets list
     if assets is None:
         assets = []
-    if not isinstance(assets, list):
+    elif not isinstance(assets, list):
         assets = [assets]
     if len(assets) == 0:
         raise ValueError('Must request at least one asset.')
@@ -719,7 +717,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 
                 # reproject bounds and out_bounds to user epsg
                 if bounds_latlon is not None and out_bounds is None:
-                    bounds = reporject_bbox(4326, out_epsg, bounds_latlon)
+                    bounds = reproject_bbox(4326, out_epsg, bounds_latlon)
                     out_bounds = bounds
 
                 # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
@@ -816,11 +814,7 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     Data is of type dictionary with everything that comes out
     of prepare_data.
     """
-       
-    # imports    
-    import itertools
-    import warnings
-
+    
     # notify
     print('Converting data into dask array.')
     
@@ -905,30 +899,33 @@ def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
     threaded cog reader classes. 
     """
     
+    result = None
+
     # remove added array dim
     asset_chunk = asset_chunk[0, 0]
     
     # get url
     url = asset_chunk['url']
-    if url is None:
-        return None
+    #If url is none, don't proccess further and return None result.
+    if url is not None:
+        # get requested bounds
+        win = windows.from_bounds(*asset_chunk['bounds'],
+                                transform=meta.get('transform'))
+        
+        # wrap in cog reader
+        cog_reader = COGReader(
+            url=url,
+            meta=meta,
+            resampler=resampler,
+            dtype=dtype,
+            fill_value=fill_value,
+            rescale=rescale
+        )
+        
+        # return reader and window
+        result = (cog_reader, win)
     
-    # get requested bounds
-    win = windows.from_bounds(*asset_chunk['bounds'],
-                              transform=meta.get('transform'))
-    
-    # wrap in cog reader
-    cog_reader = COGReader(
-        url=url,
-        meta=meta,
-        resampler=resampler,
-        dtype=dtype,
-        fill_value=fill_value,
-        rescale=rescale
-    )
-    
-    # return reader and window
-    return (cog_reader, win)
+    return result
 
 # checks, meta
 def build_coords(feats, assets, meta, pix_loc='topleft'):
@@ -1007,11 +1004,7 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
 def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
     """
     """
-    
-    # imports 
-    import osr
-    #import affine
-    
+        
     # assign spatial_ref coordinate
     crs = int(meta.get('epsg'))
     ds = ds.assign_coords({'spatial_ref': crs})
@@ -1140,6 +1133,9 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
 # fix this?
 def fetch_raster_window(asset_entry, slices):
     current_window = windows.Window.from_slices(*slices)
+
+    # Set default return for if no dataset or no overlap.
+    result = np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
     
     if asset_entry is not None:
         reader, asset_window = asset_entry
@@ -1147,10 +1143,9 @@ def fetch_raster_window(asset_entry, slices):
         # check that the window we're fetching overlaps with the asset
         if windows.intersect(current_window, asset_window):
             data = reader.read(current_window)
-            return data[None, None]
+            result = data[None, None]
 
-    # no dataset, or we didn't overlap
-    return np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
+    return result
 
 
 

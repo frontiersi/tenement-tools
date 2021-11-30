@@ -24,9 +24,6 @@ import os, sys
 import numpy as np
 import xarray as xr
 
-#sys.path.append('../../shared')
-#import tools
-
 
 def binary_mask(ds, remove_lt=None, remove_gt=None, inplace=True):
     """
@@ -60,6 +57,9 @@ def binary_mask(ds, remove_lt=None, remove_gt=None, inplace=True):
     ds : xarray dataset or array.
         
     """
+
+    #Return variable, initially set False
+    result = False
     
     # notify
     print('Creating binary mask from canopy height model.')
@@ -83,17 +83,19 @@ def binary_mask(ds, remove_lt=None, remove_gt=None, inplace=True):
     
     if remove_lt is not None and remove_gt is None:
         print('Generating mask of height > {}m.'.format(remove_lt))
-        return xr.where(ds <= remove_lt, False, True)
+        result = xr.where(ds <= remove_lt, False, True)
     
     if remove_lt is None and remove_gt is not None:
         print('Generating mask of height < {}m.'.format(remove_gt))
-        return xr.where(ds >= remove_gt, False, True)
+        result = xr.where(ds >= remove_gt, False, True)
     
     if remove_lt is not None and remove_gt is not None:
         msg = 'Generating mask of height between {}m and {}m.'
         print(msg.format(remove_lt, remove_gt))
-        return xr.where((ds <= remove_lt) | 
+        result = xr.where((ds <= remove_lt) | 
                         (ds >= remove_gt), False, True)
+    
+    return result
     
 
 def inc_sigmoid(ds, a=None, b=None, inplace=True):
@@ -125,6 +127,8 @@ def inc_sigmoid(ds, a=None, b=None, inplace=True):
     # check inputs
     if a is None or b is None:
         raise ValueError('Must provide values for a and b.')
+    elif a >= b:
+        raise ValueError('Value for \'a\' must be less than value for \'b\'.')
     
     # create copy
     if not inplace:
@@ -137,7 +141,7 @@ def inc_sigmoid(ds, a=None, b=None, inplace=True):
     # perform inc sigmoidal
     ds = np.cos((1 - ((ds - a) / (b - a))) * (np.pi / 2))**2
     
-    # mask out out of bounds values
+    # mask out of bounds values
     ds = ds.where(~mask_lt_a, 0.0)
     ds = ds.where(~mask_gt_b, 1.0)
     
@@ -172,6 +176,8 @@ def dec_sigmoid(ds, c=None, d=None, inplace=True):
     # check inputs
     if c is None or d is None:
         raise ValueError('Must provide values for c and d.')
+    elif d <= c:
+        raise ValueError('Value for \'c\' must be less than value for \'d\'.')
     
     # create copy
     if not inplace:
@@ -221,6 +227,10 @@ def bell_sigmoid(ds, a=None, bc=None, d=None, inplace=True):
     # check inputs
     if a is None or bc is None or d is None:
         raise ValueError('Must provide values for a, bc and d.')
+    elif a > bc or a > d:
+        raise ValueError('Value for \'a\' must be less than value for \'bc\' and \'d\'.')
+    elif bc < d:
+        raise ValueError('Value for \'bc\' must be less than value for \'d\'.')
     
     # create copy
     if not inplace:
