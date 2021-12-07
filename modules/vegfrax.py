@@ -28,6 +28,17 @@ import pandas as pd
 sys.path.append('../../shared')
 import tools
 
+from osgeo import ogr
+
+import dask.array as dask_array
+from dask_ml.wrappers import ParallelPostFit
+
+from sklearn import metrics
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+    
+import joblib
+
 def prepare_classified_xr(ds, dtype='int8'):
     """
     Does basic checks and corrects on a classified
@@ -52,7 +63,16 @@ def prepare_classified_xr(ds, dtype='int8'):
         raise TypeError('Dataset not an xarray type.')
     elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
         raise ValueError('No x and/or y coordinate dimension in dataset.')
-        
+    
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
     # check if more than one var - reject if so
     if len(ds) != 1:
         raise ValueError('More than one variable detected. Ensure raster has one band.')   
@@ -67,6 +87,9 @@ def prepare_classified_xr(ds, dtype='int8'):
     # convert to int16
     ds = ds.astype(dtype)
     
+    if was_da:
+        ds = ds.to_array()
+
     # notify
     print('Prepared classified dataset successfully.')
     return ds
@@ -104,6 +127,15 @@ def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
     elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
         raise ValueError('No x and/or y coordinate dimension in dataset.')
                 
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
     # convert to requested dtype
     ds = ds.astype(dtype)
         
@@ -131,6 +163,9 @@ def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
         # mask via provided nodata
         print('No NoData values found in raster.')
         ds.attrs.update({'nodatavals': 'unknown'})
+
+    if was_da:
+        ds = ds.to_array()
 
     # notify
     print('Prepared raw dataset successfully.')
@@ -169,7 +204,20 @@ def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
     # check xr type, dims in ds a
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
         raise TypeError('Dataset a not an xarray type.')
-        
+    
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
     # check if xr has nodatavals
     if not hasattr(ds, 'nodatavals'):
         raise ValueError('Dataset does not have nodata value attribute.')
@@ -179,10 +227,6 @@ def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
     # check if req classes is list or int, convert to list
     req_class = req_class if req_class is not None else []
     req_classes = req_class if isinstance(req_class, list) else [req_class]
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
                     
     # add nodata to required classes
     classes = req_classes + [ds.nodatavals]
@@ -196,6 +240,9 @@ def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
         # merge classes other than 0 and nan
         ds = ds.where(ds.isin([0, ds.nodatavals]), 1)
     
+    if was_da:
+        ds = ds.to_array()
+
     # notify
     print('Reclassified dataset successfully.')
     return ds
@@ -228,6 +275,15 @@ def get_xr_classes(ds):
     elif len(ds) != 1:
         raise ValueError('Dataset can only take one variable (i.e. 1 band).')
         
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
     # check if xr has nodatavals
     if not hasattr(ds, 'nodatavals'):
         raise ValueError('Dataset does not have nodata value attribute.')
@@ -281,9 +337,6 @@ def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_f
         A pandas dataframe containing two columns (x and y) with coordinates.
     """
     
-    # imports
-    from osgeo import ogr
-
     # notify user
     print('Generating {0} randomised sample points.'.format(num_samples))
 
@@ -434,11 +487,11 @@ def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=
     print('Generating {} stratified randomised sample points.'.format(num_samples))
 
     # check if raw dataset is xarray dataeset type
-    if not isinstance(ds_raw, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds_raw, xr.Dataset):
         raise ValueError('Raw dataset is not an xarray dataset.')
         
     # check if class dataset is xarray dataeset type
-    if not isinstance(ds_class, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds_class, xr.Dataset):
         raise ValueError('Classified dataset is not an xarray dataset.')
     
     # check if number of absence points is an int
@@ -577,9 +630,6 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
         within "windows" of low resolution pixels.
     """
     
-    # imports
-    import dask.array as dask_array
-
     # notify user
     print('Creating frequency focal windows from random sample points.')
 
@@ -619,7 +669,6 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
     window_list = []
     skip_count = 0
     for i, r in df_windows.iterrows():
-
         # generate x and y coords steps wrt class raster interval, extract values via nn
         x_values = np.arange(r.get('l'), r.get('r'), step=res_class)
         y_values = np.arange(r.get('b'), r.get('t'), step=res_class)
@@ -700,10 +749,8 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
 
     # iter each row and calc unique classes, counts and freqs
     for i, r in df_freq.iterrows():
-                
         # if valid...
-        if isinstance(r['win_vals'], np.ndarray) and len(r['win_vals']) > 0:
-                        
+        if isinstance(r['win_vals'], np.ndarray) and len(r['win_vals']) > 0:    
             # get dtype of classes (labels)
             lbl_dtype = r['win_vals'].dtype
             if lbl_dtype not in ['float16', 'float32', 'float64']:
@@ -885,6 +932,51 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[]):
     print('Data successfully prepared for analysis.')
     return df_data
 
+# set up function for random forest prediction
+def __predict__(ds_input, estimator):
+    """
+    Helper function for perform_predictions(), should not be called directly.
+    """
+
+    # get x, y dims
+    x, y, = ds_input['x'], ds_input['y']
+
+    # get crs if exists
+    try:
+        attributes = ds_input.attrs
+    except:
+        print('No attributes available. Skipping.')
+        attributes = None
+
+    # seperate each var (image bands) and store in list
+    input_data_list = []
+    for var_name in ds_input.data_vars:
+        input_data_list.append(ds_input[var_name])
+
+    # flatten and chunk each dim array and add to flatten list
+    input_data_flat = []
+    for da in input_data_list:
+        data = da.data.flatten().rechunk(chunk_size)
+        input_data_flat.append(data)
+
+    # reshape for prediction via dask array type (dda)
+    input_data_flat = dask_array.array(input_data_flat).transpose()
+
+    # perform the prediction
+    preds = estimator.predict(input_data_flat)     
+            
+    # reshape for output
+    preds = preds.reshape(len(y), len(x))
+
+    # recreate dataset
+    ds_out = xr.DataArray(preds, coords={'x': x, 'y': y}, dims=['y', 'x'])
+    ds_out = ds_out.to_dataset(name='result')
+
+    # add attributes back on
+    if attributes:
+        ds_out.attrs.update(attributes)
+
+    return ds_out
 
 def perform_prediction(ds_input, estimator):  
     """
@@ -905,16 +997,19 @@ def perform_prediction(ds_input, estimator):
              An xarray dataset containing the probabilities of the random forest model.
     """
     
-    # imports
-    import dask.array as dask_array
-    from sklearn.ensemble import RandomForestRegressor
-    from dask_ml.wrappers import ParallelPostFit
-    import joblib
-    
     # check ds in dataset or dataarray
     if not isinstance(ds_input, (xr.Dataset, xr.DataArray)):
         raise TypeError('> Input dataset is not xarray dataset or data array type.')
     
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds_input, xr.DataArray):
+        try:
+            was_da = True
+            ds_input = ds_input.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
     # check if x and y dims exist
     if 'x' not in list(ds_input.dims) and 'y' not in list(ds_input.dims):
         raise ValueError('> No x and/or y coordinate dimension in dataset.')
@@ -928,56 +1023,13 @@ def perform_prediction(ds_input, estimator):
     #get chunk size
     chunk_size = int(ds_input.chunks['x'][0]) * int(ds_input.chunks['y'][0])
 
-    # set up function for random forest prediction
-    def predict(ds_input, estimator):
-
-        # get x, y dims
-        x, y, = ds_input['x'], ds_input['y']
-
-        # get crs if exists
-        try:
-            attributes = ds_input.attrs
-        except:
-            print('No attributes available. Skipping.')
-            attributes = None
-
-        # seperate each var (image bands) and store in list
-        input_data_list = []
-        for var_name in ds_input.data_vars:
-            input_data_list.append(ds_input[var_name])
-
-        # flatten and chunk each dim array and add to flatten list
-        input_data_flat = []
-        for da in input_data_list:
-            data = da.data.flatten().rechunk(chunk_size)
-            input_data_flat.append(data)
-
-        # reshape for prediction via dask array type (dda)
-        input_data_flat = dask_array.array(input_data_flat).transpose()
-
-        # perform the prediction
-        preds = estimator.predict(input_data_flat)     
-                
-        # reshape for output
-        preds = preds.reshape(len(y), len(x))
-
-        # recreate dataset
-        ds_out = xr.DataArray(preds, coords={'x': x, 'y': y}, dims=['y', 'x'])
-        ds_out = ds_out.to_dataset(name='result')
-
-        # add attributes back on
-        if attributes:
-            ds_out.attrs.update(attributes)
-
-        return ds_out
-
     # predict via parallel, or if missing, regular compute
     if is_dask == True:
         estimator = ParallelPostFit(estimator)
         with joblib.parallel_backend('dask'):
-            ds_out = predict(ds_input, estimator)
+            ds_out = __predict__(ds_input, estimator)
     else:
-        ds_out = predict(ds_input, estimator).compute()
+        ds_out = __predict__(ds_input, estimator).compute()
 
     # return
     return ds_out
@@ -1010,11 +1062,6 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
              An xarray dataset containing the probabilities of the random forest model.
     """
     
-    # imports
-    from sklearn.model_selection import train_test_split
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn import metrics
-    
     # check for tyoe
     if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
         raise TypeError('X and/or y inputs must be numpy arrays.')
@@ -1036,7 +1083,6 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
 
     result_list = []
     for i in range(n_validations):
-
         # split train, test
         X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                             test_size=split_ratio, 
@@ -1120,7 +1166,6 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n
     # loop each class, fit model, predict onto raster, give accuraccy assessment
     pred_list = []
     for c in np_classes:
-
         # notify
         print('Fitting and predicting model for class: {0}'.format(c))
 
