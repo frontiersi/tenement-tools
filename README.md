@@ -81,3 +81,6 @@ A bug has been found where the output from a tool (e.g., metric layers from Phen
 
 ### COG Fetcher Sentinel band selector is broken
 When selecting the Sentinel satellite platform the band selector checkboxes will result in errors. We will correct this in the next release.
+
+### Phenolopy LIOS and SIOS output layers look 'noisey' when using Landsat
+Currently investigating.
