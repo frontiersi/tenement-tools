@@ -11,10 +11,16 @@ import os
 import sys
 import shutil
 import datetime
-import arcpy
+import xarray as xr
+import rasterio
+
+sys.path.append('../../modules')
+import cog_odc
+
+sys.path.append('../../shared')
+import arc, satfetcher, tools
 
 
-# todo: remove code for setting defaults if not needed
 def create_nrt_project(out_folder, out_filename):
     """
     Creates a new empty geodatabase with required features
@@ -58,8 +64,8 @@ def create_nrt_project(out_folder, out_filename):
     # temporarily disable auto-visual of outputs
     arcpy.env.addOutputsToMap = False
     
-    # create feature class and wgs84 spatial ref sys
-    srs = arcpy.SpatialReference(4326)
+    # create feature class and aus albers spatial ref sys
+    srs = arcpy.SpatialReference(3577)
     out_feat = arcpy.management.CreateFeatureclass(out_path=out_filepath, 
                                                    out_name='monitoring_areas', 
                                                    geometry_type='POLYGON',
@@ -247,3 +253,152 @@ def create_nrt_project(out_folder, out_filename):
         
     # notify
     print('Created new monitoring project database successfully.')
+
+
+# checks, dtype, fillvalueto, fillvalue_from need doing, metadata
+def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=3577, slc_off=False, resolution=30, ds_existing=None, chunks={}):
+    """
+    Takes a path to a netcdf file, a start and end date, bounding box and
+    obtains the latest satellite imagery from DEA AWS. If an existing
+    dataset is provided, the metadata from that is used to define the
+    coordinates, etc. This function is used to 'sync' existing cubes
+    to the latest scene (time = now). New scenes are appended on to
+    the existing cube and re-exported to a new file (overwrite).
+    
+    Parameters
+    ----------
+    in_feat: str
+        A path to an existing monitoring areas gdb feature class.
+    in_epsg: int
+        A integer representing a specific epsg code for coordinate system.
+      
+    """
+    
+    # checks
+    
+    # notify
+    print('Syncing cube for monitoring area: {}'.format(out_nc))
+
+    # query stac endpoint
+    items = cog_odc.fetch_stac_items_odc(stac_endpoint='https://explorer.sandbox.dea.ga.gov.au/stac', 
+                                         collections=collections, 
+                                         start_dt=start_dt, 
+                                         end_dt=end_dt, 
+                                         bbox=bbox,
+                                         slc_off=slc_off,
+                                         limit=250)
+
+    # replace s3 prefix with https for each band - arcgis doesnt like s3
+    items = cog_odc.replace_items_s3_to_https(items=items, 
+                                              from_prefix='s3://dea-public-data', 
+                                              to_prefix='https://data.dea.ga.gov.au')
+
+    # construct an xr of items (lazy)
+    ds = cog_odc.build_xr_odc(items=items,
+                              bbox=bbox,
+                              bands=bands,
+                              crs=in_epsg,
+                              resolution=resolution,
+                              group_by='solar_day',
+                              skip_broken_datasets=True,
+                              like=ds_existing,
+                              chunks=chunks)
+
+    # prepare lazy ds with data type, type, time etc
+    ds = cog_odc.convert_type(ds=ds, to_type='int16')  # input?
+    ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)  # input?
+    ds = cog_odc.fix_xr_time_for_arc_cog(ds)
+
+    # return dataset instantly if new, else append
+    if ds_existing is None:
+        return ds
+    else:
+        # existing netcdf - append
+        ds_new = ds_existing.combine_first(ds).copy(deep=True)
+
+        # close everything safely
+        ds.close()
+        ds_existing.close()
+
+        return ds_new
+
+  
+# todo - include provisional products too. finish meta
+def get_satellite_params(platform=None):
+    """
+    Helper function to generate Landsat or Sentinel query information
+    for quick use during NRT cube creation or sync only.
+    
+    Parameters
+    ----------
+    platform: str
+        Name of a satellite platform, Landsat or Sentinel only.
+    
+    params
+    """
+    
+    # check platform name
+    if platform is None:
+        raise ValueError('Must provide a platform name.')
+    elif platform.lower() not in ['landsat', 'sentinel']:
+        raise ValueError('Platform must be Landsat or Sentinel.')
+        
+    # set up dict
+    params = {}
+    
+    # get porams depending on platform
+    if platform.lower() == 'landsat':
+        
+        # get collections
+        collections = [
+            'ga_ls5t_ard_3', 
+            'ga_ls7e_ard_3', 
+            'ga_ls8c_ard_3']
+        
+        # get bands
+        bands = [
+            'nbart_red', 
+            'nbart_green', 
+            'nbart_blue', 
+            'nbart_nir', 
+            'nbart_swir_1', 
+            'nbart_swir_2', 
+            'oa_fmask']
+        
+        # get resolution
+        resolution = 30
+        
+        # build dict
+        params = {
+            'collections': collections,
+            'bands': bands,
+            'resolution': resolution}
+        
+    else:
+        
+        # get collections
+        collections = [
+            's2a_ard_granule', 
+            's2b_ard_granule']
+        
+        # get bands
+        bands = [
+            'nbart_red', 
+            'nbart_green', 
+            'nbart_blue', 
+            'nbart_nir_1', 
+            'nbart_swir_2', 
+            'nbart_swir_3', 
+            'fmask']
+        
+        # get resolution
+        resolution = 10
+        
+        # build dict
+        params = {
+            'collections': collections,
+            'bands': bands,
+            'resolution': resolution}        
+        
+    return params
+ 
