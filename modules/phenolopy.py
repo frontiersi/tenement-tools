@@ -2193,7 +2193,7 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
     
     # check metrics supported
     allowed_metrics = ['pos', 'mos', 'vos', 'bse','aos', 'sos', 'eos', 
-                       'los', 'ros', 'rod', 'lios', 'sios', 'liot', 'siot']
+                       'los', 'roi', 'rod', 'lios', 'sios', 'liot', 'siot']
     
     # check metric provided
     if metric is None or len(metric) == 0:
@@ -2342,7 +2342,7 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
         'sos':  [da_sos_values, da_sos_times],
         'eos':  [da_eos_values, da_eos_times],
         'los':  [da_los_values],
-        'ros':  [da_roi_values],
+        'roi':  [da_roi_values],
         'rod':  [da_rod_values],
         'lios': [da_lios_values],
         'sios': [da_sios_values],

@@ -1,17 +1,51 @@
-"""
-"""
+# tools
+'''
+This script contains general functions shared between other modules.
+Typically just general helper functions.
+
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
+
+# handle gdal for arcgis pro 2.8 and 2.9 differences
+try:
+    import gdal  # 2.8
+except:
+    from osgeo import gdal
 
 # import required libraries
 import os, sys
-import gdal
+import dask
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 
-# meta
 def calculate_indices(ds, index=None, custom_name=None, rescale=False, drop=False):
     """
+    Calculate various vegetation/moisture indices from satellite imagery.
+    
+    Parameters
+    ----------
+    ds: xarray dataset
+        Input xarray dataset or data array.
+    index : list or str
+        Define names of indice(s) to calculate,e xample: ndvi, ndmi, kndvi.
+        Can provide a single name, or a list of names.
+    custom_name : list or str
+        Define names to rename indices in index input. Example, if ndvi, ndmi 
+        in index input, could rename to veg_idx, mst_idx. Can provide a single 
+        name, or a list of names. Must be in same order.
+    rescale: bool 
+        If index requires rescaling, set to True. Example, sometimes ndvi is 
+        better represented as 0 to 2 instead of -1 to 1. Will apply rescaling.
+    drop : bool
+        Drop original bands after index calculated from them. Can reduce memory
+        use.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
     """
         
     # notify
@@ -175,9 +209,6 @@ def perform_interp(ds, method='full'):
         the built in interpolate_na method, which is robust and dask 
         friendly but very slow. The quicker alternative is half, which 
         only interpolates times that are all nan.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
 
     Returns
     ----------
@@ -227,9 +258,27 @@ def perform_interp(ds, method='full'):
             
     return ds
 
-# meta
+
 def get_linear_orpol_contrasts(levels=3):
     """
+    Helper function to generate orthogonal polynomial
+    contrast arrays.
+    
+    Parameters
+    ----------
+    levels: int
+        Number of contrasts. Example, if 8 scenes in dataset,
+        use 8 contrast levels. Returns coefficients, sum of squares,
+        and constant.
+
+    Returns
+    ----------
+    coeffs : numpy array
+        Array of orthogonal polynomial coefficients
+    ss : int 
+        Sum of squares value
+    const : int
+        Constant required for odd/even level number.
     """
     
     # check levels
@@ -258,7 +307,6 @@ def get_linear_orpol_contrasts(levels=3):
     return coeffs, ss, const
 
 
-# meta
 def read_shapefile(shp_path=None):
     """
     Read records from a projected ESRI Shapefile table and extracts the field values
@@ -368,14 +416,25 @@ def read_shapefile(shp_path=None):
     return df_records
 
 
-# meta
 def subset_records(df_records, p_a_column=None):
     """
-    takes a pandas dataframe with all columns and limits it down 
+    Takes a pandas dataframe with all columns and limits it down 
     to occurrence field set by user, plus x, y columns.
     if no occurrence column name set, all points considered to be
     presence (1).
+    
+    Parameters
+    ----------
+    df_records : pandas dataframe
+        A pandas dataframe containing all columns and rows within
+        a shapefile.
+    p_a_column : str
+        The name of a column with presence/absence values.
 
+    Returns
+    ----------
+    df_records : pandas dataframe
+        A pandas dataframe containing x, y and presence, absence columns.
     """
 
     # notify
@@ -430,7 +489,6 @@ def subset_records(df_records, p_a_column=None):
     return df_records
 
 
-# meta
 def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_nodata='any'):
     """
     Takes a pandas dataframe of occurrence records and clips them
@@ -448,7 +506,10 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     res_factor : int
         A threshold multiplier used during pixel + point intersection. For example
         if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-
+    if_nodata : str
+        Ignore pixel if any pixel value in vector is nan, or all pixel values 
+        are nan. Use any or all to achieve that, respectively.
+        
     Returns
     ----------
     df_records : pandas dataframe
@@ -566,109 +627,6 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     return df_records
 
 
-#!!!!!!!! I split this into read_shapefile and extract_occurence_data
-# todo: remove when sdm code updated
-def read_coordinates_shp(shp_path=None, p_a_column=None):
-    """
-    Read observation records from a projected ESRI Shapefile and extracts the x and y values
-    located within. This must be a point geometry-type dataset and it must be projected in
-    the GDA94 Albers projection system (EPSG 3577).
-
-    Parameters
-    ----------
-    shp_path : string
-        A single string with full path and filename of shapefile.
-    p_a_column : string
-        A column of presence/absence values (1, 0). If any value other than
-        1, 0 exists, error thrown. Do not enter a name to use every point in
-        the dataset as presence (default).
-
-    Returns
-    ----------
-    df_presence : pandas dataframe
-        A pandas dataframe containing two columns (x and y) with coordinates.
-    """
-    
-    # imports check
-    try:
-        from osgeo import ogr
-    except:
-        raise ImportError('Could not import osgeo.')
-    
-    # notify user
-    print('Reading species point locations from shapefile.')
-
-    # check if string, if not bail
-    if not isinstance(shp_path, str):
-        raise ValueError('> Shapefile path must be a string. Please check the file path.')
-
-    # check if shp exists
-    if not os.path.exists(shp_path):
-        raise OSError('> Unable to read species point locations. Please check the file path.')
-
-    try:
-        # read shapefile as layer
-        shp = ogr.Open(shp_path, 0)
-        lyr = shp.GetLayer()
-
-        # get epsg code
-        epsg = int(lyr.GetSpatialRef().GetAttrValue('AUTHORITY', 1))
-
-        # get num feats
-        num_feats = lyr.GetFeatureCount()
-
-    except Exception:
-        raise TypeError('> Could not read species point locations. Is the file corrupt?')
-
-    # check if point/multi point type
-    if lyr.GetGeomType() not in [ogr.wkbPoint, ogr.wkbMultiPoint]:
-        raise ValueError('> Shapefile is not a point/multi-point type.')
-
-    # check if shapefile is empty
-    if num_feats == 0:
-        raise ValueError('> Shapefile has no features in it. Please check.')
-
-    # check if shapefile is projected (i.e. in metres)
-    if epsg != 3577:
-        raise ValueError('> Shapefile is not projected in GDA94 Albers. Please reproject into EPSG: 3577.')
-        
-    # check if pres/abse column exists if requested
-
-    # loop through feats
-    coords = []
-    for feat in lyr:
-        geom = feat.GetGeometryRef()
-
-        # get x and y of individual point type
-        if geom.GetGeometryName() == 'POINT':
-            coords.append([geom.GetX(), geom.GetY()])
-
-        # get x and y of each point in multipoint type
-        elif geom.GetGeometryName() == 'MULTIPOINT':
-            for i in range(geom.GetGeometryCount()):
-                sub_geom = geom.GetGeometryRef(i)   
-                coords.append([sub_geom.GetX(), sub_geom.GetY()])
-
-        # error, a non-point type exists
-        else:
-            raise TypeError('> Unable to read point location, geometry is invalid.')
-
-    # check if list is populated
-    if not coords:
-        raise ValueError('> No coordinates in coordinate list.')
-
-    # convert coord array into dataframe
-    df_presence = pd.DataFrame(coords, columns=['x', 'y'])
-
-    # drop variables
-    shp, lyr = None, None
-
-    # notify user and return
-    print('> Species point presence observations loaded successfully.')
-    return df_presence  
-
-
-# meta, check if we can just use geobox
 def get_xr_resolution(ds):
     """
     Read dataset and get pixel resolution from attributes. If 
@@ -720,7 +678,6 @@ def get_xr_resolution(ds):
     return res
 
 
-# meta, check if we can just use geobox
 def get_xr_crs(ds):
     """
     Read dataset and get crs from attributes. If attributes don't 
@@ -737,26 +694,38 @@ def get_xr_crs(ds):
         A int containing the crs of xarray dataset.
     """
 
-    # try getting crs option 1
-    try:
-        crs = ds.crs
-        crs = int(''.join(e for e in crs if e.isdigit()))
-    except:
-        crs = None
+    # raw arcgis albers proj info
+    albers_proj = ('+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +' +
+                   'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 ' +
+                   '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True')
 
-    # try getting crs option 2
-    try:
-        if not crs:
-            crs = int(ds.geobox.crs.epsg)
-    except:
-        crs = None
+    # when crs attribute is a string
+    if isinstance(ds.crs, str):
 
-    # check if something exists
-    if not crs:
-        raise ValueError('Could not extract crs from dataset.')
+        # approach 1
+        if ds.crs.startswith('EPSG:'):
+            return int(ds.crs.split(':')[1])
 
-    # return
-    return crs
+        # approach 2
+        if hasattr(ds, 'geobox'):
+            return int(ds.geobox.crs.epsg)
+
+        # approach 3
+        if ds.crs == albers_proj:
+            return 3577
+            
+        # approach 4
+        if '+init=epsg:' in ds.crs:
+            return int(ds.crs.split(':')[-1])
+        
+    # when a iterable...
+    if isinstance(ds.crs, (tuple, list)):
+        
+        # approach 1
+        return int(''.join(e for e in ds.crs if e.isdigit()))
+
+    # error if we get here...
+    raise ValueError('Could not extract crs from dataset.')
 
 
 def get_xr_extent(ds):
@@ -800,7 +769,7 @@ def get_xr_extent(ds):
 
 def remove_nodata_records(df_records, nodata_value=-999):
     """
-    Read a numpy record array and remove -9999 (nodata) records.
+    Read a numpy record array and remove nodata records.
 
     Parameters
     ----------
@@ -897,9 +866,18 @@ def clip_xr_to_xr(ds_a, ds_b, inplace=True):
     return ds_a
 
 
-# meta
 def export_xr_as_nc(ds, filename):
     """
+    Takes a xarray dataset or array and exports as a
+    netcdf file.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        Input xarray dataset or data array with any number of
+        dimensions.
+    filename : str
+        Name of putput path and filename.    
     """
     
     # notify
@@ -935,91 +913,12 @@ def export_xr_as_nc(ds, filename):
     # notify
     print('Exported xarray as netcdf successfully.')
     
-    
-# vegfrax, older
-# todo, long in tooth, move these into funcs when needed
-def extract_rast_info(rast_path):
-    """
-    Read a raster (e.g. tif) and extract geo-transformation, coordinate 
-    system, projection type, size of dimensions (x and y), nodata value.
 
-    Parameters
-    ----------
-    rast_path: string
-        A single string with full path and filename of a raster.
-
-    Returns
-    ----------
-    rast_meta_dict : dictionary with keys:
-        layer = name of layer
-        type = type of data, vector or raster.
-        geo_trans = raster geotransformation info.
-        epsg = the epsg code of spatial reference system.
-        is_projected = is projection system, true or false.
-        x_dim = number of raster cells along x axis.
-        y_dim = number of raster cells along y axis.
-        nodata_val = no data value embedded in raster.
-    """
-    
-    # check if string, if not bail
-    if not isinstance(rast_path, str):
-        raise ValueError('> Raster path must be a string. Please check the file path.')
-
-    # check if raster exists
-    if not os.path.exists(rast_path):
-        raise OSError('> Unable to read raster, file not found. Please check the file path.')    
-
-    # init dict
-    rast_info_dict = {
-        'layer': os.path.basename(rast_path),
-        'type': 'raster',
-        'geo_tranform': None,
-        'x_dim': None,
-        'y_dim': None,
-        'epsg': None,
-        'is_projected': 0,
-        'nodata_val': None
-    }
-        
-    try:
-        # open raster
-        rast = gdal.Open(rast_path, 0)
-
-        # add transform, dims
-        rast_info_dict['geo_tranform'] = rast.GetGeoTransform()
-        rast_info_dict['x_dim'] = rast.RasterXSize
-        rast_info_dict['y_dim'] = rast.RasterYSize
-        rast_info_dict['nodata_val'] = rast.GetRasterBand(1).GetNoDataValue()
-
-        # get spatial ref
-        srs = rast.GetSpatialRef()
-
-        # get epsg if exists
-        if srs and srs.GetAttrValue('AUTHORITY', 1):
-            rast_info_dict['epsg'] = srs.GetAttrValue('AUTHORITY', 1)
-
-        # get is projected if exists
-        if srs and srs.IsProjected():
-            rast_info_dict['is_projected'] = srs.IsProjected()
-
-        # get nodata value if exists
-        if srs and srs.IsProjected():
-            rast_info_dict['is_projected'] = srs.IsProjected()    
-
-        # drop
-        rast = None
-
-    except Exception:
-        raise IOError('Unable to read raster: {0}. Please check.'.format(rast_path))
-
-    return rast_info_dict
-     
-# 
 def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
     """
-    Read a xarray dataset and convert them into a numpy records array. Based 
-    on RSGISLib code.
-
+    Extracts xarray dataset or array values at input coordinates. 
+    Used mostly for training and testing models.
+    
     Parameters
     ----------
     ds: xarray dataset
@@ -1121,12 +1020,92 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
     return df_samples 
 
 
-# meta, checks
 def resample_xr(ds_from, ds_to, resampling='nearest'):
     """
-    """
+    Resamples resolution of one input dataset (ds_from) to another 
+    (ds_to). Needed when modelling various seperate rasters in a combined 
+    stack. Will ensure all pixels align and extents match.
     
-    # checks
+    Parameters
+    ----------
+    ds_from: xarray dataset or array
+        A xarray dataset or array which to resample to new resolution.
+    ds_to: xarray dataset or array
+        A xarray dataset or array which to resample from.
+    resampling : str
+        Type of resampling method to use, default is nearest neighbour.
+        See xarray documentation for list of others.
+
+    Returns
+    ----------
+    df_samples : pandas dataframe
+    """
     
     # resample from one res to another
     return ds_from.interp(x=ds_to['x'], y=ds_to['y'], method=resampling)
+    
+    
+def build_xr_attributes(ds):
+    """
+    Sometimes we have no choice but build our own
+    xr dataset attirbutes from scratch, assuming the input
+    data was in albers (would have recieved an error if it 
+    was not before this function). This function constructs
+    such metadata from scratch as a last resort. We avoid
+    this as much as possible.
+    """
+    
+    # manual albers coord system wkt
+    srs = 'PROJCS["GDA_1994_Australia_Albers",GEOGCS["GCS_GDA_1994",DATUM["D_GDA_1994",' \
+          'SPHEROID["GRS_1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],' \
+          'TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6283"]],PRIMEM["Greenwich",0,' \
+          'AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],' \
+          'AUTHORITY["EPSG","4283"]],PROJECTION["Albers_Conic_Equal_Area"],' \
+          'PARAMETER["standard_parallel_1",-18],PARAMETER["standard_parallel_2",-36],' \
+          'PARAMETER["latitude_of_center",0],PARAMETER["longitude_of_center",132],' \
+          'PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,' \
+          'AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3577"]]'
+
+    try:
+        # get res and crs from attributes
+        res = get_xr_resolution(ds)
+        crs = get_xr_crs(ds)
+        
+        # if spatial_ref coord/dim doesnt exist, create it
+        if 'spatial_ref' not in list(ds.coords):
+            ds = ds.assign_coords({'spatial_ref': crs})
+        
+        # update grid mapping attribute
+        ds.attrs.update({
+            'grid_mapping': 'spatial_ref', 
+            'crs': 'EPSG:{}'.format(crs)})
+        
+        # update spatial ref with spatial ref system for albers
+        ds['spatial_ref'].attrs.update({
+            'spatial_ref': srs,
+            'grid_mapping_name': 'albers_conical_equal_area'})
+        
+        # create band level attriutes
+        for var in list(ds.data_vars):
+            ds[var].attrs = {
+                'units': '1',
+                'crs': 'EPSG:{}'.format(crs), 
+                'grid_mapping': 'spatial_ref'}
+        
+        # add attributes to x coordinates
+        ds['x'].attrs.update({
+            'units': 'metre', 
+            'resolution': '{}'.format(res), 
+            'crs': 'EPSG:{}'.format(crs)})
+        
+        # add attributes to y coordinates
+        ds['y'].attrs.update({
+            'units': 'metre', 
+            'resolution': '{}'.format(res * -1), 
+            'crs': 'EPSG:{}'.format(crs)})        
+        
+    except:
+        print('Could not manually create dataset attributes.')
+
+    return ds
+    

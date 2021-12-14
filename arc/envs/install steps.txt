@@ -1,0 +1,68 @@
+0. dev only
+conda env remove -n arcgispro-py3-dev-tool-extra
+
+# create yml, use yml to create new env
+conda env export --name arcgispro-py3-dev-tool > "C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"
+conda env create -f "C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"
+
+
+xx. deactivate arcgis pro env
+https://pro.arcgis.com/en/pro-app/latest/arcpy/get-started/what-is-conda.htm
+Network access for creating environments and installing packages
+Creating conda environments and installing packages requires an internet connection. If you're trying to clone an environment from behind a firewall, the following sites may need to be put on an allow list in your network's firewall settings:
+
+https://conda.anaconda.org
+https://repo.anaconda.com
+
+
+dev stuff
+remove the dev-tools-extra env if exists
+
+copy latest addinx to backup folder in github folder
+push github
+copy the github tenement-tools folder to desktop 
+
+move from folder arc > latest plugin file addinx to top level tenement tools folder
+move from arc folder > whole toolbox folder to top level tenement tools folder
+
+if new yaml created, move yaml file to the arc folder > envs folder (wont do this often)
+
+now, delete the following from the desktop tenement tools folder
+arc > envs > text file
+arc > net folder
+arc > plugin folder
+arc > project folder
+arc > toolbox folder (after copied)
+data folder
+supersded folder
+.git folder (hidden)
+
+finally, in notepad++, open tenement tools toolbox pyt file and change dev code at top to non-dev
+
+zip this thing up, move to github under new version
+
+then, on a new puter, do this to install
+1. download github zip and unzip into C:\Users\Lewis\Documents\ArcGIS\AddIns\ArcGISPro
+
+2. go to arcgis python console
+
+3. check if conda env exists
+conda env list
+if arcgispro-py3 exists, we are good to go. if not, you are either not in the right terminal or arcgis pro 2.8 not installed
+
+4. install tenement tools env via yaml file
+conda env create -f "C:\Users\Lewis\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\arc\envs\arcgispro-py3-dev-tool.yml"
+
+5. activate env
+activate arcgispro-py3-dev-tool-extra
+
+6. close python console
+
+7. open arcgis pro > python > package manager > click your new environm,ent. click ok
+
+8. retsrt arcgis pro
+
+9. create a new project
+
+10. add toolbox. right click toolboces > add toolbox > "C:\Users\Lewis\Documents\ArcGIS\AddIns\ArcGISPro\tenement-tools\toolbox\tenement-tools-toolbox.pyt"
+

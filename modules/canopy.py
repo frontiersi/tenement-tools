@@ -1,18 +1,15 @@
 # canopy
 '''
-This script contains functions for calculating groundwater-dependent 
-vegetation (GDV) from landsat or sentinel data. This model has been 
-validated for three key Pilbara, Western Australia species Euc. victrix, Euc. 
-camaldulenesis and Mel. argentea. It offers a SMCE approach to detecting
-this vegetation. GDV is detected using a time series of vegetation indices,
-moisture indices and seasonal stability in an AHP process, resulting in
-a GDV likelihood (probability) map. Thresholding can be implemented via
-standard deviation or groundtruthed point locations. GDV health
-trends can be determined using Mann-Kendall trend analysis, Theil-sen slopes, 
-or Change Vector Analysis (CVA) functions. Finally, significant breaks 
-in vegetation can be detected using change point detection.
+This script contains functions for preparing and applying
+canopy height model raster data. This includes functions for 
+creating a binary mask output from canopy height raster based
+on desired vegetation height threshold. Also, provide a range
+of fuzzy sigmoidal functions for rescaling canopy height model
+raster to 0-1. These functions were created for canopy height,
+but are actually applied to any raster or xr dataset pre-ensemble
+modelling.
 
-See associated Jupyter Notebook gdvspectra.ipynb for a basic tutorial on the
+See associated Jupyter Notebook canopy.ipynb for a basic tutorial on the
 main functions and order of execution.
 
 Contacts: 

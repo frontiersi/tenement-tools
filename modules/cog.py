@@ -1,12 +1,39 @@
-# working
+# cog
+'''
+This script contains functions for searching the digital earth australia (dea)
+public aws bucket using stac, preparing cog data into dask arrays for lazy 
+loading, and computation into a local netcdf with bands as variables, x, y
+and time dimensions. This script is a simplified, python 3.7-compatible and 
+dea-focused version of the great stackstac python library 
+(http://github.com/gjoseph92/stackstac). 
 
-# gdal, rasterio env init - todo make this dynamic
-#import os, certifi
-#os.environ['GDAL_DATA']  = r'C:\Program Files\ArcGIS\Pro\Resources\pedata\gdaldata'
-#os.environ.setdefault("CURL_CA_BUNDLE", certifi.where())
+We highly recommended using stackstac if you need any aws bucket other 
+than the dea public database, and to cite them when they have a white paper 
+available, if using tenement-tools in research.
 
-import rasterio
-import dask
+Note: upcoming DEA ODC-STAC module provides an official stac-xarray workflow, 
+consider swapping in if GDV project continues.
+
+See associated Jupyter Notebook cog.ipynb for a basic tutorial on the
+main functions and order of execution. https://odc-stac.readthedocs.io/en/latest/
+
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
+
+# handle arcgis 2.8 vs 2.9 gdal changes
+try:
+    import osr  # 2.8
+except:
+    from osgeo import osr  # 2.9
+
+# import required libraries
+import itertools
+import warnings
+import requests
+import threading
+import pyproj
+import affine
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -16,6 +43,8 @@ import osr
 import threading
 import dask.array as da
 import dask.array as dask_array
+import rasterio
+from rasterio.warp import transform_bounds
 from rasterio import windows
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
@@ -31,10 +60,16 @@ import math
 import pyproj
 from functools import lru_cache
 
-# meta
+# # # rasterio reader classes
 class COGReader:
     """
-    Method is a very basic version of stackstac and rasterio.
+    Class for a url/cog reader that returns an array of actual values
+    for a url/cog that was were not errorneous or completely empty on 
+    the dea aws side of things. Tasked with opening (lazy), reading,
+    closing, warping cog to projected bounds, etc. Smart gdal management
+    with threading, locking, designed by great team at stakstac:
+    http://github.com/gjoseph92/stackstac. This reader is applied
+    dask-based url and bounding infomration.
     """
     
     def __init__(self, url, meta, resampler, dtype=None, fill_value=None, rescale=True):
@@ -45,7 +80,7 @@ class COGReader:
         self.rescale = rescale
         self.fill_value = fill_value
         
-        # set env defaults 
+        # set default rasterio/gdal env parameters
         self._env = {
             'CPL_VSIL_CURL_ALLOWED_EXTENSIONS': 'tif',
             'GDAL_HTTP_MULTIRANGE': 'YES',
@@ -55,16 +90,20 @@ class COGReader:
         # set private dataset and lock
         self._dataset = None
         self._dataset_lock = threading.Lock()
-        
-        
+
+
     def _open(self):
         """
+        Opens a cog/url via rasterio to obtain basic info about raster. 
+        No reading is done, just a quick check of metadata. If warping
+        is required, warping is done via rasterio warpedvrt without read.
         """
         # Return variable
         result = False
         # open efficient env
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
             try:
+                # open url via rasterio
                 ds = rasterio.open(self.url, sharing=False)
             except:
                 result = NANReader(dtype=self.dtype, 
@@ -74,17 +113,22 @@ class COGReader:
             # check if 1 band, else fail
             if ds.count != 1:
                 ds.close()
-                raise ValueError('more than 1 band in single cog. not supported.')
+                raise ValueError('More than one band in single cog, data not supported.')
                 
-            # create vrt if current tif differ from requested params
+            # init vrt variable
             vrt = None
-            if self.meta.get('vrt_params') != {
-                'crs': ds.crs.to_epsg(),
-                'transform': ds.transform,
-                'height': ds.height,
-                'width': ds.width
-            }:
+                
+            # check if cog meta matches uer requested meta (i.e., projection)
+            meta_no_match = self.meta.get('vrt_params') != {'crs': ds.crs.to_epsg(),
+                                                            'transform': ds.transform,
+                                                            'height': ds.height,
+                                                            'width': ds.width}
+                                                            
+            # if no match, then warp via vrt
+            if meta_no_match:
                 vrt_meta = self.meta.get('vrt_params')
+                
+                # swap to rasterio env for warping and warp speed!
                 with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
                     vrt = WarpedVRT(ds,
                                     sharing=False, 
@@ -105,26 +149,20 @@ class COGReader:
      
     @property
     def dataset(self):
-        """
-        Within the current locked thread, return dataset
-        if exists, else open one.
-        """
+        """In current locked thread, return dataset if exists, else open one."""
         with self._dataset_lock:
             if self._dataset is None:
                 self._dataset = self._open()
             return self._dataset
         
-        
+ 
     def read(self, window, **kwargs):
-        """
-        Read a window of a dataset. Also will
-        rescale if requested. Finally, dtype is
-        converted and mask values filled to fill_value.
-        """
+        """Read cog window, rescale if requested, mask fill values."""
+        
         # open dataset if exist, or load and open if not
         reader = self.dataset
         try:
-            # read the open dataset. mask for safer scaling/offsets
+            # read dataset and mask for safer scaling/offsets
             result = reader.read(window=window, masked=True, **kwargs)
 
             # rescale to scale and offset values 
@@ -158,11 +196,7 @@ class COGReader:
     
     
     def __del__(self):
-        """
-        Called when garbage collected after close.
-        Can get around some multi-threading issues 
-        such as "no dataset_lock" exists.
-        """
+        """Called when garbage collected after close. Helps multi-thread issues."""
         try:
             self.close()
         except:
@@ -186,10 +220,7 @@ class COGReader:
     
     
     def __setstate__(self, state):
-        """
-        Set pickled meta.
-        """
-        print('Setting picked data!')
+        """Set pickled meta."""
         self.__init__(
             url=state.get('url'),
             meta=state.get('meta'),
@@ -199,11 +230,15 @@ class COGReader:
             rescale=state.get('rescale')
         )
 
-# meta
+
 class NANReader:
     """
-    Reader that returns a constant (nodata) value 
-    for all subsequent reads.
+    Class for a url/cog reader that returns an array of nodata values
+    for a url/cog that was errorneous or completely empty on the dea 
+    aws side of things. Based off the great work of the stackstac library:
+    http://github.com/gjoseph92/stackstac. Is used to wrap dask array
+    urls and bounding boxes up for opening, reading, closing tasks during
+    xr dataset computation.
     """
     
     # set scale offset
@@ -212,38 +247,34 @@ class NANReader:
     def __init__(self, dtype=None, fill_value=None, **kwargs):
         self.dtype = dtype
         self.fill_value = fill_value
-        
-        
+
+
     def read(self, window, **kwargs):
-        """
-        """
-        
-        return nodata_for_window(window, 
-                                 self.dtype, 
-                                 self.fill_value)
-        
-      
+        """Read cog window, fill with empty values."""
+        return get_nodata_for_window(window, self.dtype, self.fill_value)
+
+
     def close(self):
+        """Just a pass (nothing to close)."""
         pass
-    
-    
+
+
     def __getstate__(self):
-        """
-        Get pickled dtype and fill value.
-        """
+        """Get pickled dtype and fill values."""
         return (self.dtype, self.fill_value)
-    
+
 
     def __setstate__(self, state):
-        """
-        Set pickled dtype and fill value.
-        """
+        """Set pickled dtype and fill value."""
         self.dtype, self.fill_value = state
-    
-# meta
+
+
 class ThreadLocalData:
     """
-    Re-open dataset.
+    Creates a copy of the current dataset and vrt for every thread that reads
+    from it. This is to avoid limitations of gdal and multi-threading. See
+    the method of the same name by the stackstac team, who are the originators:
+    http://github.com/gjoseph92/stackstac.
     """
     
     def __init__(self, ds, vrt=None):
@@ -273,8 +304,8 @@ class ThreadLocalData:
                 'height': vrt.height,
                 'src_transform': vrt.src_transform,
                 'transform': vrt.transform,
-                #'dtype': vrt.working_dtype,    # currently not avail in arcgis 2.8 rasterio
-                #'warp_extras': vrt.warp_extras # currently not avail in arcgis 2.8 rasterio
+                #'dtype': vrt.working_dtype,     # currently not avail in arcgis 2.8 rasterio
+                #'warp_extras': vrt.warp_extras  # currently not avail in arcgis 2.8 rasterio
             }
         else:
             self._vrt_params = None
@@ -284,30 +315,39 @@ class ThreadLocalData:
         self._threadlocal.ds = ds
         self._threadlocal.vrt = vrt      
         
-        # lock!
+        # lock thread!
         self._lock = threading.Lock()
-        
-        
+
+
     def _open(self):
         """
-        Open COG url and VRT if required.
+        Opens a cog/url via rasterio to obtain basic info about raster. 
+        No reading is done, just a quick check of metadata. If warping
+        is required, warping is done via rasterio warpedvrt without read.
         """
-        # open efficient env and url
+        
+        # init rasterio env for efficient open
         with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
+        
+            # open url via rasterio
             result = ds = rasterio.open(self._url, 
                                         sharing=False, 
                                         driver=self._driver,
                                         **self._open_options)
             
-            # open efficient env and vrt
+            # init vrt variable
             vrt = None
+            
+            # if vrt exists...
             if self._vrt_params:
+            
+                # init rasterio env for vrt warp
                 with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", VSI_CACHE=True, **self._env):
                     result = vrt = WarpedVRT(ds,
                                              sharing=False, 
                                              **self._vrt_params)
                     
-        # in current lock, store ds and vrt
+        # in current lock, set ds and vrt
         with self._lock:
             self._threadlocal.ds = ds
             self._threadlocal.vrt = vrt
@@ -316,10 +356,7 @@ class ThreadLocalData:
     
     @property
     def dataset(self):
-        """
-        Within the current locked thread, return vrt
-        if exists, else ds. If neither, open a ds or vrt.
-        """
+        """In current locked thread, return vrt if exists, else set dataset."""
         try:
             with self._lock:
                 if self._threadlocal.vrt:
@@ -331,30 +368,25 @@ class ThreadLocalData:
         
         
     def read(self, window, **kwargs):
-        """
-        Read from current thread's dataset, opening
-        a new copy of the dataset on first access
-        from each thread.
-        """
+        """Read current thead dataset, opening new copy on first thread access."""
         with rasterio.Env(VSI_CACHE=False, **self._env):
             return self.dataset.read(1, window=window, **kwargs)
-        
-        
+
+
     def close(self):
-        """
-        Release every thread's reference to its dataset,
-        allowing them to close. 
-        """
+        """Release every thread's reference to its dataset, allowing them to close."""
         with self._lock:
             self._threadlocal = threading.local()
-            
-    
+
+
     def __getstate__(self):
-        raise RuntimeError('I shouldnt be getting pickled...')
+        """Get pickled meta."""
+        raise RuntimeError('Error during get pickle.')
 
         
     def __setstate__(self, state):
-        raise RuntimeError('I shouldnt be getting un-pickled...')
+        """Set pickled meta."""
+        raise RuntimeError('Error during set pickle')
 
 def get_next_url(json):
     """
@@ -380,15 +412,49 @@ def get_next_url(json):
     # else, go home empty handed
     return result
 
-# meta, move checks up to top? make the year comparitor cleaner
-def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=False, sort_time=True, limit=250):
+
+# # # constructor functions
+def fetch_stac_data(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, sort_time=True, limit=250):
     """
-    bbox BBOX BBOX BBOX BBOX
-    Bounding box (min lon, min lat, max lon, max lat)
-    (default: None)
+    Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac/search'),
+    a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of
+    dates, etc. and a bounding box in lat/lon and queries for all available metadata on the 
+    digital earth australia (dea) aws bucket for these parameters. If any data is found for
+    provided search query, a list of dictionaries containing image/band urls and other 
+    vrt-friendly information is returned for further processing.
     
-    datetime DATETIME   Single date/time or begin and end date/time (e.g.,
-                        2017-01-01/2017-02-15) (default: None)
+    Parameters
+    ----------
+    stac_endpoint: str
+        A string url for a stac endpoint. We are focused on 
+        https://explorer.sandbox.dea.ga.gov.au/stac/search for this
+        tool.
+    collections : list of strings 
+        A list of strings of dea aws product names, e.g., ga_ls5t_ard_3.
+    start_dt : date
+         A datetime object in format YYYY-MM-DD. This is the starting date
+         of required satellite imagery.
+    end_dt : date
+         A datetime object in format YYYY-MM-DD. This is the ending date
+         of required satellite imagery.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat).
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Default is False - images where SLC turned off
+        are not included.
+    sort_time : bool
+        Ensure the returned satellite data items are sorted by time in
+        list of dictionaries.
+    limit : int
+        Limit number of dea aws items per page in query. Recommended to use
+        250. Max is 999. 
+     
+    Returns
+    ----------
+    feats : list of dicts of returned stac metadata items.
     """
     
     # set headers
@@ -401,7 +467,7 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
     # notify
     print('Beginning STAC search for items. This can take awhile.')
             
-    # check stac_endpoint
+    # check stac endpoint provided
     if stac_endpoint is None:
         raise ValueError('Must provide a STAC endpoint.')
 
@@ -412,10 +478,13 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
         collections = [collections]
         
     # get dt objects of date strings
-    start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
-    end_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+    if start_dt is None or end_dt is None:
+        raise ValueError('No start or end date provided.')
+    else:
+        start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+        end_dt_obj = datetime.strptime(end_dt, "%Y-%m-%d")
         
-    # iter each collection. stac doesnt return more than one
+    # iter each stac collection
     feats = []
     for collection in collections:
         
@@ -425,15 +494,19 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
         # set up fresh query
         query = {}
 
-        # collections
+        # add collection to query
         if isinstance(collection, str):
             query.update({'collections': collection})
+        else:
+            raise TypeError('Collection must be a string.')
 
-        # bounding box
+        # add bounding box to query if correct
         if isinstance(bbox, list) and len(bbox) == 4:
             query.update({'bbox': bbox})
+        else:
+            raise TypeError('Bounding box must contain four numbers.')
 
-        # start and end date. consider slc for ls7
+        # add start and end date to query. correct slc for ls7 if exists, requested
         if isinstance(start_dt, str) and isinstance(end_dt, str):
             
             if collection == 'ga_ls7e_ard_3' and not slc_off:
@@ -444,14 +517,17 @@ def fetch_stac_data(stac_endpoint, collections, start_dt, end_dt, bbox, slc_off=
                 start_slc_dt = slc_dt if not start_dt_obj.year < 2003 else start_dt
                 end_slc_dt = slc_dt if not end_dt_obj.year < 2003 else end_dt
                 dt = '{}/{}'.format(start_slc_dt, end_slc_dt)
-                
+         
             else:
                 dt = '{}/{}'.format(start_dt, end_dt)
             
             # update query
             query.update({'datetime': dt})
+            
+        else:
+            raise TypeError('Start/end date must be of string type.')
 
-        # query limit
+        # add query limit
         query.update({'limit': limit})
 
         # perform initial post query
@@ -626,50 +702,80 @@ def get_shape(bounds, resolution):
     hw = [h, w]
     return hw
 
-# meta
-def get_nodata_for_window(window, dtype, fill_value):
+def prepare_data(feats=None, assets=None, bounds_latlon=None, bounds=None, epsg=3577, resolution=30, snap_bounds=True, force_dea_http=True):
     """
-    Fill window with constant no data value if error
-    occurred during cog reader.
-    """
+    Prepares raw stac metadata and assets into actual useable data for dask
+    computations. This includes preparing coordinate system, bounding boxes,
+    resolution and resampling, raster sizes and overlaps, raster snapping,
+    etc. Results in an numpy asset table of bounding box and url information, 
+    plus and metadata object for later appending to xarray dataset.
     
-    if fill_value is None:
-        raise ValueError('Fill value must be anything but None.')
+    Parameters
+    ----------
+    feats: list
+        A list of dicts of stac metadata items produced from fetch stac data
+        function.
+    assets: list
+        A list of satellite band names. Must be correct names for landsat and
+        sentinel from dea aws.
+    bound_latlon: list of int/float
+        The bounding box of area of interest for which to query for 
+        satellite data. Must be lat and lon with format: 
+        (min lon, min lat, max lon, max lat). Recommended that users
+        use wgs84.
+    bounds : list of int/float
+        As above, but using same coordinate system specified in epsg 
+        parameter. Cannot provide both. Currently disabled.
+    epsg : int
+        Reprojects output satellite images into this coordinate system. 
+        If none provided, uses default system of dea aws. Default is
+        gda94 albers, 3577. Tenement tools will always use this.
+    resolution : int
+        Output size of raster cells. If higher or greater than raw pixel
+        size on dea aws, resampling will occur to up/down scale to user
+        provided resolution. Careful - units must be in units of provided
+        epsg. Tenement tools sets this to 30, 10 for landsat, sentinel 
+        respectively.
+    snap_bounds : bool
+        Whether to snap raster bounds to whole number intervals of resolution,
+        to prevent fraction-of-a-pixel offsets. Default is true.
+    force_dea_http : bool
+        Replace s3 aws url path for an http path. Default is true.
         
-    # get hight, width of window
-    h, w = int(window.height), int(window.width)
-    return np.full((h, w), fill_value, dtype)
-
-# todo checks, meta, union, overlap, resolution, center or corner align/snap? does no data get removed? not sure ins tackstac either
-def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577, 
-                 resolution=30, snap_bounds=True, force_dea_http=True):
-    """
+    Returns
+    ----------
+    meta : a dictionary of dea aws metadata for appending to xr dataset later
+    asset_table : a numpy table with rows of url and associated cleaned bounding box
     """
     
     # notify
-    print('Translating raw STAC data into numpy format.')
+    print('Converting raw STAC data into numpy format.')
+    
+    # set input epsg used by bounds_latlon. for now, we hardcode to wgs84
+    # may change and make dynamic later, for now suitable
+    in_bounds_epsg = 4326
 
-    # checks
+    # check if both bound parameters provided
     if bounds_latlon is not None and bounds is not None:
         raise ValueError('Cannot provide both bounds latlon and bounds.')
+    
+    # check if bounds provided - currently disabled, might remove
+    if bounds is not None:
+        raise ValueError('Bounds input currently disabled. Please use bounds_latlon.')
         
-    # check epsg
+    # check output epsg is albers - currently only support epsg
     if epsg != 3577:
-        raise ValueError('EPSG 3577 only supported at this stage.')
-            
-    # set epsg, bounds
-    out_epsg = epsg
-    out_bounds = bounds
-
+        raise ValueError('EPSG 3577 only supported for now.')
+        
     # prepare resolution tuple
     if resolution is None:
         raise ValueError('Must set a resolution value.')
     elif not isinstance(resolution, tuple):
         resolution = (resolution, resolution)
+            
+    # set output epsg, output bounds, output resolution
+    out_epsg, out_bounds, out_resolution = epsg, bounds, resolution
     
-    # set output res
-    out_resolution = resolution
-        
     # prepare and check assets list
     if assets is None:
         assets = []
@@ -678,10 +784,10 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     if len(assets) == 0:
         raise ValueError('Must request at least one asset.')
                 
-    # todo check data type, get everything if empty list
-    #asset_ids = assets
+    # check data types of assets?
+    # we always get rasters of int16 from dea aws... leave for now
         
-    # create an numpy asset table to store info
+    # create an numpy asset table to store info, make use of object type for string
     asset_dt = np.dtype([('url', object), ('bounds', 'float64', 4)]) 
     asset_table = np.full((len(feats), len(assets)), None, dtype=asset_dt) 
 
@@ -689,10 +795,10 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     if len(feats) == 0:
         raise ValueError('No items to prepare.')
         
-    # iter feats
+    # iter feats, work on bbox, projection, get url
     for feat_idx, feat in enumerate(feats):
         
-        # get top level meta
+        # get feat level meta
         feat_props = feat.get('properties')
         feat_epsg = feat_props.get('proj:epsg')
         feat_bbox = feat_props.get('proj:bbox')
@@ -704,7 +810,7 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
         for asset_idx, asset_name in enumerate(assets):
             asset = feat.get('assets').get(asset_name)
             
-            # get asset level meta, if not exist, use top level
+            # get asset level meta, if not exist, use feat level
             if asset is not None:
                 asset_epsg = asset.get('proj:epsg', feat_epsg)
                 asset_bbox = asset.get('proj:bbox', feat_bbox)
@@ -712,7 +818,10 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                 asset_transform = asset.get('proj:transform', feat_transform)
                 asset_affine = None
                 
-                # prepare crs - todo handle when no epsg given. see stackstac
+                # note: in future, may want to handle using asset epsg 
+                # here instead of forcing albers. for now, all good.
+                
+                # cast output epsg if in case string
                 out_epsg = int(out_epsg)
                 
                 # reproject bounds and out_bounds to user epsg
@@ -720,72 +829,69 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
                     bounds = reproject_bbox(4326, out_epsg, bounds_latlon)
                     out_bounds = bounds
 
-                # compute asset bbox via feat bbox. todo: what if no bbox in stac, or asset level exists?
-                if asset_transform is None or asset_shape is None or asset_epsg is None:
-                    raise ValueError('No feature-level transform and shape metadata.')
-                else:
-                    asset_affine = get_affine(asset_transform)
+                # below could be expanded in future. we always have asset transform, shape
+                # but what if we didnt? would need to adapt this to handle. lets leave for now
+                # compute bbox from asset level shape and geotransform
+                if asset_transform is not None or asset_shape is not None or asset_epsg is not None:
+                    asset_affine = affine.Affine(*asset_transform[:6])
                     asset_bbox_proj = bbox_from_affine(asset_affine,
                                                        asset_shape[0],
                                                        asset_shape[1],
                                                        asset_epsg,
                                                        out_epsg)
+                else:
+                    raise ValueError('No feature-level transform and shape metadata.')
                 
-                # compute bounds
+                # compute bounds depending on situation
                 if bounds is None:
                     if asset_bbox_proj is None:
                         raise ValueError('Not enough STAC infomration to build bounds.')
                         
+                    # when output bounds does not exist, use projcted asset bbox, else dounion
                     if out_bounds is None:
                         out_bounds = asset_bbox_proj
                     else:
-                        #bound_union = union_bounds(asset_bbox_proj, out_bounds)
-                        #out_bounds = bound_union
-                        raise ValueError('Need to implement union.')
-    
+                        out_bounds = union_bounds(asset_bbox_proj, out_bounds)
+                        
                 else:
-                    # skip if asset bbox does not overlap with bounds
+                    # skip asset if bbox does not overlap with requested bounds
                     overlaps = bounds_overlap(asset_bbox_proj, bounds)
                     if asset_bbox_proj is not None and not overlaps:
-                        continue # move to next asset
+                        continue
                     
-                # do resolution todo: implement auto resolution capture
-                if resolution is None:
-                    raise ValueError('Need to implement auto-find resolution.')
-                    
-                # force aws s3 to https todo make this work with aws s3 bucket
+                # note: may want to auto-detect resolution from bounds and affine
+                # here. for now, tenement tools requires resolution is set
+                
+                # extract url from asset
                 href = asset.get('href')
+
+                # convert aws s3 url to https if requested. note: not tested with s3 url               
                 if force_dea_http:
                     href = href.replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
                     
-                # add info to asset table
+                # add info to asset table, 1 row per scene, n columns per band, i.e. (url, [l, b, r, t]) per row
                 asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-                
-        # creates row in array that has 1 row per scene, n columns per requested band where (url, [l, b, r, t])
-        href = asset["href"].replace('s3://dea-public-data', 'https://data.dea.ga.gov.au')
-        asset_table[feat_idx, asset_idx] = (href, asset_bbox_proj)
-        
-    # snap boundary coordinates
+
+    # snap boundary coordinates if requested
     if snap_bounds:
-        out_bounds = snap_bbox(out_bounds, 
-                               out_resolution)
+        out_bounds = snap_bbox(out_bounds, out_resolution)
      
-    # transform and get shape for top-level
+    # transform and get shape for feat level
     transform = do_transform(out_bounds, out_resolution)
     shape = get_shape(out_bounds, out_resolution)
         
-    # get table of nans where any feats/assets where asset missing/out bounds
+    # get table of nans for any feats/assets where asset missing/out bounds
     isnan_table = np.isnan(asset_table['bounds']).all(axis=-1)
-    feat_isnan = isnan_table.all(axis=1)  # any items all empty?
-    asset_isnan = isnan_table.all(axis=0) # any assets all empty?
+    feat_isnan = isnan_table.all(axis=1)
+    asset_isnan = isnan_table.all(axis=0)
     
-    # remove offending items. np.ix_ removes specific cells (col, row)
+    # remove nan feats/assets. note: ix_ looks up cells at specific col, row
     if feat_isnan.any() or asset_isnan.any():
         asset_table = asset_table[np.ix_(~feat_isnan, ~asset_isnan)]
         feats = [feat for feat, isnan in zip(feats, feat_isnan) if not isnan]
         assets = [asset for asset, isnan in zip(assets, asset_isnan) if not isnan]
         
-    # create final top-level raster metadata dict
+    # create feat/asset metadata attributes for xr dataset later
     meta = {
         'epsg': out_epsg,
         'bounds': out_bounds,
@@ -803,16 +909,53 @@ def prepare_data(feats, assets=None, bounds_latlon=None, bounds=None, epsg=3577,
     }
     
     # notify and return
-    print('Translated raw STAC data successfully.')
+    print('Converted raw STAC data successfully.')
     return meta, asset_table
 
-# checks, meta, todos, mpve fetch raster window func into here?
-def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest',
-                    dtype='int16', fill_value=-999, rescale=True):
-    
+
+def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='nearest', dtype='int16', fill_value=-999, rescale=True):
     """
-    Data is of type dictionary with everything that comes out
-    of prepare_data.
+    Takes a array of prepared stac items from the prepare_data function 
+    and converts it into lazy-load friendly dask arrays prior to 
+    converson into a final xr dataset. Some of the smart dask work is
+    based on the rasterio/stackstac implementation. For more information
+    on stackstac, see: https://github.com/gjoseph92/stackstac. 
+    
+    Parameters
+    ----------
+    meta: dict
+        A dictionary of metadata attibution extracted from stac results
+        in prepare_data function.
+    asset_table: numpy array
+        A numpy array of structure (url, [bbox]) per row. Url is a 
+        url link to a specific band of a specific feature from dea public
+        data (i.e., Landsta or Sentinel raster band), and bbox is the
+        projected bbox for that scene or scene window.
+    chunksize: int
+        Rasterio lazy-loading chunk size for cog asset. The dea uses default
+        chunksize of 512, but could speed up processing by modifying this.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Default rasterio nearest
+        neighbour. Could use bilinear. We will basically always use this in 
+        tenement tools.
+    dtype : str or numpy type
+        The numpy data type for output rasters for ech dask array row.
+        We will typically use int16, to speed up downloads and reduce 
+        storage size. Thus, no data is best as -999 instead of np.nan,
+        which will cast to float32 and drastically increase data size.
+    fill_value : int or float
+        The value to use when pixel is detected or converted to no data
+        i.e. on errors or missing raster areas. Recommended that -999 is
+        used on dea landsat and sentinel data to reduce download and storage
+        concerns.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True.
+
+    Returns
+    ----------
+    rasters : a dask array of satellite rasters nearly ready for compute!
     """
     
     # notify
@@ -820,7 +963,7 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     
     # check if meta and array provided
     if meta is None or asset_table is None:
-        raise ValueError('Must provide metadata and assets.')
+        raise ValueError('Must provide metadata and asset table array.')
         
     # checks
     if resampling not in ['nearest', 'bilinear']:
@@ -832,30 +975,33 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     else:
         resampler = Resampling.bilinear
     
-    # check type of dtype
+    # check dtype, if string cast it, catch error if invalid
     if isinstance(dtype, str):
-        dtype = np.dtype(dtype)
-
-    # check fill value
-    #if fill_value is None and errors_as_nodata:
-        #raise ValueError('cant do')
+        try:
+            dtype = np.dtype(dtype)
+        except:
+            raise TypeError('Requested dtype is not valid.')        
+            
+    # check if dtypes are allowed
+    if dtype not in [np.int8, np.int16, np.int32, np.float16, np.float32, np.float64, np.nan]:
+        raise TypeError('Requested dtype is not supported. Use int or float.')
         
-    # check if we can use fillvalue
+    # check if we can use fill value with select dtype
     if fill_value is not None and not np.can_cast(fill_value, dtype):
         raise ValueError('Fill value incompatible with output dtype.')
-                
-    # set errors or empty tuple (not none)
-    #errors_as_nodata = errors_as_nodata or ()
-
-    # see stackstac for explanation of this logic here
+        
+    # note: the following approaches are based on rasterio and stackstac
+    # methods. the explanation for this is outlined deeply in the stackstac
+    # to_dask function. check that code for a deeper explanation.
+    # extra note: this might be overkill for our 'dumb' arcgis method
     
-    # make urls into dask array with 1-element chunks (i.e. 1 chunk per asset (i.e.e band))
+    # see their documentation for a deeper explanation.
     da_asset_table = dask_array.from_array(asset_table, 
                                            chunks=1, 
-                                           #inline_array=True # need high ver of dask
+                                           #inline_array=True,  # our version of xr does not support inline
                                            name='assets_' + dask.base.tokenize(asset_table))
     
-    # map to blocks
+    # map to blocks. the cog reader class is mapped to each chunk for reading
     ds = da_asset_table.map_blocks(apply_cog_reader,
                                    meta,
                                    resampler,
@@ -864,22 +1010,20 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
                                    rescale,
                                    meta=da_asset_table._meta)
     
-    # generate a fake array from shape and chunksize
+    # generate fake array from shape and chunksize, see stackstac to_dask for approach
     shape = meta.get('shape')
     name = 'slices_' + dask.base.tokenize(chunksize, shape)
     chunks = dask_array.core.normalize_chunks(chunksize, shape)
     keys = itertools.product([name], *(range(len(b)) for b in chunks))
     slices = dask_array.core.slices_from_chunks(chunks)
     
-    # stick slices into an array to use dask blockwise logic
+    # stick slices into array container to force dask blockwise logic to handle broadcasts
     fake_slices = dask_array.Array(dict(zip(keys, slices)), 
                                    name, 
                                    chunks, 
                                    meta=ds._meta)
     
-    # apply blockwise
-    #with warnings.catch_warnings():
-        #warnings.simplefilter("ignore", category=dask_array.core.PerformanceWarning)
+    # apply blockwise logic
     rasters = dask_array.blockwise(fetch_raster_window,
                                    'tbyx',
                                    ds,
@@ -892,11 +1036,37 @@ def convert_to_dask(meta=None, asset_table=None, chunksize=512, resampling='near
     print('Converted data successfully.')
     return rasters
 
-# cogs
+
+
+# # # core data functions
 def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
     """
-    For each dask url/bounds chunk, apply the local
-    threaded cog reader classes. 
+    Takes a single asset dask chunk (i.e., in our case a single satellite band)
+    and associated metadata, subsets that chunk to a rasterio window object
+    based on a projected bounds of coordinates, and wraps that chunk subset
+    into a COGReader class (which reads rasters into memory).
+    
+    Parameters
+    ----------
+    asset_chunk: dask array
+        A single chunk from a dask array of structure (url, [bbox]). 
+    meta: dict
+        A dictionary of metadata obtained from stac metadata.
+    resampler: rasterio Resampler object
+        A rasterio resampler object type of either NearestNeighbor or
+        Bilinear.
+    dtype : numpy type
+        The numpy data type for output dask chunk.
+    fill_value : int or float
+        The value to use when pixel is detected or converted to no data.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True.
+
+    Returns
+    ----------
+    cog reader and window : a tuple containing the chunk wrapped in a 
+    cog reader class with the associated rasterio window to read.
     """
     
     result = None
@@ -904,7 +1074,7 @@ def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
     # remove added array dim
     asset_chunk = asset_chunk[0, 0]
     
-    # get url
+    # extract just the url from asset
     url = asset_chunk['url']
     #If url is none, don't proccess further and return None result.
     if url is not None:
@@ -927,30 +1097,88 @@ def apply_cog_reader(asset_chunk, meta, resampler, dtype, fill_value, rescale):
     
     return result
 
-# checks, meta
+
+def fetch_raster_window(asset_entry, slices):
+    """
+    Takes an asset chunk and asociated fake slices created from the 
+    convert_to_dask method and fetches a window of raster data. If
+    the slice covers the window, the cogreader wrapping the asset
+    reads the current window and returns data. If no overlap exists,
+    an empty window is returned of current window shape.
+    
+    Parameters
+    ----------
+    asset_entry: dask array
+        A chunked dask array with cog reader mapped to each chunk. 
+    slices: numpy array
+        Sliced up rows and columns of dask array for parallel reading.
+
+    Returns
+    ----------
+    Data that as been read within a window. If no data, empty window
+    is returned.
+    
+    """
+    
+    # read current window from input sliced dimensions
+    current_window = windows.Window.from_slices(*slices)
+    
+    # unpack asset entry into cog reader and window if exists
+    if asset_entry is not None:
+        reader, asset_window = asset_entry
+
+        # if window being fetched overlaps with the asset, read!
+        if windows.intersect(current_window, asset_window):
+            data = reader.read(current_window)
+            return data[None, None]
+
+    # if no dataset or no intersection with window, return empty array
+    return np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
+
+# PIXEL CENTERING NEEDS CHECK HERE
 def build_coords(feats, assets, meta, pix_loc='topleft'):
     """
-    Very basic version of stackstac. We are only concerned with
-    times, bands, ys and xs for our product.
+    Takes stac feats, assets and metadata outputs and
+    generates grid of spatial coordinates. Simplified implementation
+    of stackstac method: http://github.com/gjoseph92/stackstac. For tenement
+    tools, we are only ever going to need times, bands, and x, y coordinate
+    dimensions.
+    
+    Parameters
+    ----------
+    feats: list
+        A list of dicts of stac metadata items produced from fetch stac data
+        function.
+    assets: list
+        A list of satellite band names. Must be correct names for landsat and
+        sentinel from dea aws.
+    meta : dict
+        A dictionary of metadata information from stac for use in creating
+        xr dataset attribution.
+    pix_loc : str
+        Alignment of pixel cells. If topleft is used, coordinates set at topleft
+        of pixel. If center is used, centroid of pixel used. 
+        
+    Returns
+    ----------
+    coords : dict of x, y coordinate arrays
+    dims : list of dimension names
     """
+    
+    # notify
+    print('Creating dataset coordinates and dimensions.')
     
     # parse datetime from stac features
     times = [f.get('properties').get('datetime') for f in feats]
     times = pd.to_datetime(times, infer_datetime_format=True, errors='coerce')
     
-    # timezone can exist, remove it if so (xarray dont likey)
+    # remove timezone and milliseconds if exists, xr and arcmap doesnt like
     times = times.tz_convert(None) if times.tz is not None else times
-    
-    # strip milliseconds
-    #ds['time'] = ds.time.dt.strftime('%Y-%m-%d').astype(np.datetime64)
     times = times.strftime('%Y-%m-%dT%H:%M:%S').astype('datetime64[ns]')
         
     # prepare xr dims and coords
     dims = ['time', 'band', 'y', 'x']
-    coords = {
-        'time': times,
-        'band': assets
-    }
+    coords = {'time': times, 'band': assets}
     
     # set pixel coordinate position
     if pix_loc == 'center':
@@ -963,7 +1191,7 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
     # generate coordinates
     if meta.get('transform').is_rectilinear:
         
-        # we can just use arange for this - quicker
+        # as rectilinear, we can just use arange
         min_x, min_y, max_x, max_y = meta.get('bounds')
         res_x, res_y = meta.get('resolutions_xy')
         
@@ -980,7 +1208,7 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
         y_range = pd.Float64Index(np.linspace(max_y, min_y, h, endpoint=False))
         
     else:
-        # get offset dependong on pixel position
+        # get offset depending on pixel position
         off = 0.5 if pixel_center else 0.0
 
         # gen x, y ranges
@@ -991,18 +1219,67 @@ def build_coords(feats, assets, meta, pix_loc='topleft'):
     # set coords
     coords['y'] = y_range
     coords['x'] = x_range
-    
-    # get properties as coords
-    # not needed
-    
-    # get band as coords
-    # not needed
-    
-    return coords, dims
 
-# checks, meta, improve dynanism
-def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resampling):
+    # notify and return
+    print('Created coordinates and dimensions successfully.')
+    return coords, dims
+  
+# ADD OTHER ATTRIBUTES NEEDED BY UPDATE FUNC
+def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype, 
+                     snap_bounds, fill_value, rescale, cell_align, resampling):
     """
+    Takes a newly constructed xr dataset and associated stac metadata attributes
+    and appends attributes to the xr dataset itself. This is useful information
+    for context in arcmap, but also needed in the dataset update methodology
+    for nrt methodology. A heavily modified version of the work done by the 
+    great stackstac folk: http://github.com/gjoseph92/stackstac. 
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        An xr dataset object that holds the lazy-loaded raster images obtained
+        from the majority of this code base. Attributes are appended to this
+        object.
+    meta : dict
+        A dictionary of the dea stac metadata associated with the current
+        query and satellite data.
+    collections : list
+        A list of names for the requested satellite dea collections. For example,
+        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
+        just dded to attributes.
+    bands : list
+        List of band names requested original query.
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Not used in analysis here, only appended to attributes.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat). Only used to append to 
+        attributes, here.
+    dtype : str
+        Name of original query dtype, e.g., int16, float32. In numpy
+        dtype that the output xarray dataset will be encoded in.
+    snap_bounds : bool
+        Whether to snap raster bounds to whole number intervals of resolution,
+        to prevent fraction-of-a-pixel offsets. Default is true. Only used
+        to append to netcdf attirbutes.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes.
+    rescale : bool
+        Whether rescaling of pixel vales by the scale and offset set on the
+        dataset. Defaults to True. Only used to append to netcdf attributes.
+    cell_align: str
+        Alignmented of cell in original query. Either Too-left or Center.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Just used here to append
+        to attributes.
+        
+    Returns
+    ----------
+    A xr dataset with new attributes appended to it.
     """
         
     # assign spatial_ref coordinate
@@ -1014,12 +1291,13 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
     srs.ImportFromEPSG(crs)
     wkt = srs.ExportToWkt()
     
-    # assign wkt to spatial ref 
-    grid_mapping_name = 'albers_conical_equal_area' # todo get this dynamically?
+    # assign wkt to spatial ref attribute. note: this is designed for gda 94 albers
+    # if we ever want to include any other output crs, we will need to adapt this
+    grid_mapping_name = 'albers_conical_equal_area'
     ds['spatial_ref'] = ds['spatial_ref'].assign_attrs({'spatial_ref': wkt, 
                                                         'grid_mapping_name': grid_mapping_name})
     
-    # assign global crs and grid mapping 
+    # assign global crs and grid mapping attributes
     ds = ds.assign_attrs({'crs': 'EPSG:{}'.format(crs)})
     ds = ds.assign_attrs({'grid_mapping': 'spatial_ref'})
     
@@ -1034,37 +1312,30 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
         'crs': 'EPSG:{}'.format(crs)
     })
     
-    # do same for y coordinate attributes
+    # assign y coordinate attributes
     ds['y'] = ds['y'].assign_attrs({
         'units': 'metre',
         'resolution': res_y,
         'crs': 'EPSG:{}'.format(crs)
     })    
     
-    # add attributes custom for cog fetcher
-    ds = ds.assign_attrs({'transform': tuple(transform)})
+    # set range of original query parameters for future sync
+    ds = ds.assign_attrs({'transform': tuple(transform)})          # set transform info for cog fetcher
+    ds = ds.assign_attrs({'nodatavals': fill_value})               # set original no data values
+    ds = ds.assign_attrs({'orig_collections': tuple(collections)}) # set original collections
+    ds = ds.assign_attrs({'orig_bands': tuple(bands)})             # set original bands
+    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
+    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
+    ds = ds.assign_attrs({'orig_dtype': dtype})                    # set original dtype
+    ds = ds.assign_attrs({'orig_snap_bounds': str(snap_bounds)})   # set original snap bounds (as string)
+    ds = ds.assign_attrs({'orig_cell_align': cell_align})          # set original cell align
+    ds = ds.assign_attrs({'orig_resample': resampling})            # set original resample method 
     
     # set output resolution depending on type
     res = meta.get('resolutions_xy')
     res = res[0] if res[0] == res[1] else res
     ds = ds.assign_attrs({'res': res})
-    
-    # set no data values
-    ds = ds.assign_attrs({'nodatavals': fill_value})
-    
-    # set collections from original query
-    ds = ds.assign_attrs({'orig_collections': tuple(collections)})
-    
-    # set original bbox
-    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})
-    
-    # set slc off from original query
-    slc_off = 'True' if slc_off else 'False'
-    ds = ds.assign_attrs({'orig_slc_off': slc_off})
-    
-    # set original resample method 
-    ds = ds.assign_attrs({'orig_resample': resampling})
-    
+        
     # iter each var and update attributes 
     for data_var in ds.data_vars:
         ds[data_var] = ds[data_var].assign_attrs({
@@ -1072,35 +1343,68 @@ def build_attributes(ds, meta, fill_value, collections, slc_off, bbox, resamplin
             'crs': 'EPSG:{}'.format(crs), 
             'grid_mapping': 'spatial_ref'
         })
-   
+        
+    # notify and return
+    print('Attributes appended to dataset successfully.')
     return ds
 
-# checks, meta
+
 def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
     """
-    Takes a xarray dataset (typically as dask)
-    and computes mask band. From mask band,
-    calculates percentage of valid vs invalid
-    pixels per date. Returns a list of every
-    date that is above the max invalid threshold.
+    Takes an xr dataset and computes fmask band, if it exists. From mask band,
+    calculates percentage of valid vs invalid pixels per image date. Returns a xr
+    dataset where all images where too  many invalid pixels were detected have been
+    removed.
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        A xarray dataset with time, x, y, band dimensions.
+    valid_classes : list
+        List of valid fmask classes. For dea landsat/sentinel data,
+        1 = valid, 2 = cloud, 3 = shadow, 4 = snow, 5 = water. See:
+        https://docs.dea.ga.gov.au/notebooks/Frequently_used_code/Masking_data.html.
+        Default is 1, 4 and 5 (valid, snow, water pixels returned).
+    max_invalid : int or float
+        The maximum amount of invalid pixels per image to flag whether
+        it is invalid. In other words, a max_invalid = 5: means >= 5% invalid
+        pixels in an image will remove that image.
+    mask_band : str
+        Name of mask band in dataset. Default is oa_fmask.
+    nodata_value : numpy dtype
+        If an invalid pixel is detected, replace with this value. Numpy nan 
+        (np.nan) is recommended.
+    drop_fmask : bool
+        Once fmask images have been removed, drop the fmask band too? Default
+        is True.
+        
+    Returns
+    ----------
+    ds : xr dataset with invalid pixels masked out and images >= max_invalid
+        removed also.
     """
     
     # notify
     print('Removing dates where too many invalid pixels.')
 
-    # check if x and y dims
-    # todo
+    # check if time, x, y in dataset
+    for dim in [dim for dim in list(ds.dims)]:
+        if dim not in ['time', 'x', 'y']:
+            raise ValueError('Unsupported dim: {} in dataset.'.format(dim))
+            
+    # check if fmask in dataset
+    if mask_band is None:
+        raise ValueError('Name of mask band must be provided.')
+    else:
+        if mask_band not in list(ds.data_vars):
+            raise ValueError('Requested mask band name not found in dataset.')
 
-    # get 
+    # calc min number of valid pixels allowed
     min_valid = 1 - (max_invalid / 100)
-
-    # get total num pixels for one slice
     num_pix = ds['x'].size * ds['y'].size
 
-    # subset mask band
+    # subset mask band and if dask, compute it
     mask = ds[mask_band]
-
-    # if dask, compute it
     if bool(mask.chunks):
         print('Mask band is currently dask. Computing, please wait.')
         mask = mask.compute()
@@ -1113,10 +1417,10 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
         ds = ds.astype('float32')    
 
     # mask invalid pixels with user value
-    print('Filling invalid pixels with nan')
+    print('Filling invalid pixels with requested nodata value.')
     ds = ds.where(mask == 1.0, nodata_value)
     
-    # calc percentage of valdi to total and get invalid dates
+    # calc proportion of valid pixels to get array of invalid dates
     mask = mask.sum(['x', 'y']) / num_pix
     valid_dates = mask['time'].where(mask >= min_valid, drop=True)
 
@@ -1128,6 +1432,8 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
         print('Dropping mask band.')
         ds = ds.drop_vars(mask_band)
         
+    # notify and return
+    print('Removed invalid images successfully.')
     return ds
 
 # fix this?
@@ -1137,8 +1443,23 @@ def fetch_raster_window(asset_entry, slices):
     # Set default return for if no dataset or no overlap.
     result = np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
     
-    if asset_entry is not None:
-        reader, asset_window = asset_entry
+    Parameters
+    -------------
+    json : dict
+        A dictionary of json elements returned from stac.
+    
+    Returns
+    ----------
+    A url.
+    """
+    
+    # parse json doc and look for link ref
+    for link in json.get('links'):
+        if link.get('rel') == 'next':
+            return link.get('href')
+        
+    # else return nothing
+    return None
 
         # check that the window we're fetching overlaps with the asset
         if windows.intersect(current_window, asset_window):
@@ -1147,5 +1468,253 @@ def fetch_raster_window(asset_entry, slices):
 
     return result
 
+@lru_cache(maxsize=64)
+def cached_transform(from_epsg=4326, to_epsg=3577, skip_equivalent=True, always_xy=True):
+    """
+    Helper function to perform a cached pyproj transform. Transforms
+    are computationally slow, so caching it during 100s of identical
+    operations speeds us up considerablly. Implemented via
+    LRU cache.
+        
+    Parameters
+    -------------
+    from_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    to_epsg : int
+        As above, except for destination epsg. Default is gda albers.
+    skip_equivalent : bool
+        Whether to skip re-cache of already cached operations. Obviously,
+        we set this to True.
+    always_xy : bool
+        Whether transform method will accept and return traditional GIS
+        coordinate order e.g. lon, lat and east, north. Set to True.
+        
+    Returns
+    ----------
+    Cached pyproject transformer object.
+    """
+
+    # transform from epsg to epsg
+    return pyproj.Transformer.from_crs(from_epsg, to_epsg, skip_equivalent, always_xy)
 
 
+def bbox_from_affine(aff, ysize, xsize, from_epsg=4326, to_epsg=3577):
+    """
+    Calculate bounding box from pre-existing affine transform.
+    
+    Parameters
+    -------------
+    aff : affine object or list of numerics 
+        A pre-existing affine transform array, usually produced
+        by pyproj or similar.
+    ysize : int
+        Number of cells on y-axis.
+    xsize : int
+        Number of cells on x-axis.
+    from_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    to_epsg : int
+        As above, except for destination epsg. Default is gda albers.
+        
+    Returns
+    ----------
+    A list of int/floats of bbox.
+    """
+    
+    # affine calculation
+    x_nw, y_nw = aff * (0, 0)
+    x_sw, y_sw = aff * (0, ysize)
+    x_se, y_se = aff * (xsize, ysize)
+    x_ne, y_ne = aff * (xsize, 0)
+
+    # set x and y extents
+    x_ext = [x_nw, x_sw, x_se, x_ne]
+    y_ext = [y_nw, y_sw, y_se, y_ne]
+
+    # transform if from/to epsg differs, else dont transform
+    if from_epsg != to_epsg:
+        transformer = cached_transform(from_epsg, to_epsg)
+        x_ext_proj, y_ext_proj = transformer.transform(x_ext, y_ext, errcheck=True)
+    
+    else:
+        x_ext_proj = x_ext
+        y_ext_proj = y_ext
+        
+    # prepare and return bbox (l, b, r, t)
+    return [min(x_ext_proj), min(y_ext_proj), max(x_ext_proj), max(y_ext_proj)]
+
+
+def reproject_bbox(source_epsg=4326, dest_epsg=3577, bbox=None):
+    """
+    Helper function to reproject given bounding box (default wgs84)
+    to requested coordinate system)
+    
+    Parameters
+    -------------
+    source_epsg : int
+        A epsg code as int (e.g., wgs84 as 4326). Default is wgs84.
+    dest_epsg : int
+        As above, except for destination epsg. Default is gda94 albers.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat).
+    
+    Returns
+    ----------
+    pbbox : list of reprojected coordinates of bbox.
+    """
+    
+    # deconstruct original bbox array
+    l, b, r, t = bbox
+    
+    # reproject from source epsg to destination epsg
+    pbbox = transform_bounds(src_crs=source_epsg,
+                             dst_crs=dest_epsg, 
+                             left=l, bottom=b, right=r, top=t)
+                             
+    # return
+    return pbbox
+
+
+def bounds_overlap(*bounds):
+    """
+    Helper function to check if bounds within list overlap.
+    Used to discard assets that may not overlap with user
+    defined bbox, or other assets bboxes.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+       Two or more lists of bounding box coordinates
+    
+    Returns
+    ----------
+    A boolean indicating whether bounds overlap.
+    """
+    
+    # zip up same coordinates across each array
+    min_x_vals, min_y_vals, max_x_vals, max_y_vals = zip(*bounds)
+    
+    # check if overlaps occur and return
+    return max(min_x_vals) < min(max_x_vals) and max(min_y_vals) < min(max_y_vals)
+
+
+def snap_bbox(bounds, resolution):
+    """
+    Helper function to 'snap' bounding box, e.g., to
+    the ceiling and floor depending on min and max values
+    with consideration with resolution.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+        Two or more lists of bounding box coordinates.
+    resolution : tuple or list of int
+        Pixel cell size in tuple e.g., (30, 30) for 30 squarem.
+        
+    Returns
+    ----------
+    A 'snapped' bounding box.
+    """
+    
+    # unpack coords, resolution from inputs
+    min_x, min_y, max_x, max_y = bounds
+    res_x, res_y = resolution
+    
+    # snap bounds!
+    min_x = np.floor(min_x / res_x) * res_x
+    max_x = np.ceil(max_x / res_x) * res_x
+    min_y = np.floor(min_y / res_y) * res_y
+    max_y = np.ceil(max_y / res_y) * res_y
+
+    # return new snapped bbox
+    return [min_x, min_y, max_x, max_y]
+
+
+def union_bounds(*bounds):
+    """
+    Helper function to union all bound extents, typically
+    for asset level and outut bound extents during data
+    preparation. Essentially gets minimum bounding rectangle
+    of all bounding coordinates in input.
+    
+    Parameters
+    -------------
+    bounds : multiple lists of bounding box coordinates (e.g., bbox).
+
+    Returns
+    ----------
+    A list of unioned boundaries.
+    """
+    
+    # zip up all coordinate arrays 
+    pairs = zip(*bounds)
+    
+    # union and return
+    return [
+        min(next(pairs)),
+        min(next(pairs)),
+        max(next(pairs)),
+        max(next(pairs))
+    ]
+
+
+def get_shape(bounds, resolution):
+    """
+    Helper function to get the shape (i.e., h, w) of a 
+    bounds, with respect to resolution size.
+    
+    Parameters
+    -------------
+    bounds : list of bounds (e.g., bbox)
+        Two or more lists of bounding box coordinates.
+    resolution : tuple or list of int
+        Pixel cell size in tuple e.g., (30, 30) for 30 squarem.
+        
+    Returns
+    ----------
+    The size of the bounds as list e.g., (h, w)
+    """
+
+    # unpack coords and resolution
+    min_x, min_y, max_x, max_y = bounds
+    res_x, res_y = resolution
+    
+    # calc shape (width and height) from bounds and resolution
+    w = int((max_x - min_x + (res_x / 2)) / res_x)
+    h = int((max_y - min_y + (res_y / 2)) / res_y)
+    
+    # return
+    return [h, w]
+
+
+def get_nodata_for_window(window, dtype, fill_value):
+    """
+    Helper function to create an window (i.e. a numpy array) with 
+    a specific value representing no data (i.e., np.nan or 0) if
+    error occurred during cog reader function.
+    
+    Parameters
+    -------------
+    window : rasterio window object
+        A rasterio-based window subset of actual raster or cog data.
+    dtype : str or np dtype
+        Data type of output window object
+    fill_value : various
+        Any type of numpy data type e.g., int8, int16, float16, float32, nan.
+        
+    Returns
+    ----------
+    A numpy array representing original window size but of new user-defined
+    fill value.
+    """
+    
+    # check if fill value provided
+    if fill_value is None:
+        raise ValueError('Fill value must be anything but None.')
+        
+    # get height, width of window and fill new numpy array
+    h, w = int(window.height), int(window.width)
+    return np.full((h, w), fill_value, dtype)
+    

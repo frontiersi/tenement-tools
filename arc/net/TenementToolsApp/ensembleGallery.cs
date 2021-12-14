@@ -39,10 +39,16 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Run All",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Combine outputs into an ensemble model.",
-                                group: "Wizard"));
+            Add(new GalleryItem(text: "Ensemble Model",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_32.png",
+                                tooltip: "Combine outputs into a Dempster-Shafer model.",
+                                group: "Run individual functions"));
+
+            // add gallery item for wizard
+            Add(new GalleryItem(text: "Ensemble Masker",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/CanoPy_Wizard_32.png",
+                                tooltip: "Mask out Ensemble areas using an elevation-based mask (e.g., Canopy Height).",
+                                group: "Run individual functions"));
 
             // initialise
             _isInitialized = true;
@@ -50,8 +56,8 @@ namespace TenementToolsApp
 
         protected override void OnClick(GalleryItem item)
         {
-            //TODO - insert your code to manipulate the clicked gallery item here
-            //System.Diagnostics.Debug.WriteLine("Remove this line after adding your custom behavior.");
+            // ensure users can re-click on already selected items
+            base.AlwaysFireOnClick = true;
 
             // obtain clicked gallery item
             base.OnClick(item);
@@ -59,15 +65,11 @@ namespace TenementToolsApp
             // get name of clicked gallery item
             var gallery_item = base.SelectedItem.ToString();
 
-            // temp: tell dev what was called
-            //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
-
-            // open gdvspectra likelihood tool pane
-            if (gallery_item == "Run All")
+            // open tool pane
+            if (gallery_item == "Ensemble Model")
             {
-
                 // set toolname and create empty input array
-                string toolname = "Ensemble";
+                string toolname = "Ensemble_Model";
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
@@ -78,7 +80,25 @@ namespace TenementToolsApp
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine("Could not find GDVSpectra tool.");
+                    Debug.WriteLine("Could not find Ensemble Model tool. Did you add the Tenement Tools toolbox?");
+                };
+            }
+            // open tool pane
+            if (gallery_item == "Ensemble Masker")
+            {
+                // set toolname and create empty input array
+                string toolname = "Ensemble_Masker";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find Ensemble Masker tool. Did you add the Tenement Tools toolbox?");
                 };
             };
         }

@@ -1,6 +1,22 @@
 # ensemble
-"""
-"""
+'''
+This script contains functions for performing Dempster-Shafer belief modelling.
+The intention is to take 2 or more raster / netcdf file inputs, designate each
+as either belief or disbelief, rescale each to 0-1 range using fuzzy sigmoidals
+from the canopy module, then output belief, disbelief, plausability maps.
+See https://www.sciencedirect.com/topics/computer-science/dempster-shafer-theory
+for a good overview of Dempster-Shafer theory. Use of Dempster-Shafer allows us
+to combine multiple evidence layers showing potential groundwater dependent 
+vegetation into one, potentially improving statistical robustness of the model.
+The plausability map also provides an assessment of areas that may be under sampled
+and need attention.
+
+See associated Jupyter Notebook ensemble.ipynb for a basic tutorial on the
+main functions and order of execution.
+
+Contacts: 
+Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
+'''
 
 # import required libraries
 import os, sys
@@ -14,9 +30,46 @@ import canopy
 sys.path.append('../../shared')
 import satfetcher, tools
 
-# check, meta
-def prepare_data(file_list, nodataval):
+def check_belief_disbelief_exist(in_lyrs):
     """
+    Given a list of lists of dempster-shafer parameter
+    values, check if the type element has at least one
+    belief and disbelief type. If not, invalid is flagged.
+    """
+    
+    belief_disbelief_list = []
+    for lyr in in_lyrs:
+        belief_disbelief_list.append(lyr[2])
+
+    # check belief layers
+    invalid = False
+    if 'Belief' not in np.unique(belief_disbelief_list):
+        invalid = True
+    elif 'Disbelief' not in np.unique(belief_disbelief_list):
+        invalid = True
+        
+    return invalid
+
+
+def prepare_data(file_list, var=None, nodataval=-999):
+    """
+    Takes a list of filepath strings in which to open into xarray
+    datasets. Calls satfetcher module functions for loading.
+
+    Parameters
+    ----------
+    file_list: list
+        A list of strings representing geotiff or netcdf filepaths.
+    var : string
+        The name of a particular variable to extract from
+        dataset with multiple variables.
+    nodataval : numeric or numpy nan
+        A value ion which to standardise all nodata values to in
+        each provided input file.
+
+    Returns
+    ----------
+    da_list : list of xarray dataset or arrays.
     """
     
     # check if file list is list
@@ -32,22 +85,39 @@ def prepare_data(file_list, nodataval):
         lyr_name, lyr_ext = os.path.splitext(lyr_fn)
 
         # lazy load dataset depending on tif or nc
-        if lyr_ext == '.tif':
-            ds = satfetcher.load_local_rasters(rast_path_list=lyr_path, 
-                                               use_dask=True, 
-                                               conform_nodata_to=nodataval)    
-        elif lyr_ext == '.nc':
-            ds = satfetcher.load_local_nc(nc_path=lyr_path, 
-                                          use_dask=True, 
-                                          conform_nodata_to=nodataval)
-        else:
-            print('File {} was not a tif or netcdf - skipping.'.format(lyr_fn))
-            continue
+        try:
+            if lyr_ext == '.tif':
+                ds = satfetcher.load_local_rasters(rast_path_list=lyr_path, 
+                                                   use_dask=True, 
+                                                   conform_nodata_to=nodataval)   
+            elif lyr_ext == '.nc':
+                ds = satfetcher.load_local_nc(nc_path=lyr_path, 
+                                              use_dask=True, 
+                                              conform_nodata_to=nodataval)
+        except:
+            raise ValueError('Could not load input: {}'.format(lyr_path))
+
+        # check if crs is albers, else skipping
+        try:
+            crs = tools.get_xr_crs(ds)
+        except:
+            raise ValueError('Input: {} has no crs infomration.'.format(lyr_path))
+            
+        # check crs is albers
+        if crs != 3577:
+            raise ValueError('Input: {} crs is not projected in GDA94 Albers.'.format(lyr_path))
+
+        # convert to dataset if need be
+        if isinstance(ds, xr.DataArray):
+            ds = ds.to_dataset(dim='variable')            
+            
+        # if variable given for nc, slice
+        if lyr_ext == '.nc' and var is not None:
+            ds = ds[var].to_dataset()
             
         # check if shape correct, convert array
         if ds.to_array().shape[0] != 1:
-            print('More than one variable detected - skipping.')
-            continue
+            raise ValueError('More than one band in input: {}. Only support one.'.format(lyr_path))
 
         # append 
         da_list.append(ds)
@@ -72,19 +142,38 @@ def __get_min_max__(ds, x):
 # checks, meta
 def apply_auto_sigmoids(items):
     """
-    takes a list of items with elements in order [path, a, bc, d, ds].
-    From that, will work out which sigmoidal to apply.
+    Takes a list of arrays with elements as [path, a, bc, d, ds] 
+    and using this information, rescales each dataset 
+    using fuzzy sigmoidal function. Auto-detects which fuzzy
+    sigmoidal to apply based on values in a, bc, d. Output
+    is an updated dataset for each array in list, rescaled to
+    0 to 1.
+
+    Parameters
+    ----------
+    items: list
+        A list of arrays with elements as [path, var, type, a, bc, d, ds] .
+        Path represents path of raster/netcdf, a, bc, d are values
+        for inflection points on sigmoidal (e.g., a is low inflection, 
+        bc is mid-point or max inflection, and ds represents
+        the raw, un-scaled xarray dataset to be rescaled.
+
+    Returns
+    ----------
+    items : list of rescaled array(s).
     """
     
     for item in items:
         
         # fetch elements
         path = item[0]
-        a, bc, d = item[1], item[2], item[3]
-        ds = item[4]
+        var = item[1]
+        typ = item[2]
+        a, bc, d = item[3], item[4], item[5]
+        ds = item[6]
         
-        # expect 5 items and xr dataset...
-        if len(item) != 5:
+        # expect 7 items and xr dataset...
+        if len(item) != 7:
             continue
         elif ds is None:
             continue
@@ -114,16 +203,51 @@ def apply_auto_sigmoids(items):
 
         # reapply attributes and update original list item
         ds.attrs = attrs
-        item[4] = ds
+        item[6] = ds
         
     #return
     return items
 
-# checks, meta
+
+def seperate_ds_belief_disbelief(in_lyrs):
+    """
+    Takes a list of prepared dempster shafer list
+    elements and seperates into two seperate lists,
+    one for belief, one for disbelief.
+    """
+    
+    belief_list, disbelief_list = [], []
+    for lyr in in_lyrs:
+        typ = lyr[2]
+        
+        # seperate
+        if typ == 'Belief':
+            belief_list.append(lyr[6])
+        else:
+            disbelief_list.append(lyr[6])
+        
+    # gimme
+    return belief_list, disbelief_list
+
+
 def export_sigmoids(items, out_path):
     """
-    Takes list of sigmoided datasets and exports them
-    to desired folder with _sigmoid appended to end.
+    Simple netcdf exporter. Exports fuzzy sigmoidal 
+    versions of raster/netcdf file to netcdf file post-
+    rescaling. Calls tools script for export code.
+
+    Parameters
+    ----------
+    items: list
+        A list of arrays with elements as [path, a, bc, d, ds] .
+        Path represents path of raster/netcdf, a, bc, d are values
+        for inflection points on sigmoidal (e.g., a is low inflection, 
+        bc is mid-point or max inflection, and ds represents
+        the raw, un-scaled xarray dataset to be rescaled. Only
+        the ds element is considered.
+        
+    out_path : str
+        A string for output file location and name.
     """
     
     # checks
@@ -143,11 +267,20 @@ def export_sigmoids(items, out_path):
         print('Exporting sigmoidal {}'.format(fn))
         tools.export_xr_as_nc(ds, fn)
     
-# checks, meta
+
 def append_dempster_attr(ds_list, dempster_label='belief'):
     """
-    Small helper function to append dempster label
-    to xr dataset/array.
+    Helper functiont to append the dempster output type label
+    to existing dataset. Just an xarray update function.
+
+    Parameters
+    ----------
+    ds_list: list
+        A list of xarray datasets.
+
+    Returns
+    ----------
+    out_list : list of xarray datasets with appended attributes.
     """
     
     # check if list
@@ -163,9 +296,31 @@ def append_dempster_attr(ds_list, dempster_label='belief'):
     # return
     return out_list
 
-# check, meta
+
 def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     """
+    Dumb but effective way of resampling one dataset to others. Takes
+    a list of xarray datasets, finds lowest/highest resolution dataset
+    within list, then resamples all other datasets to that resolution.
+    Required for Dempster-Schafer ensemble modelling.
+
+    Parameters
+    ----------
+    ds_list: list
+        A list of xarray datasets.
+        
+    resample_to : str
+        Either lowest or highest allowed. If highest, the dataset 
+        with the highest resolution (smallest pixels) is used as the 
+        resample template. If lowest, the opposite occurs.
+    
+    resampling: str
+        Type of resampling method. Nearest neighjbour is default. See
+        xarray resample method for more options.
+
+    Returns
+    ----------
+    out_list : list of datasets outputs.
     """
     
     # notify
@@ -213,12 +368,32 @@ def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     # return
     return out_list 
 
-# meta, checks, split is a bit weak
+
 def perform_dempster(ds_list):
     """
-    Performs dempster-schafer ensemble modelling. 
-    Creates site vs non-site evidence layers and combines
-    in to belief, disbelief and plausability maps.
+    Performs Dempster-Schafer ensemble modelling. Creates site vs non-site 
+    evidence layers and combines in to belief, disbelief and plausability 
+    maps. Two or more layers in ds_list inout required.
+
+    Parameters
+    ----------
+    ds_list: list
+        A list of xarray datasets.
+        
+    resample_to : str
+        Either lowest or highest allowed. If highest, the dataset 
+        with the highest resolution (smallest pixels) is used as the 
+        resample template. If lowest, the opposite occurs.
+    
+    resampling: str
+        Type of resampling method. Nearest neighjbour is default. See
+        xarray resample method for more options.
+
+    Returns
+    ----------
+    ds : xarray dataset
+        An xarray dataset containing belief, disbelief and plausability 
+        variables.
     """
 
     # set up bpa's
@@ -251,11 +426,15 @@ def perform_dempster(ds_list):
     # generate plausability layer
     da_plauability = (1 - da_disbelief)
     
+    # generate belief interval
+    da_interval = (da_plauability - da_belief)
+    
     # combine into dataset
     ds = xr.merge([
         da_belief.to_dataset(name='belief'), 
         da_disbelief.to_dataset(name='disbelief'), 
-        da_plauability.to_dataset(name='plausability')
+        da_plauability.to_dataset(name='plausability'),
+        da_interval.to_dataset(name='interval')
     ])
 
     return ds
