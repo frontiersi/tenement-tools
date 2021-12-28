@@ -404,15 +404,15 @@ def get_satellite_params(platform=None):
     return params
  
  
- # todo - meta
- def validate_monitoring_areas(in_feat):
+# todo - meta
+def validate_monitoring_areas(in_feat):
     """
     Does relevant checks for information for a
     gdb feature class of one or more monitoring areas.
     """
-    
+
     is_valid = True
-    
+
     # check input feature is not none and strings
     if in_feat is None:
         raise ValueError('Monitoring area feature class not provided.')
@@ -458,8 +458,8 @@ def get_satellite_params(platform=None):
     return is_valid
  
  
- # todo - meta
- def validate_monitoring_area(area_id, platform, s_year, e_year, index):
+# todo - meta
+def validate_monitoring_area(area_id, platform, s_year, e_year, index):
     """
     Does relevant checks for information for a
     single monitoring area.
