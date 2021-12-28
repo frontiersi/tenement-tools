@@ -13,6 +13,7 @@ import shutil
 import datetime
 import xarray as xr
 import rasterio
+from osgeo import gdal
 
 sys.path.append('../../modules')
 import cog_odc
@@ -402,3 +403,147 @@ def get_satellite_params(platform=None):
         
     return params
  
+ 
+ # todo - meta
+ def validate_monitoring_areas(in_feat):
+    """
+    Does relevant checks for information for a
+    gdb feature class of one or more monitoring areas.
+    """
+    
+    is_valid = True
+    
+    # check input feature is not none and strings
+    if in_feat is None:
+        raise ValueError('Monitoring area feature class not provided.')
+    elif not isinstance(in_feat, str):
+        raise TypeError('Monitoring area feature class not string.')
+        
+    try:
+        # get feature epsg and check
+        lyr = arcpy.Describe(in_feat)
+        epsg = lyr.spatialReference.factoryCode
+        
+        # check if epsg is correct
+        if not isinstance(epsg, int) or epsg != 3577:
+            print('Monitoring area feature EPSG is incorrect, flagging as invalid.')
+            is_valid = False           
+    except:
+        print('Could not open monitoring area feature, flagging as invalid.')
+        is_valid = False
+        
+    # get num rows and all area ids
+    fields = ['area_id']
+    with arcpy.da.SearchCursor(in_feat, fields) as cursor:
+        feat_count = 0
+        area_ids = []
+        
+        for row in cursor:
+            feat_count += 1
+            area_ids.append(row[0])
+            
+
+    # check if number of features > 0
+    if feat_count == 0:
+        print('No monitoring areas found in feature, flagging as invalid.')
+        is_valid = False
+        
+    print(area_ids)
+        
+    # check if duplicate area ids
+    if len(set(area_ids)) != len(area_ids):
+        print('Duplicate area ids detected, flagging as invalid.')
+        is_valid = False
+        
+    return is_valid
+ 
+ 
+ # todo - meta
+ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
+    """
+    Does relevant checks for information for a
+    single monitoring area.
+    """
+
+    # set valid flag
+    is_valid = True
+
+    # check area id exists
+    if area_id is None:
+        print('No area id exists, flagging as invalid.')
+        is_valid = False
+
+    # check platform is Landsat or Sentinel
+    if platform is None:
+        print('No platform exists, flagging as invalid.')
+        is_valid = False
+    elif platform.lower() not in ['landsat', 'sentinel']:
+        print('Platform must be Landsat or Sentinel, flagging as invalid.')
+        is_valid = False
+
+    # check if start and end years are valid
+    if not isinstance(s_year, int) or not isinstance(e_year, int):
+        print('Start and end year values must be integers, flagging as invalid.')
+        is_valid = False
+    elif s_year < 1980 or s_year > 2050:
+        print('Start year must be between 1980 and 2050, flagging as invalid.')
+        is_valid = False
+    elif e_year < 1980 or e_year > 2050:
+        print('End year must be between 1980 and 2050, flagging as invalid.')
+        is_valid = False
+    elif e_year <= s_year:
+        print('Start year must be less than end year, flagging as invalid.')
+        is_valid = False
+    elif abs(e_year - s_year) < 2:
+        print('Must be at least 2 years between start and end year, flagging as invalid.')
+        is_valid = False
+
+    # check if index is acceptable
+    if index is None:
+        print('No index exists, flagging as invalid.')
+        is_valid = False
+    elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
+        print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
+        is_valid = False
+
+    return is_valid 
+ 
+ 
+ # todo do checks, do meta
+def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1):
+    """
+    geom object from gdal
+    x, y = arrays of coordinates from xr dataset
+    bbox 
+    transform from geobox
+    ncols, nrows = len of x, y
+
+    """
+
+    # extract bounding box extents
+    xmin, ymin, xmax, ymax = bbox.left, bbox.bottom, bbox.right, bbox.top
+
+    # create ogr transform structure
+    geotransform = (transform[2], transform[0], 0.0, 
+                    transform[5], 0.0, transform[4])
+
+    # create template raster in memory
+    dst_rast = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 , gdal.GDT_Byte)
+    dst_rb = dst_rast.GetRasterBand(1)      # get a band
+    dst_rb.Fill(0)                          # init raster with zeros
+    dst_rb.SetNoDataValue(0)                # set nodata to zero
+    dst_rast.SetGeoTransform(geotransform)  # resample, transform
+
+    # rasterise vector and flush
+    err = gdal.RasterizeLayer(dst_rast, [1], geom, burn_values=[mask_value])
+    dst_rast.FlushCache()
+
+    # get numpy version of classified raster
+    arr = dst_rast.GetRasterBand(1).ReadAsArray()
+
+    # create mask
+    mask = xr.DataArray(data=arr,
+                        dims=['y', 'x'],
+                        coords={'y': y, 'x': x})
+
+    return mask
