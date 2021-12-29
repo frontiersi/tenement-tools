@@ -14,6 +14,7 @@ import datetime
 import xarray as xr
 import rasterio
 from osgeo import gdal
+from osgeo import ogr
 
 sys.path.append('../../modules')
 import cog_odc
@@ -404,58 +405,59 @@ def get_satellite_params(platform=None):
     return params
  
  
-# todo - meta
+# todo - meta, remove arcpy dependency
 def validate_monitoring_areas(in_feat):
     """
     Does relevant checks for information for a
     gdb feature class of one or more monitoring areas.
     """
 
-    is_valid = True
-
     # check input feature is not none and strings
     if in_feat is None:
-        raise ValueError('Monitoring area feature class not provided.')
+        raise ValueError('Monitoring area feature class not provided, flagging as invalid.')
+        return False
     elif not isinstance(in_feat, str):
-        raise TypeError('Monitoring area feature class not string.')
+        raise TypeError('Monitoring area feature class not string, flagging as invalid.')
+        return False
+    elif not os.path.dirname(in_feat).endswith('.gdb'):
+        raise TypeError('Feature class is not in a geodatabase, flagging as invalid.')
+        return False
         
     try:
-        # get feature epsg and check
-        lyr = arcpy.Describe(in_feat)
-        epsg = lyr.spatialReference.factoryCode
+        # get feature
+        driver = ogr.GetDriverByName("OpenFileGDB")
+        data_source = driver.Open(os.path.dirname(in_feat), 0)
+        lyr = data_source.GetLayer('monitoring_areas')
         
-        # check if epsg is correct
-        if not isinstance(epsg, int) or epsg != 3577:
-            print('Monitoring area feature EPSG is incorrect, flagging as invalid.')
-            is_valid = False           
-    except:
-        print('Could not open monitoring area feature, flagging as invalid.')
-        is_valid = False
+        # get and check feat count
+        feat_count = lyr.GetFeatureCount()
+        if feat_count == 0:
+            print('No monitoring areas found in feature, flagging as invalid.')
+            return False
         
-    # get num rows and all area ids
-    fields = ['area_id']
-    with arcpy.da.SearchCursor(in_feat, fields) as cursor:
-        feat_count = 0
+        # get epsg
+        epsg = lyr.GetSpatialRef()
+        if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
+            print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
+            return False
+        
+        # check if any duplicate area ids
         area_ids = []
-        
-        for row in cursor:
-            feat_count += 1
-            area_ids.append(row[0])
+        for feat in lyr:
+            area_ids.append(feat['area_id'])
             
+        # check if duplicate area ids
+        if len(set(area_ids)) != len(area_ids):
+            print('Duplicate area ids detected, flagging as invalid.')
+            return False
+        
+    except Exception as e:
+        print('Could not open monitoring area feature, flagging as invalid.')
+        print(e)
+        return False
 
-    # check if number of features > 0
-    if feat_count == 0:
-        print('No monitoring areas found in feature, flagging as invalid.')
-        is_valid = False
-        
-    print(area_ids)
-        
-    # check if duplicate area ids
-    if len(set(area_ids)) != len(area_ids):
-        print('Duplicate area ids detected, flagging as invalid.')
-        is_valid = False
-        
-    return is_valid
+    # all good!
+    return True
  
  
 # todo - meta
@@ -465,48 +467,46 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
     single monitoring area.
     """
 
-    # set valid flag
-    is_valid = True
-
     # check area id exists
     if area_id is None:
         print('No area id exists, flagging as invalid.')
-        is_valid = False
+        return False
 
     # check platform is Landsat or Sentinel
     if platform is None:
         print('No platform exists, flagging as invalid.')
-        is_valid = False
+        return False
     elif platform.lower() not in ['landsat', 'sentinel']:
         print('Platform must be Landsat or Sentinel, flagging as invalid.')
-        is_valid = False
+        return False
 
     # check if start and end years are valid
     if not isinstance(s_year, int) or not isinstance(e_year, int):
         print('Start and end year values must be integers, flagging as invalid.')
-        is_valid = False
+        return False
     elif s_year < 1980 or s_year > 2050:
         print('Start year must be between 1980 and 2050, flagging as invalid.')
-        is_valid = False
+        return False
     elif e_year < 1980 or e_year > 2050:
         print('End year must be between 1980 and 2050, flagging as invalid.')
-        is_valid = False
+        return False
     elif e_year <= s_year:
         print('Start year must be less than end year, flagging as invalid.')
-        is_valid = False
+        return False
     elif abs(e_year - s_year) < 2:
         print('Must be at least 2 years between start and end year, flagging as invalid.')
-        is_valid = False
+        return False
 
     # check if index is acceptable
     if index is None:
         print('No index exists, flagging as invalid.')
-        is_valid = False
+        return False
     elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
         print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
-        is_valid = False
+        return False
 
-    return is_valid 
+    # all good!
+    return True 
  
  
  # todo do checks, do meta
