@@ -411,53 +411,61 @@ def validate_monitoring_areas(in_feat):
     Does relevant checks for information for a
     gdb feature class of one or more monitoring areas.
     """
+    
+    # set up flag
+    is_valid = True
 
     # check input feature is not none and strings
     if in_feat is None:
-        raise ValueError('Monitoring area feature class not provided, flagging as invalid.')
-        return False
+        print('Monitoring area feature class not provided, flagging as invalid.')
+        is_valid = False
     elif not isinstance(in_feat, str):
-        raise TypeError('Monitoring area feature class not string, flagging as invalid.')
-        return False
+        print('Monitoring area feature class not string, flagging as invalid.')
+        is_valid = False
     elif not os.path.dirname(in_feat).endswith('.gdb'):
-        raise TypeError('Feature class is not in a geodatabase, flagging as invalid.')
-        return False
+        print('Feature class is not in a geodatabase, flagging as invalid.')
+        is_valid = False
         
-    try:
-        # get feature
-        driver = ogr.GetDriverByName("OpenFileGDB")
-        data_source = driver.Open(os.path.dirname(in_feat), 0)
-        lyr = data_source.GetLayer('monitoring_areas')
-        
-        # get and check feat count
-        feat_count = lyr.GetFeatureCount()
-        if feat_count == 0:
-            print('No monitoring areas found in feature, flagging as invalid.')
-            return False
-        
-        # get epsg
-        epsg = lyr.GetSpatialRef()
-        if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
-            print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
-            return False
-        
-        # check if any duplicate area ids
-        area_ids = []
-        for feat in lyr:
-            area_ids.append(feat['area_id'])
+    # if we've made it, check shapefile
+    if is_valid:
+        try:
+            # get feature
+            driver = ogr.GetDriverByName("OpenFileGDB")
+            data_source = driver.Open(os.path.dirname(in_feat), 0)
+            lyr = data_source.GetLayer('monitoring_areas')
             
-        # check if duplicate area ids
-        if len(set(area_ids)) != len(area_ids):
-            print('Duplicate area ids detected, flagging as invalid.')
-            return False
-        
-    except Exception as e:
-        print('Could not open monitoring area feature, flagging as invalid.')
-        print(e)
-        return False
+            # get and check feat count
+            feat_count = lyr.GetFeatureCount()
+            if feat_count == 0:
+                print('No monitoring areas found in feature, flagging as invalid.')
+                is_valid = False
+            
+            # get epsg
+            epsg = lyr.GetSpatialRef()
+            if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
+                print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
+                is_valid = False
+            
+            # check if any duplicate area ids
+            area_ids = []
+            for feat in lyr:
+                area_ids.append(feat['area_id'])
+                
+            # check if duplicate area ids
+            if len(set(area_ids)) != len(area_ids):
+                print('Duplicate area ids detected, flagging as invalid.')
+                is_valid = False
+                
+            # close data source
+            data_source.Destroy()
+            
+        except:
+            print('Could not open monitoring area feature, flagging as invalid.')
+            is_valid = False
+            data_source.Destroy()
 
-    # all good!
-    return True
+    # return
+    return is_valid
  
  
 # todo - meta
@@ -466,7 +474,7 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
     Does relevant checks for information for a
     single monitoring area.
     """
-
+    
     # check area id exists
     if area_id is None:
         print('No area id exists, flagging as invalid.')
