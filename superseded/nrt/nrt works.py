@@ -20,15 +20,11 @@ import rasterio
 from osgeo import gdal
 from osgeo import ogr
 
-try:
-    sys.path.append('../../modules')
-    import cog_odc
+sys.path.append('../../modules')
+import cog_odc
 
-    sys.path.append('../../shared')
-    import arc, satfetcher, tools
-    
-except:
-    print('TEMP DELETE THIS TRYCATCH LATER ONCE WEMACD UP AND RUNNING')
+sys.path.append('../../shared')
+import arc, satfetcher, tools
 
 
 def create_nrt_project(out_folder, out_filename):
@@ -526,8 +522,6 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
  
  
  # todo do checks, do meta
-
-
 def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1):
     """
     geom object from gdal
@@ -573,8 +567,6 @@ def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1)
 # todo 0 : current error: historyBound is wrong.
 # todo 1: any numpy we "copy" must use .copy(), or we overwrite mem...!
 # todo 2: force type where needed... important!
-
-# note: check the pycharm project pyEWMACD for original, working code if i break this!!!
 
 
 def harmonic_matrix(timeSeries0to2pi, numberHarmonicsSine,  numberHarmonicsCosine):
@@ -1150,21 +1142,20 @@ def annual_summaries(Values, yearIndex, summaryMethod='date-by-date'):
         #finalOutput = (np.round(aggregate(Values, by=list(yearIndex), FUN=mean, na.rm = T)))$x
         ...
 
-#
 # todo check use of inf... not sure its purpose yet...
-def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
+def EWMACD(inputBrick, DateInfo=None, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, numberCPUs='all', writeFile=True, fileOverwrite=False, fileName='EWMACD_Outputs', reverseOrder=False, summaryMethod='date-by-date', parallelFramework='snow', outputType='chart.values'):
     """main function"""
 
-    # notify
-    #
+    # todo added this for testing
+    # load csc of dates (fix this up)
+    in_csv = r"C:\Users\Lewis\Curtin\GDVII - General\Work Package 2\Analysis\EWMACD\Temporal Distribution with DOY.csv"
+    DateInfo = pd.read_csv(in_csv)
+    #print(inputBrick)
+    #print(DateInfo)
 
-    # get day of years and associated year as int 16
-    DOYs = ds['time.dayofyear'].data.astype('int16')
-    Years = ds['time.year'].data.astype('int16')
-
-    # check doys, years
-    if len(DOYs) != len(Years):
-        raise ValueError('DOYs and Years are not same length.')
+    # get lsit of doys, years todo: get from ds?
+    DOYs = np.array(list(DateInfo['DOY']), dtype='int16')
+    Years = np.array(list(DateInfo['Year']), dtype='int16')
 
     # if no training date provided, choose first year
     if trainingStart is None:
@@ -1190,75 +1181,28 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
     if outputType == 'chart.values':
         simple_output = True
 
-    # create per-pixel vectorised version of ewmacd per-pixel func
-    def map_ewmacd_to_xr(pixel):
-        
-        try:
-            change = EWMACD_pixel_date_by_date(myPixel=pixel,
-                                               DOYs=DOYs,
-                                               Years=Years,
-                                               _lambda=_lambda,
-                                               numberHarmonicsSine=numberHarmonicsSine,
-                                               numberHarmonicsCosine=numberHarmonicsCosine,
-                                               trainingStart=trainingStart,
-                                               testingEnd=testingEnd,
-                                               trainingPeriod=trainingPeriod,
-                                               trainingEnd=trainingEnd,
-                                               minTrainingLength=minTrainingLength,
-                                               maxTrainingLength=maxTrainingLength,
-                                               trainingFitMinimumQuality=trainingFitMinimumQuality,
-                                               xBarLimit1=xBarLimit1,
-                                               xBarLimit2=xBarLimit2,
-                                               lowthresh=lowthresh,
-                                               lambdaSigs=lambdaSigs,
-                                               rounding=rounding,
-                                               persistence_per_year=persistence_per_year,
-                                               reverseOrder=reverseOrder,
-                                               simple_output=simple_output)
+    # todo put into dask function
+    try:
+        o = EWMACD_pixel_date_by_date(myPixel=inputBrick, DOYs=DOYs, Years=Years, _lambda=_lambda,
+                                      numberHarmonicsSine=numberHarmonicsSine, numberHarmonicsCosine=numberHarmonicsCosine,
+                                      trainingStart=trainingStart, testingEnd=testingEnd, trainingPeriod='dynamic',
+                                      trainingEnd=trainingEnd, minTrainingLength=minTrainingLength,
+                                      maxTrainingLength=maxTrainingLength,
+                                      trainingFitMinimumQuality=trainingFitMinimumQuality, xBarLimit1=xBarLimit1,
+                                      xBarLimit2=xBarLimit2, lowthresh=lowthresh, lambdaSigs=lambdaSigs, rounding=rounding,
+                                      persistence_per_year=persistence_per_year, reverseOrder=reverseOrder,
+                                      simple_output=simple_output)
 
-            # get change per date from above
-            change = change.get('dateByDate')
+        # get datebydate from above
+        o = o.get('dateByDate')
 
-            # calculate summary method (todo set up for others than just date to date
-            final_out = annual_summaries(Values=change,
-                                         yearIndex=Years,
-                                         summaryMethod=summaryMethod)
+    # parallel work here
+        final_out = annual_summaries(Values=o, yearIndex=Years, summaryMethod=summaryMethod)
+    except Exception as e:
+        print('ERROR CHECK!')
+        print(e)
+        final_out = NAvector
 
-        except Exception as e:
-            print('ERROR CHECK!')
-            print(e)
-            final_out = NAvector
-
-        #return final_out
-        return final_out
-        
-
-    # map ewmacd func to ds and compute it
-    ds = xr.apply_ufunc(map_ewmacd_to_xr,
-                        ds,
-                        input_core_dims=[['time']],
-                        output_core_dims=[['time']],
-                        vectorize=True)
+    return final_out
     
-    # rename veg_idx to change and convert to float32
-    ds = ds.rename({'veg_idx': 'change'}).astype('float32')
-    
-    #return dataset
-    return ds
 
-# temp
-if __name__ == '__main__':
-    ds = xr.open_dataset(r"C:\Users\Lewis\Desktop\testing ds\ds.nc")
-
-    ds_summary = ds.median(['x', 'y'])
-
-    output = EWMACD(ds=ds_summary)
-
-    # todo - the order of dims is wrong on output
-    ds_final_veg, _ = xr.broadcast(ds_summary, ds)   # want same median value for every pixel per image
-    ds_final_change, _ = xr.broadcast(output , ds)   # want same change value for every pixel per image
-
-    # ensure dimensions in original order
-    ds_final_veg = ds_final_veg.transpose('time', 'y', 'x')
-    ds_final_change = ds_final_change.transpose('time', 'y', 'x')
-    print(output)
