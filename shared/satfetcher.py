@@ -511,7 +511,7 @@ def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
         else:
             # mask via provided nodata
             print('No NoData values found in raster: {0}.'.format(nc_path))
-            da.attrs.update({'nodatavals': 'unknown'})
+            ds.attrs.update({'nodatavals': 'unknown'})
 
         # notify and append
         print('Converted netcdf to xarray dataset: {0}'.format(nc_path))

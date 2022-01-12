@@ -12,6 +12,7 @@ import sys
 import shutil
 import time
 import datetime
+import smtplib
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -19,6 +20,8 @@ import scipy.stats
 import rasterio
 from osgeo import gdal
 from osgeo import ogr
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 try:
     sys.path.append('../../modules')
@@ -960,7 +963,55 @@ def EWMACD_pixel_date_by_date(myPixel, DOYs, Years, _lambda, numberHarmonicsSine
     persistence = persistence.astype('int16')  # todo added conversion to int, check
 
     # todo add training period == static
-    # ...
+    if trainingPeriod == 'static':
+        if minTrainingLength == 0:
+            minTrainingLength = 1
+
+        if np.isinf(minTrainingLength):  # todo using inf...
+            minTrainingLength = 1
+
+        DecimalYearsCleaned = (YearsCleaned + DOYsCleaned / 365)
+
+        # call optimize hreg
+        optimal_outputs = optimize_hreg(DecimalYearsCleaned,
+                                        DOYsCleaned,
+                                        myPixelCleaned,
+                                        trainingFitMinimumQuality,
+                                        minTrainingLength,
+                                        maxTrainingLength,
+                                        ns=1,
+                                        nc=1,
+                                        screenSigs=xBarLimit1)
+
+        # get bounds, precedents
+        historyBound = optimal_outputs.get('historyBound')
+        training_precedents = optimal_outputs.get('fitPrevious')
+
+        # combine bp start, tracker, ignore start if empty
+        breakPointsStart = np.append(breakPointsStart, breakPointsTrackerCleaned[0])
+        breakPointsEnd = np.append(breakPointsEnd, breakPointsTrackerCleaned[historyBound])
+
+        if np.isnan(historyBound):  # todo just check this handles None
+            return dateByDateWithMissing
+
+        # call ewmac clean pixel date by date
+        tmpOut = EWMACD_clean_pixel_date_by_date(inputPixel=myPixelCleaned,
+                                                 numberHarmonicsSine=numberHarmonicsSine,
+                                                 numberHarmonicsCosine=numberHarmonicsCosine,
+                                                 inputDOYs=DOYsCleaned,
+                                                 inputYears=YearsCleaned,
+                                                 trainingStart=trainingStart,  # todo added this
+                                                 trainingEnd=trainingEnd,  # todo added this
+                                                 _lambda=_lambda,
+                                                 lambdaSigs=lambdaSigs,
+                                                 historyBound=historyBound,
+                                                 precedents=training_precedents,
+                                                 persistence=persistence)
+
+        # get output values
+        runKeeps = tmpOut.get('outputValues')
+        runKeepsResiduals = tmpOut.get('residualOutputValues')
+        BetaFirst = tmpOut.get('Beta')
 
     # begin dynamic (Edyn) method
     if trainingPeriod == 'dynamic':
@@ -1150,7 +1201,7 @@ def annual_summaries(Values, yearIndex, summaryMethod='date-by-date'):
         #finalOutput = (np.round(aggregate(Values, by=list(yearIndex), FUN=mean, na.rm = T)))$x
         ...
 
-#
+
 # todo check use of inf... not sure its purpose yet...
 def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
     """main function"""
@@ -1246,13 +1297,68 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
     #return dataset
     return ds
 
+
+# todo checks
+def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
+    """
+    """
+    
+    # check sent from
+    if not isinstance(sent_from, str):
+        raise TypeError('Sent from must be string.')
+    elif not isinstance(sent_to, str):
+        raise TypeError('Sent to must be string.')
+    elif not isinstance(subject, str):
+        raise TypeError('Subject must be string.')
+    elif not isinstance(body_text, str):
+        raise TypeError('Body text must be string.')     
+    elif not isinstance(smtp_server, str):
+        raise TypeError('SMTP server must be string.')        
+    elif not isinstance(smtp_port, int):
+        raise TypeError('SMTP port must be integer.')
+    elif not isinstance(username, str):
+        raise TypeError('Username must be string.')     
+    elif not isinstance(password, str):
+        raise TypeError('Password must be string.')
+        
+    # notify
+    print('Emailing alert.')
+    
+    # construct header text
+    msg = MIMEMultipart()
+    msg['From'] = sent_from
+    msg['To'] = sent_to
+    msg['Subject'] = subject
+
+    # construct body text (plain)
+    mime_body_text = MIMEText(body_text)
+    msg.attach(mime_body_text)
+
+    # create secure connection with server and send
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+
+        # begin ttls
+        server.starttls()
+
+        # login to server
+        server.login(username, password)
+
+        # send email
+        server.sendmail(sent_from, sent_to, msg.as_string())
+
+        # notify
+        print('Emailed alert area.')
+                
+    return
+
+
 # temp
 if __name__ == '__main__':
     ds = xr.open_dataset(r"C:\Users\Lewis\Desktop\testing ds\ds.nc")
 
     ds_summary = ds.median(['x', 'y'])
 
-    output = EWMACD(ds=ds_summary)
+    output = EWMACD(ds=ds_summary, trainingPeriod='dynamic')
 
     # todo - the order of dims is wrong on output
     ds_final_veg, _ = xr.broadcast(ds_summary, ds)   # want same median value for every pixel per image
@@ -1262,3 +1368,13 @@ if __name__ == '__main__':
     ds_final_veg = ds_final_veg.transpose('time', 'y', 'x')
     ds_final_change = ds_final_change.transpose('time', 'y', 'x')
     print(output)
+    
+    
+# what i need to do
+# ui buttons:
+# create project button - calls nrt create project that builds new, empty gdb with monitoring areas feature
+# create manage areas button - opens tab that has basic controls for adding, modifying, deleting monitoring areas? leave for last
+# prevent 2011, 2012 deom being used
+
+# nrt 
+
