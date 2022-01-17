@@ -26,6 +26,7 @@ import cog_odc
 sys.path.append('../../shared')
 import arc, satfetcher, tools
 
+# these are all working scripts prior to modifications. just a backup really
 
 def create_nrt_project(out_folder, out_filename):
     """
@@ -1206,3 +1207,250 @@ def EWMACD(inputBrick, DateInfo=None, trainingPeriod='dynamic', trainingStart=No
     return final_out
     
 
+
+
+
+# working nrt sync cubes method for toolbox, we dont really want a tool for this now
+# it has been built in the monit areas function 
+class NRT_Sync_Cube(object):
+
+    def __init__(self):
+        """Define the tool (tool name is the name of the class)."""
+        self.label = "NRT Sync Cube"
+        self.description = "Sync existing (or new) cubes for monitoring areas."
+        self.canRunInBackground = False
+
+    def getParameterInfo(self):
+        """
+        Set various ArcGIS Pro UI controls. Data validation
+        is enforced via ArcGIS Pro API.
+        """
+        
+        # input monitoring area features
+        par_in_feat = arcpy.Parameter(
+                        displayName='Input monitoring area features',
+                        name='in_feat',
+                        datatype='GPFeatureLayer',
+                        parameterType='Required',
+                        direction='Input',
+                        multiValue=False)
+        par_in_feat.filter.list = ['Polygon']
+                                                                
+        # combine parameters
+        parameters = [
+            par_in_feat,
+        ]
+        
+        return parameters
+
+    def isLicensed(self):
+        """Set whether tool is licensed to execute."""
+        return True
+
+    def updateParameters(self, parameters):
+        """Modify the values and properties of parameters before internal
+        validation is performed.  This method is called whenever a parameter
+        has been changed."""
+        return
+
+    def updateMessages(self, parameters):
+        """Modify the messages created by internal validation for each tool
+        parameter.  This method is called after internal validation."""
+        return
+
+    def execute(self, parameters, messages):
+        """
+        Executes the NRT Sync Cube module.
+        """
+        
+        # set gdal global environ
+        import os
+        os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+        os.environ['CPL_VSIL_CURL_ALLOWED_EXTENSIONS '] = 'tif'
+        os.environ['VSI_CACHE '] = 'TRUE'
+        os.environ['GDAL_HTTP_MULTIRANGE '] = 'YES'
+        os.environ['GDAL_HTTP_MERGE_CONSECUTIVE_RANGES '] = 'YES'
+        
+        # also set rasterio env variables
+        rasterio_env = {
+            'GDAL_DISABLE_READDIR_ON_OPEN': 'EMPTY_DIR',
+            'CPL_VSIL_CURL_ALLOWED_EXTENSIONS':'tif',
+            'VSI_CACHE': True,
+            'GDAL_HTTP_MULTIRANGE': 'YES',
+            'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
+        }
+
+        # disable future warnings
+        import warnings
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        
+        # safe imports
+        import sys                      # arcgis comes with these
+        import datetime                 # arcgis comes with these
+        import numpy as np              # arcgis comes with these
+        import arcpy                    # arcgis comes with these
+        from datetime import datetime   # arcgis comes with these
+        
+        # risky imports (not native to arcgis)
+        try:
+            import xarray as xr
+            import dask
+            import rasterio
+            import pystac_client
+            from odc import stac
+        except:
+            arcpy.AddError('Python libraries xarray, dask, rasterio, pystac, or odc not installed.')
+            raise
+            
+        # import tools
+        try:
+            # shared folder
+            sys.path.append(FOLDER_SHARED)
+            import arc, satfetcher, tools
+
+            # module folder
+            sys.path.append(FOLDER_MODULES)
+            import nrt
+        except:
+            arcpy.AddError('Could not find tenement tools python scripts (modules, shared).')
+            raise            
+         
+        # grab parameter values 
+        in_feat = parameters[0]        # input monitoring area features
+
+        
+        # # # # #
+        # notify user and set up progress bar
+        arcpy.AddMessage('Beginning NRT Sync Cube...')
+        arcpy.SetProgressor(type='step', 
+                            message='Preparing parameters...',
+                            min_range=0, max_range=2)
+                            
+                            
+        # prepare features shapefile
+        shp_desc = arcpy.Describe(in_feat)
+        in_feat = os.path.join(shp_desc.path, shp_desc.name)
+        
+        # temp do this dynamically
+        in_epsg = 3577
+                            
+        # validate monitoring area feature class
+        if not nrt.validate_monitoring_areas(in_feat):
+            arcpy.AddError('Monitoring areas feature is invalid.')
+            raise
+            
+        # get input featureclass file, get dir and filename
+        in_name = os.path.basename(in_feat)     # name of monitor fc
+        in_gdb = os.path.dirname(in_feat)       # path of gdb
+        
+        # check gdv extension
+        if not in_gdb.endswith('.gdb'):
+            arcpy.AddError('Feature class is not in a geodatabase.')
+            raise
+        else:
+            in_path = os.path.splitext(in_gdb)[0]   # path of gdb without ext
+            in_data_path = in_path + '_' + 'cubes'  # associated cube data folder
+            
+        # check if cubes folder exists
+        if not os.path.exists(in_data_path):
+            arcpy.AddError('Could not find cube folder for selected monitoring areas.')
+            raise
+
+        # todo count num feats in fc for progressor 
+        #
+        
+        
+        # # # # #
+        # notify and increment progress bar
+        arcpy.SetProgressorLabel('Iterating through monitoring areas...')
+        arcpy.SetProgressorPosition(1)
+        
+        # set required fields and iterate
+        fields = ['area_id', 'platform', 's_year', 'e_year', 'index', 'Shape@']
+        with arcpy.da.UpdateCursor(in_feat, fields) as cursor:
+            for row in cursor:
+                
+                # # # # #
+                # notify
+                arcpy.AddMessage('Validating monitoring area: {}'.format(row[0]))
+                
+                # send off to check if valid
+                is_valid = nrt.validate_monitoring_area(area_id=row[0],
+                                                        platform=row[1], 
+                                                        s_year=row[2], 
+                                                        e_year=row[3], 
+                                                        index=row[4])
+                
+                # check if monitoring area is valid
+                if not is_valid:
+                    arcpy.AddWarning('Invalid monitoring area: {}, skipping.'.format(row[0]))
+                    continue
+            
+            
+                # # # # #
+                # notify
+                arcpy.AddMessage('Preparing monitoring area: {}'.format(row[0]))
+                
+                # prepare start year from input, get latest year for end
+                s_year = '{}-01-01'.format(row[2])
+                e_year = '{}-12-31'.format(datetime.now().year)  # e.g. always latest, use test here
+                
+                # get parameters for platform
+                params = nrt.get_satellite_params(platform=row[1])  
+                
+                # convert get bbox in wgs84
+                srs = arcpy.SpatialReference(4326)  # we always want wgs84
+                geom = row[5].projectAs(srs)
+                bbox = [geom.extent.XMin, geom.extent.YMin, 
+                        geom.extent.XMax, geom.extent.YMax]
+                        
+                # set output nc
+                out_nc = os.path.join(in_data_path, 'cube' + '_' + row[0] + '.nc')
+                
+                # open existing cube if exists, get date information
+                ds_existing = None
+                if os.path.exists(out_nc):
+                    try:
+                        # open current cube, get first and last date
+                        ds_existing = xr.open_dataset(out_nc)
+                        s_year = ds_existing.isel(time=-1)
+                        s_year = str(s_year['time'].dt.strftime('%Y-%m-%d').values)                       
+                    except:
+                        arcpy.AddWarning('Could not open existing cube, skipping.')
+                        continue
+                        
+                        
+                # # # # #
+                # notify
+                arcpy.AddMessage('Syncing monitoring area: {}'.format(row[0]))
+                
+                # sync cube to now
+                ds = nrt.sync_nrt_cube(out_nc=out_nc,
+                                       collections=params.get('collections'),
+                                       bands=params.get('bands'),
+                                       start_dt=s_year,
+                                       end_dt=e_year,
+                                       bbox=bbox,
+                                       in_epsg=in_epsg,
+                                       slc_off=False,
+                                       resolution=params.get('resolution'),
+                                       ds_existing=ds_existing,
+                                       chunks={})
+                
+                # download and overwrite netcdf
+                with rasterio.Env(**rasterio_env):
+                    tools.export_xr_as_nc(ds=ds, filename=out_nc)
+                
+                # close ds
+                ds.close()
+                del ds
+
+
+        # # # # #
+        # notify and increment progress bar
+        arcpy.SetProgressorLabel('Finalising process...')
+        arcpy.SetProgressorPosition(3)
+
+        # notify user
+        arcpy.AddMessage('Monitoring areas synced successfully.')
+        return

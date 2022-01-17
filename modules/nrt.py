@@ -33,7 +33,7 @@ try:
 except:
     print('TEMP DELETE THIS TRYCATCH LATER ONCE WEMACD UP AND RUNNING')
 
-
+# prints
 def create_nrt_project(out_folder, out_filename):
     """
     Creates a new empty geodatabase with required features
@@ -46,6 +46,12 @@ def create_nrt_project(out_folder, out_filename):
     out_filename: str
         An output filename for new project.
     """
+    
+    # imports 
+    try:
+        import arcpy 
+    except:
+        raise ValueError('Could not import arcpy.')
     
     # notify
     print('Creating new monitoring project database...')
@@ -1354,11 +1360,12 @@ def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None,
 
 # temp
 if __name__ == '__main__':
-    ds = xr.open_dataset(r"C:\Users\Lewis\Desktop\testing ds\ds.nc")
 
-    ds_summary = ds.median(['x', 'y'])
+    ds_summary = xr.open_dataset(r"C:\Users\Lewis\Desktop\testing ds\ds_static.nc")
 
-    output = EWMACD(ds=ds_summary, trainingPeriod='dynamic')
+    #ds_summary = ds.median(['x', 'y'])
+
+    output = EWMACD(ds=ds_summary, trainingPeriod='static')
 
     # todo - the order of dims is wrong on output
     ds_final_veg, _ = xr.broadcast(ds_summary, ds)   # want same median value for every pixel per image
@@ -1372,8 +1379,12 @@ if __name__ == '__main__':
     
 # what i need to do
 # ui buttons:
-# create project button - calls nrt create project that builds new, empty gdb with monitoring areas feature
+# create project button - calls nrt create project that builds new, empty gdb with monitoring areas features
 # create manage areas button - opens tab that has basic controls for adding, modifying, deleting monitoring areas? leave for last
+# create monitor tool button - opens tab that allows for running tool
+
+
+# todo :
 # prevent 2011, 2012 deom being used
 
 # nrt 
