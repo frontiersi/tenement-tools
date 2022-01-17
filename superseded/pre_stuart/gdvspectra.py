@@ -72,15 +72,7 @@ def subset_months(ds, month=None, inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+                        
     # reduce to wet, dry months
     try:
         print('Reducing dataset into months: {0}.'.format(months))
@@ -91,9 +83,6 @@ def subset_months(ds, month=None, inplace=True):
     
     # notify and return
     print('Subset to requested months successfully.')
-    if was_da:
-        ds = ds.to_array()
-    
     return ds
 
 
@@ -146,16 +135,7 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None, inplace=True
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+    
     # if dask, must compute for resample median
     # note, there seems to be a dask-resample bug where nan is returned
     # randomly when dask resampled. leaving this here in case bug occurs 
@@ -203,9 +183,6 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None, inplace=True
     
     # notify and return
     print('Resampled dataset to annual wet and dry medians successfully.')
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
 
@@ -244,14 +221,6 @@ def resample_to_freq_medians(ds, freq='YS', inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
     
     # if dask, must compute for resample median
     # note, there seems to be a dask-resample bug where nan is returned
@@ -270,9 +239,6 @@ def resample_to_freq_medians(ds, freq='YS', inplace=True):
     #if was_dask:
         #ds = ds.chunk({'time': 1})
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Resampled down to annual medians successfully.')
     return ds
@@ -331,10 +297,6 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01, i
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
     
-    if p_value not in (0.10, 0.05, 0.01):
-        print('P-value not supported. Setting to 0.01.')
-        p_value = 0.01
-
     # set z_value based on user significance (p_value)
     if p_value == 0.10:
         z_value = 1.65
@@ -343,21 +305,12 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01, i
     elif p_value == 0.01:
         z_value = 2.58
     else:
-        p_value = 0.01
+        print('P-value not supported. Setting to 0.01.')
         z_value = 2.58
 
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
             
     # split into wet, dry
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
@@ -395,10 +348,6 @@ def nullify_wet_dry_outliers(ds, wet_month=None, dry_month=None, p_value=0.01, i
         
     # notify and return
     print('Nullified wet, dry season outliers successfully.')
-
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
 
@@ -440,15 +389,6 @@ def drop_incomplete_wet_dry_years(ds, inplace=True):
     if not inplace:
         ds = ds.copy(deep=True)
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-    
     # get annual groups list, get first and last year info
     groups = list(ds.groupby('time.year').groups.items())
     
@@ -467,71 +407,8 @@ def drop_incomplete_wet_dry_years(ds, inplace=True):
         print('No uneven years detected, no data lost.')
 
     # return
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
-# helper func to fill edges via bfill, ffill
-def __fill_edge__(ds, edge=None):
-    """
-    Helper function for fill_empty_wet_dry_edges()
-
-    Parameters
-    ----------
-    ds: xarray dataset
-        A dataset with x, y and time dims. NOTE: ONLY accepts dataset as it's a helper function.
-    edge: string
-        Variable to pass in edge value, accepts either 'first' or 'last'
-
-    Returns
-    ----------
-    ds : xarray dataset
-
-    """
-    if not isinstance(ds, (xr.Dataset)):
-        raise TypeError('__fill_edge__() can ONLY accept a Dataset.')
-
-    # check edge
-    if edge not in ['first', 'last']:
-        raise ValueError('Edge must be first or last.')
-
-    # create sort order
-    asc = True
-    if edge == 'last':
-        asc = False
-
-    # loop each da in ds
-    for i, dt in enumerate(ds['time'].sortby('time', asc)):
-        
-        # get current datetime
-        da = ds.sel(time=dt)
-        
-        # check if vars are all nan depending on xr type
-        if isinstance(da, xr.Dataset):
-            da_has_nans = da.to_array().isnull().all()
-        elif isinstance(da, xr.DataArray):
-            da_has_nans = da.isnull().all()
-            
-        # if edge empty, get next time with vals, fill
-        if i == 0 and da_has_nans:
-            print('{0} time is empty. Processing to fill.'.format(edge.title()))
-
-        elif i == 0 and not da_has_nans:
-            print('{0} time has values. No need to fill.'.format(edge.title()))
-            break
-
-        elif i > 0 and not da_has_nans:
-            print('Performing backfill.')
-            if edge == 'first':
-                ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), 
-                                ds.bfill('time'), ds)
-            elif edge == 'last':
-                ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), 
-                                ds.ffill('time'), ds)
-            break
-
-    return ds
 
 def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     """
@@ -585,36 +462,68 @@ def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
     # split into wet, dry - we dont want to fill wet with dry, vice versa
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
 
+    # helper func to fill edges via bfill, ffill
+    def fill_edge(ds, edge=None):
+        
+        # check edge
+        if edge not in ['first', 'last']:
+            raise ValueError('Edge must be first or last.')
+
+        # create sort order
+        asc = True
+        if edge == 'last':
+            asc = False
+
+        # loop each da in ds
+        for i, dt in enumerate(ds['time'].sortby('time', asc)):
+            
+            # get current datetime
+            da = ds.sel(time=dt)
+            
+            # check if vars are all nan depending on xr type
+            if isinstance(da, xr.Dataset):
+                da_has_nans = da.to_array().isnull().all()
+            elif isinstance(da, xr.DataArray):
+                da_has_nans = da.isnull().all()
+                
+            # if edge empty, get next time with vals, fill
+            if i == 0 and da_has_nans:
+                print('{0} time is empty. Processing to fill.'.format(edge.title()))
+
+            elif i == 0 and not da_has_nans:
+                print('{0} time has values. No need to fill.'.format(edge.title()))
+                break
+
+            elif i > 0 and not da_has_nans:
+                print('Performing backfill.')
+                if edge == 'first':
+                    ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), 
+                                  ds.bfill('time'), ds)
+                elif edge == 'last':
+                    ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), 
+                                  ds.ffill('time'), ds)
+                break
+
+        return ds
+
     # fill edges for wet first, last
     print('Filling wet season edges.')
-    ds_wet = __fill_edge__(ds_wet, edge='first')
-    ds_wet = __fill_edge__(ds_wet, edge='last')
+    ds_wet = fill_edge(ds_wet, edge='first')
+    ds_wet = fill_edge(ds_wet, edge='last')
 
     # fill edges for wet first, last
     print('Filling dry season edges.')
-    ds_dry = __fill_edge__(ds_dry, edge='first')
-    ds_dry = __fill_edge__(ds_dry, edge='last')
+    ds_dry = fill_edge(ds_dry, edge='first')
+    ds_dry = fill_edge(ds_dry, edge='last')
 
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Filled empty wet and dry edges successfully.')
     return ds
@@ -676,15 +585,6 @@ def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inpl
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
     # check wet dry list, convert if not
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
@@ -700,9 +600,6 @@ def interp_empty_wet_dry(ds, wet_month=None, dry_month=None, method='full', inpl
 
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
-
-    if was_da:
-         ds = ds.to_array()
 
     # notify and return
     print('Interpolated empty values successfully.')
@@ -757,25 +654,11 @@ def interp_empty(ds, method='full', inplace=True):
     if not inplace:
         ds = ds.copy(deep=True)
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-    
     # interpolate for ds
     ds = tools.perform_interp(ds=ds, method=method)
 
     # notify and return
     print('Interpolated empty values successfully.')
-
-    if was_da:
-        ds = ds.to_array()
-   
-
     return ds   
 
 
@@ -827,15 +710,6 @@ def interp_empty_months(ds, method='full', inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
     # get list of months within dataset
     months_list = list(ds.groupby('time.month').groups.keys())
@@ -860,10 +734,6 @@ def interp_empty_months(ds, method='full', inplace=True):
     
     # notify and return
     print('Interpolating empty values along months successfully.')
-
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
 
@@ -895,7 +765,7 @@ def calc_ivts(ds, ds_med, q_upper=0.99, q_lower=0.05):
 
     Returns
     ----------
-    ds_targets : xarray dataset or array.
+    ds : xarray dataset or array.
     """
     
     # notify
@@ -916,32 +786,15 @@ def calc_ivts(ds, ds_med, q_upper=0.99, q_lower=0.05):
         raise TypeError('Dataset not an xarray type.')
     elif 'x' not in list(ds_med.dims) or 'y' not in list(ds_med.dims):
         raise ValueError('No x or y dimensions in dataset.')
-    
-    # check q_lower < q_upper
-    if q_upper <= q_lower:
-        raise ValueError('Upper quantile value must be larger than lower quantile.')
+        
     # check q_value 0-1
-    elif q_upper < 0 or q_upper > 1:
+    if q_upper < 0 or q_upper > 1:
         raise ValueError('Upper quantile value must be between 0 and 1.')
-    # check q_value 0-1
-    elif q_lower < 0 or q_lower > 1:
-        raise ValueError('Lower quantile value must be between 0 and 1.')
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-    
-    if isinstance(ds_med, xr.DataArray):
-        try:
-            ds_med = ds_med.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
+    # check q_value 0-1
+    if q_lower < 0 or q_lower > 1:
+        raise ValueError('Lower quantile value must be between 0 and 1.')
+        
     # get upper n quantile (i.e., percentiles) of dry vege, moist
     ds_quants = ds_med.quantile(q=q_upper, skipna=True)
     ds_quants = xr.where(ds_med > ds_quants, True, False)
@@ -972,11 +825,6 @@ def calc_ivts(ds, ds_med, q_upper=0.99, q_lower=0.05):
             
     # notify and return
     print('Created invariant target sites successfully.')
-
-    if was_da:
-        ds_targets = ds_targets.to_array()
-
-
     return ds_targets
 
 
@@ -1029,14 +877,12 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
     elif len(ds['time.year']) < 3:
         raise ValueError('Less than 3 years in dataset.')
         
-    # check q_lower < q_upper
-    if q_upper <= q_lower:
-        raise ValueError('Upper quantile value must be larger than lower quantile.')
     # check q_value 0-1
-    elif q_upper < 0 or q_upper > 1:
+    if q_upper < 0 or q_upper > 1:
         raise ValueError('Upper quantile value must be between 0 and 1.')
+
     # check q_value 0-1
-    elif q_lower < 0 or q_lower > 1:
+    if q_lower < 0 or q_lower > 1:
         raise ValueError('Lower quantile value must be between 0 and 1.')
         
     # check wet, dry month if none given
@@ -1049,15 +895,6 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
         
     # get attributes - we lose them 
     attrs = ds.attrs
@@ -1098,10 +935,6 @@ def standardise_to_dry_targets(ds, dry_month=None, q_upper=0.99, q_lower=0.05, i
     
     # notify and return
     print('Standardised using invariant targets successfully.')
-
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
 
@@ -1150,28 +983,17 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05, inplace=True):
     elif len(ds['time.year']) < 3:
         raise ValueError('Less than 3 years in dataset.')
         
-    # check q_lower < q_upper
-    if q_upper <= q_lower:
-        raise ValueError('Upper quantile value must be larger than lower quantile.')
     # check q_value 0-1
-    elif q_upper < 0 or q_upper > 1:
+    if q_upper < 0 or q_upper > 1:
         raise ValueError('Upper quantile value must be between 0 and 1.')
+
     # check q_value 0-1
-    elif q_lower < 0 or q_lower > 1:
+    if q_lower < 0 or q_lower > 1:
         raise ValueError('Lower quantile value must be between 0 and 1.')
         
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
         
     # get attributes - we lose them 
     attrs = ds.attrs
@@ -1211,10 +1033,6 @@ def standardise_to_targets(ds, q_upper=0.99, q_lower=0.05, inplace=True):
     
     # notify and return
     print('Standardised using invariant targets successfully.')
-
-    if was_da:
-        ds = ds.to_array()
-
     return ds
 
 
@@ -1277,15 +1095,6 @@ def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9, inp
     wet_months = wet_month if isinstance(wet_month, list) else [wet_month]
     dry_months = dry_month if isinstance(dry_month, list) else [dry_month]
 
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # take attrs
     attrs = ds.attrs
     
@@ -1310,7 +1119,7 @@ def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9, inp
     # combine similarity back together
     ds_similarity = xr.concat(similarity_list, dim='time').sortby('time')
 
-    # rescale from (-1 to 1) to (0 to 2)
+    # rescale from -1 to 1 to 0 to 2
     ds_similarity = ds_similarity + 1
     
     # notify
@@ -1354,9 +1163,6 @@ def calc_seasonal_similarity(ds, wet_month=None, dry_month=None, q_mask=0.9, inp
     # add attributes back on
     ds_similarity.attrs.update(attrs)
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Calculated seasonal similarity successfully.')
     return ds_similarity
@@ -1483,7 +1289,7 @@ def calc_likelihood(ds, ds_similarity, wet_month=None, dry_month=None):
     
     # convert back to datarray
     if was_da:
-        ds_likelihood = ds_likelihood.to_array()
+        ds = ds.to_array()
 
     # notify and return
     print('Generated groundwater-dependent vegetation model successfully')
@@ -1515,7 +1321,7 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         
     Returns
     ----------
-    ds_thresh : xarray dataset or array.
+    ds : xarray dataset or array.
     """
     
     # imports check
@@ -1528,19 +1334,10 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     print('Thresholding dataset via occurrence records and AUC.')
     
     # check xr type, dims, num time
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, (xr.Dataset)):
         raise TypeError('Dataset not an xarray type.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x or y dimensions in dataset.')
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
     # check if pandas type, columns, actual field
     if not isinstance(df, pd.DataFrame):
@@ -1606,36 +1403,14 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         if 'time' in ds.dims:
             print('AUC: {0} for time: {1}.'.format(round(auc, 3), da['time'].values))
         else:
-            print('AUC: {0} for whole dataset.'.format(round(auc, 3)))
-           
-        
-        for e in fpr:
-            print(e)
-        print('\n')
-        for e in tpr:
-            print(e)
-        print('\n')
-        print(auc)
-        print('\n')
-        print(cut_off)
-
-        
-
-        # show
-        print('- ' * 30)
-        plt.show()
-        print('- ' * 30)
-        print('')
+            print('AUC: {0} for whole dataset.'.format(round(auc, 3)))       
 
     # concat array back together
     if len(thresh_list) > 1:
         ds_thresh = xr.concat(thresh_list, dim='time').sortby('time')
     else:
         ds_thresh = thresh_list[0]
-    
-    if was_da:
-        ds_thresh = ds_thresh.to_array()
-
+        
     # notify and return
     print('Thresholded dataset successfully.')
     return ds_thresh
@@ -1667,7 +1442,7 @@ def threshold_xr_via_std(ds, num_stdevs=3, inplace=True):
     print('Thresholding dataset via standard deviation.')
     
     # check xr type, dims, num time
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, (xr.Dataset)):
         raise TypeError('Dataset not an xarray type.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x or y dimensions in dataset.')  
@@ -1679,23 +1454,11 @@ def threshold_xr_via_std(ds, num_stdevs=3, inplace=True):
     # create copy ds if not inplace
     if not inplace:
         ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+          
     # calculate n stand devs and apply threshold
     ds_thresh = ds.mean(['x', 'y']) + (ds.std(['x', 'y']) * num_stdevs)
     ds = ds.where(ds > ds_thresh)
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Thresholded dataset successfully.')
     return ds
@@ -1731,17 +1494,15 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
         
     Returns
     ----------
-    ds_thresh : xarray dataset or array.
+    ds : xarray dataset or array.
     """
 
     # notify
     print('Thresholding groundwater-dependent vegeation likelihood.')
 
     # we need a dataset, try and convert to array
-    was_da = False
     if isinstance(ds, xr.DataArray):
         try:
-            was_da = True
             ds = ds.to_dataset(dim='variable')
         except:
             raise TypeError('Failed to convert xarray DataArray to Dataset.')
@@ -1781,55 +1542,12 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
     else:
         # attempt roc standard dev thresholding
         ds_thresh = threshold_xr_via_std(ds, num_stdevs=num_stdevs)
-    
-
-    if was_da:
-        ds_thresh = ds_thresh.to_array()
-
+                
     # notify
     print('Thresholded likelihood succuessfully.')
     return ds_thresh
 
-# define original mk function
-def __mk__(x, y, p, d, nd):
-    """
-    Helper function, should only be called by perform_mk_original()
-    """
 
-    result = None
-
-    # check nans
-    nans = np.isin(x, nd) | np.isnan(x)
-    if np.all(nans):
-        result = nd
-    else:
-        # remove nans
-        x, y = x[~nans], y[~nans]
-
-        # count finite values, abort if 3 or less
-        num_fin = np.count_nonzero(x)
-        if num_fin <= 3:
-            result = nd
-        else:
-            # perform original mk
-            tau, pvalue = kendalltau(x=x, y=y, nan_policy='omit')
-
-            # if p given and its not sig, bail
-            if p and pvalue >= p:
-                result = nd
-            
-            # check direction
-            elif d == 'both':
-                result = tau
-            elif d == 'inc' and tau > 0:
-                result = tau
-            elif d == 'dec' and tau < 0:
-                result = tau
-            else: 
-                result = nd
-    
-    return result
-        
 def perform_mk_original(ds, pvalue=None, direction='both'):
     """
     Takes a xarray dataset/array of gdv likelihood values (thresholded or not)
@@ -1863,23 +1581,14 @@ def perform_mk_original(ds, pvalue=None, direction='both'):
     # notify user
     print('Performing Mann-Kendall test (original).')
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # check xr type, dims
-    if not isinstance(ds, (xr.Dataset)):
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
         raise TypeError('Dataset not an xarray type.')
     elif 'time' not in list(ds.dims):
         raise ValueError('No time dimension in dataset.')
     elif len(ds['time']) < 3:
         raise ValueError('More than 2 years required for analysis.')
-    
+        
     # check if nodatavals is in dataset
     if not hasattr(ds, 'nodatavals') or ds.nodatavals == 'unknown':
         raise AttributeError('Dataset does not have a nodatavalue attribute.')
@@ -1891,10 +1600,43 @@ def perform_mk_original(ds, pvalue=None, direction='both'):
     # check distance value
     if direction not in ['inc', 'dec', 'both']:
         raise ValueError('Direction value must be inc, dec or both.')
+    
+    # define original mk function
+    def mk(x, y, p, d, nd):
+
+        # check nans
+        nans = np.isin(x, nd) | np.isnan(x)
+        if np.all(nans):
+            return nd
+
+        # remove nans
+        x, y = x[~nans], y[~nans]
+
+        # count finite values, abort if 3 or less
+        num_fin = np.count_nonzero(x)
+        if num_fin <= 3:
+            return nd
+
+        # perform original mk
+        tau, pvalue = kendalltau(x=x, y=y, nan_policy='omit')
+
+        # if p given and its not sig, bail
+        if p and pvalue >= p:
+            return nd
+
+        # check direction
+        if d == 'both':
+            return tau
+        elif d == 'inc' and tau > 0:
+            return tau
+        elif d == 'dec' and tau < 0:
+            return tau
+        else: 
+            return nd
 
     # generate mk
     ds_mk = xr.apply_ufunc(
-        __mk__, ds,
+        mk, ds,
         input_core_dims=[['time']],
         vectorize=True,
         dask='parallelized',
@@ -1911,35 +1653,8 @@ def perform_mk_original(ds, pvalue=None, direction='both'):
     except:
         pass
     
-    if was_da:
-        ds_mk = ds_mk.to_array()
-
     return ds_mk
 
-# define ts function (note: y, x different to mk)
-def __ts__(y, x, a, nd):
-    """
-    Helper function, should only be called by perform_theilsen_slope
-    """
-
-    # check nans
-    nans = np.isin(y, nd) | np.isnan(y)
-    if np.all(nans):
-        return nd
-
-    # remove nans
-    y, x = y[~nans], x[~nans]
-
-    # count finite values, abort if 3 or less
-    num_fin = np.count_nonzero(y)
-    if num_fin <= 3:
-        return nd
-    
-    # perform theil-sen
-    medslope, medint, lo_slope, up_slope = theilslopes(y=y, x=x, alpha=a)
-    
-    # return
-    return medslope
 
 def perform_theilsen_slope(ds, alpha):
     """
@@ -1975,16 +1690,9 @@ def perform_theilsen_slope(ds, alpha):
         raise TypeError('Dataset not an xarray type.')
     elif 'time' not in list(ds.dims):
         raise ValueError('No time dimension in dataset.')
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+    elif len(ds['time']) < 3:
+        raise ValueError('More than 2 years required for analysis.')
+        
     # check if 3 or more times
     if len(ds['time']) < 3:
         raise ValueError('More than 2 years required for analysis.')
@@ -1996,10 +1704,32 @@ def perform_theilsen_slope(ds, alpha):
     # check if p is valid, if provided
     if alpha and (alpha < 0 or alpha > 1):
         raise ValueError('Alpha must be between 0 and 1.')   
+        
+    # define ts function (note: y, x different to mk)
+    def ts(y, x, a, nd):
+
+        # check nans
+        nans = np.isin(y, nd) | np.isnan(y)
+        if np.all(nans):
+            return nd
+
+        # remove nans
+        y, x = y[~nans], x[~nans]
+
+        # count finite values, abort if 3 or less
+        num_fin = np.count_nonzero(y)
+        if num_fin <= 3:
+            return nd
+        
+        # perform theil-sen
+        medslope, medint, lo_slope, up_slope = theilslopes(y=y, x=x, alpha=a)
+        
+        # return
+        return medslope
 
     # create ufunc to wrap mk in
     ds_ts = xr.apply_ufunc(
-        __ts__, ds,
+        ts, ds,
         input_core_dims=[['time']],
         vectorize=True,
         dask='parallelized',
@@ -2015,63 +1745,8 @@ def perform_theilsen_slope(ds, alpha):
     except:
         pass
     
-    if was_da:
-        ds_ts = ds_ts.to_array()
-
     return ds_ts
 
-# define cva here
-def __cva__(ds_base, ds_comp, vege_var='tcg', soil_var='tcb', tmf=2):
-    """
-    Helper function, should only be called by perform_cva()
-    """
-
-    # check each dataset for issues
-    for ds_temp in [ds_base, ds_comp]:
-
-        # get vars in ds
-        temp_vars = []
-        if isinstance(ds_temp, xr.Dataset):
-            temp_vars = list(ds_temp.data_vars)
-        elif isinstance(ds_temp, xr.DataArray):
-            temp_vars = list(ds_temp['variable'])
-
-        # check if vege var and soil var given
-        for v in [vege_var, soil_var]:
-            if v not in temp_vars:
-                raise ValueError('Vege and/or soil var name not in dataset.')
-
-    # get difference between comp and base, calc magnitude
-    ds_diff = ds_comp - ds_base
-    ds_magnitude = xr.ufuncs.sqrt(xr.ufuncs.square(ds_diff['tcb']) + 
-                                    xr.ufuncs.square(ds_diff['tcg']))
-
-    # get threshold value and make mask where mag > threshold
-    threshold = ds_magnitude.where(ds_magnitude > 0.0).mean() * tmf
-    ds_target = xr.where(ds_magnitude > threshold, True, False)
-
-    # calculate magnitude (as percentage) and angle values 
-    ds_magnitude = ds_magnitude.where(ds_target) * 100
-    ds_angle = xr.ufuncs.arctan2(ds_diff['tcb'].where(ds_target), 
-                                    ds_diff['tcg'].where(ds_target)) / np.pi * 180
-
-    # convert angles to 0-360 degrees
-    ds_angle = xr.where(ds_angle < 0, ds_angle + 360, ds_angle)
-    ds_angle = ds_angle.where(ds_target)
-
-    # rename datasets and merge
-    ds_angle = ds_angle.rename('angle')
-    ds_magnitude = ds_magnitude.rename('magnitude')
-
-    # merge arrays together into dataset
-    ds_cva = xr.merge([ds_angle, ds_magnitude])
-
-    # check and notify if no values returned
-    if ds_angle.isnull().all() or ds_magnitude.isnull().all():
-        print('Warning: No angles or magnitudes returned.')
-
-    # return
-    return ds_cva
 
 def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False, 
                 vege_var='tcg', soil_var='tcb', tmf=2):
@@ -2140,14 +1815,55 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
     if tmf < 0:
         raise ValueError('Threshold value must be provided and >= 0.')
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+    # define cva here
+    def cva(ds_base, ds_comp, vege_var='tcg', soil_var='tcb', tmf=2):
+
+        # check each dataset for issues
+        for ds_temp in [ds_base, ds_comp]:
+
+            # get vars in ds
+            temp_vars = []
+            if isinstance(ds_temp, xr.Dataset):
+                temp_vars = list(ds_temp.data_vars)
+            elif isinstance(ds_temp, xr.DataArray):
+                temp_vars = list(ds_temp['variable'])
+
+            # check if vege var and soil var given
+            for v in [vege_var, soil_var]:
+                if v not in temp_vars:
+                    raise ValueError('Vege and/or soil var name not in dataset.')
+
+        # get difference between comp and base, calc magnitude
+        ds_diff = ds_comp - ds_base
+        ds_magnitude = xr.ufuncs.sqrt(xr.ufuncs.square(ds_diff['tcb']) + 
+                                      xr.ufuncs.square(ds_diff['tcg']))
+
+        # get threshold value and make mask where mag > threshold
+        threshold = ds_magnitude.where(ds_magnitude > 0.0).mean() * tmf
+        ds_target = xr.where(ds_magnitude > threshold, True, False)
+
+        # calculate magnitude (as percentage) and angle values 
+        ds_magnitude = ds_magnitude.where(ds_target) * 100
+        ds_angle = xr.ufuncs.arctan2(ds_diff['tcb'].where(ds_target), 
+                                     ds_diff['tcg'].where(ds_target)) / np.pi * 180
+
+        # convert angles to 0-360 degrees
+        ds_angle = xr.where(ds_angle < 0, ds_angle + 360, ds_angle)
+        ds_angle = ds_angle.where(ds_target)
+
+        # rename datasets and merge
+        ds_angle = ds_angle.rename('angle')
+        ds_magnitude = ds_magnitude.rename('magnitude')
+
+        # merge arrays together into dataset
+        ds_cva = xr.merge([ds_angle, ds_magnitude])
+
+        # check and notify if no values returned
+        if ds_angle.isnull().all() or ds_magnitude.isnull().all():
+            print('Warning: No angles or magnitudes returned.')
+
+        # return
+        return ds_cva
     
     # generate year ranges
     base_range = np.arange(base_times[0], base_times[1] + 1, 1)
@@ -2182,7 +1898,7 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
         print('Doing CVA: {0}.'.format(i + 1))
         
         # do cva!
-        ds_cva = __cva__(ds_base=ds_base, 
+        ds_cva = cva(ds_base=ds_base, 
                      ds_comp=da_comp, 
                      vege_var=vege_var, 
                      soil_var=soil_var, 
@@ -2194,10 +1910,7 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
     # check if list, concat
     if ds_cva_list:
         ds_cva = xr.concat(ds_cva_list, dim='time')
-    
-    if was_da:
-        ds_cva = ds_cva.to_array()
-
+        
     # notify and return
     print('Performed CVA successfully.')
     return ds_cva
@@ -2231,15 +1944,6 @@ def isolate_cva_change(ds, angle_min=90, angle_max=180, inplace=True):
     if not isinstance(ds, (xr.Dataset, xr.DataArray)):
         raise TypeError('Dataset not an xarray type.')
 
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # get vars
     if isinstance(ds, xr.Dataset):
         data_vars = list(ds.data_vars)
@@ -2265,9 +1969,6 @@ def isolate_cva_change(ds, angle_min=90, angle_max=180, inplace=True):
     # restrict ds to requested angles
     ds = ds.where((ds['angle'] > angle_min) & (ds['angle'] < angle_max))
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Isolated CVA angles successfully.')
     return ds
