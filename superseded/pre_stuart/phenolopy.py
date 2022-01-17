@@ -33,14 +33,6 @@ from datetime import datetime
 sys.path.append('../../shared')
 import tools
 
-from scipy.stats import zscore
-from scipy.signal import savgol_filter
-from scipy.signal import find_peaks
-from scipy.ndimage import gaussian_filter
-
-
-from collections import Counter
-
 
 def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=True):
     """
@@ -76,9 +68,12 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=Tru
     Returns
     -------
     ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with all detected outliers in the
+        The original xarray Dataset inputted into the function, with a all detected outliers in the
         veg_index variable set to nan.
     """
+    
+    # imports
+    from scipy.stats import zscore
     
     # notify user
     print('Removing outliers via method: {}'.format(method))
@@ -90,18 +85,22 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=Tru
         raise ValueError('No x or y dimension in dataset.')
     elif 'time' not in list(ds.dims):
         raise ValueError('No time dimension in dataset.')
-
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+        
     # check if user factor provided
     if user_factor <= 0:
         raise TypeError('User factor is less than 0, must be above 0.')
+        
+    # check if pval provided if method is zscore
+    if method == 'zscore':
+        if p_value == 0.10:
+            z_value = 1.65
+        elif p_value == 0.05:
+            z_value = 1.96
+        elif p_value == 0.01:
+            z_value = 2.58
+        else:
+            print('P-value not supported. Setting to 0.01.')
+            z_value = 2.58
             
     # create copy ds if not inplace
     if not inplace:
@@ -183,10 +182,7 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=Tru
         
     else:
         raise ValueError('Provided method not supported. Please use median or zscore.')
-    
-    if was_da:
-        ds = ds.to_array()
-
+        
     # notify user and return
     print('Outlier removal successful.')
     return ds
@@ -214,7 +210,11 @@ def remove_overshoot_times(ds, max_times=3):
     ds : xarray Dataset
         The original xarray Dataset inputted into the function, with any 
         times removed that occured in non-dominant year (if exists).
-    """    
+    """
+    
+    # imports
+    from collections import Counter
+    
     # notify user
     print('Removing times that occur in overshoot years.')
 
@@ -223,15 +223,6 @@ def remove_overshoot_times(ds, max_times=3):
         raise TypeError('Dataset not an xarray type.')
     elif 'time' not in list(ds.dims):
         raise ValueError('No time dimension in dataset.')
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
 
     # get unique years in dataset as dict pairs
     counts = Counter(list(ds['time.year'].values))
@@ -258,9 +249,6 @@ def remove_overshoot_times(ds, max_times=3):
                 
     else:
         print('Only 1 year detected. No data removed.')
-
-    if was_da:
-        ds = ds.to_array()
 
     # notify and return
     print('Removed times that occur in overshoot years successfully.')
@@ -295,15 +283,6 @@ def conform_edge_dates(ds):
     elif 'time' not in list(ds.dims):
         raise ValueError('No time dimension in dataset.')
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
     # get first, last datetime object
     f_dt, l_dt = ds['time'].isel(time=0), ds['time'].isel(time=-1)
 
@@ -327,9 +306,6 @@ def conform_edge_dates(ds):
         l_da['time'] = np.datetime64(l_dt)
         ds = xr.concat([ds, l_da], dim='time')
         
-    if was_da:
-        ds = ds.to_array()
-
     # notify and return
     print('Conformed edge dates successfully.')
     return ds
@@ -370,20 +346,7 @@ def resample(ds, interval='1M', inplace=True):
         raise ValueError('No time dimension in dataset.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x, y dimension in dataset.')
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+        
     # check if at least one year of data
     if len(ds.groupby('time.year').groups) < 1:
         raise ValueError('Need at least one year in dataset.')
@@ -399,15 +362,16 @@ def resample(ds, interval='1M', inplace=True):
     if 'veg_idx' not in temp_vars:
         raise ValueError('Vege var name not in dataset.')
         
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
     # resample based on user selected interval and reducer
     if interval in ['1W', '1SM', '1M']:
         ds = ds.resample(time=interval).median('time', keep_attrs=True)
     else:
         raise ValueError('Provided resample interval not supported.')
-
-    if was_da:
-        ds = ds.to_array()
-
+                            
     # notify user and return
     print('Resampled dataset successful.')
     return ds
@@ -448,20 +412,7 @@ def group(ds, interval='month', inplace=True):
         raise ValueError('No time dimension in dataset.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x, y dimension in dataset.')
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
+        
     # check if at least one year of data
     if len(ds.groupby('time.year').groups) < 1:
         raise ValueError('Need at least one year in dataset.')
@@ -476,7 +427,11 @@ def group(ds, interval='month', inplace=True):
     # check if vege var and soil var given
     if 'veg_idx' not in temp_vars:
         raise ValueError('Vege var name not in dataset.')
-            
+        
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
     # get all years in dataset, choose middle year in array for labels
     years = np.array([year for year in ds.groupby('time.year').groups])
     year = np.take(years, years.size // 2)
@@ -509,9 +464,6 @@ def group(ds, interval='month', inplace=True):
     # append array of dts to dataset
     ds['time'] = [np.datetime64(dt) for dt in times]
             
-    if was_da:
-        ds = ds.to_array()
-
     # notify user and return
     print('Grouped dataset successful.')
     return ds
@@ -563,38 +515,13 @@ def interpolate(ds, method='full', inplace=True):
     if not inplace:
         ds = ds.copy(deep=True)
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
     # interpolate for ds
     ds = tools.perform_interp(ds=ds, method=method)
-
-    if was_da:
-        ds = ds.to_array()
 
     # notify and return
     print('Interpolated empty values successfully.')
     return ds   
 
-# create savitsky smoother func
-def __sav_smoother__(da, window_length, polyorder):
-    """
-    Helper method for smooth(), should only be called by smooth.
-    """
-    return da.apply(savgol_filter, window_length=window_length, polyorder=polyorder)
-
-# create gaussian smoother func
-def __gau_smoother__(da, sigma):
-    """
-    Helper method for smooth(), should only be called by smooth.
-    """
-    return da.apply(gaussian_filter, sigma=sigma)
 
 def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):  
     """
@@ -629,6 +556,10 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
         veg_index variable.
     """
     
+    # imports
+    from scipy.signal import savgol_filter
+    from scipy.ndimage import gaussian_filter
+    
     # notify user
     print('Smoothing data via method: {0}.'.format(method))
     
@@ -639,16 +570,7 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
         raise ValueError('No time dimension in dataset.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x, y dimension in dataset.')
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+        
     # check params
     if window_length <= 0 :
         raise ValueError('Window_length is <= 0. Must be greater than 0.')
@@ -663,8 +585,9 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
     if method in ['savitsky', 'symm_gaussian']:
         if method == 'savitsky':
             
-            #Set the method we want to pass to xr.map_blocks
-            smoother = __sav_smoother__
+            # create savitsky smoother func
+            def smoother(da, window_length, polyorder):
+                return da.apply(savgol_filter, window_length=window_length, polyorder=polyorder)
             
             # create kwargs dict
             kwargs = {'window_length': window_length, 
@@ -672,8 +595,9 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
 
         elif method == 'symm_gaussian':
             
-            #Set the method we want to pass to xr.map_blocks
-            smoother = __gau_smoother__
+            # create gaussian smoother func
+            def smoother(da, sigma):
+                return da.apply(gaussian_filter, sigma=sigma)
             
             # create kwargs dict
             kwargs = {'sigma': sigma}
@@ -683,32 +607,12 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
         ds = xr.map_blocks(smoother, ds, template=ds, kwargs=kwargs)
         
     else:
-        raise ValueError('Provided method not supported. Please use savtisky or symm_gaussian.')
-    
-    if was_da:
-        ds = ds.to_array()
-
+        raise ValueError('Provided method not supported. Please use savtisky.')
+        
     # notify user and return
     print('Smoothing successful.\n')
     return ds
 
-# set up calc peaks functions
-def __calc_peaks__(x, t):
-    """
-    Helper function for calc_num_seasons(), should not be called directly.
-    """
-
-    # calc num peaks
-    peaks, _ = find_peaks(x, prominence=t)
-    
-    # check and correct to 1 if nothing
-    if len(peaks) > 0:
-        num_peaks = len(peaks)
-    else:
-        num_peaks = 1
-
-    # return
-    return num_peaks
 
 def calc_num_seasons(ds):
     """
@@ -730,6 +634,9 @@ def calc_num_seasons(ds):
         number of seasons value detected across the timeseries at each pixel.
     """
     
+    # imports
+    from scipy.signal import find_peaks
+    
     # notify user
     print('Beginning calculation of number of seasons.')
     
@@ -740,16 +647,7 @@ def calc_num_seasons(ds):
         raise ValueError('No time dimension in dataset.')
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x, y dimension in dataset.')
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
+                
     # get vars in ds
     temp_vars = []
     if isinstance(ds, xr.Dataset):
@@ -765,13 +663,28 @@ def calc_num_seasons(ds):
     if bool(ds.chunks):
         print('Warning: had to rechunk dataset.')
         ds = ds.chunk({'time': -1})
+
+    # set up calc peaks functions
+    def calc_peaks(x, t):
+
+        # calc num peaks
+        peaks, _ = find_peaks(x, prominence=t)
+        
+        # check and correct to 1 if nothing
+        if len(peaks) > 0:
+            num_peaks = len(peaks)
+        else:
+            num_peaks = 1
+
+        # return
+        return num_peaks
     
     # prepare prominence threshold dataset
     ds_thresh = (ds.max('time') - ds.min('time')) / 8
         
     # calculate nos using calc_funcs func
     print('Calculating number of seasons.')
-    ds_nos = xr.apply_ufunc(__calc_peaks__, 
+    ds_nos = xr.apply_ufunc(calc_peaks, 
                             ds['veg_idx'], 
                             ds_thresh['veg_idx'],
                             input_core_dims=[['time'], []],
@@ -784,12 +697,10 @@ def calc_num_seasons(ds):
     
     # rename
     ds_nos = ds_nos.rename('nos_values')
-      
-    #If the input was a ds, return a ds.
-    if not was_da:
-        # convert to dataset
-        ds_nos = ds_nos.to_dataset()
-
+    
+    # convert to dataset
+    ds_nos = ds_nos.to_dataset()
+    
     # notify user
     print('Success!')
         
@@ -1045,13 +956,6 @@ def get_aos(da_peak_values, da_base_values):
     print('Success!')
     return da_aos_values
 
-# prepare stl func
-def __func_stl__(v, period, seasonal, trend, low_pass, robust):
-    """
-    Helper function for get_sos() and get_eos(), should not be called outside of those functions
-    """
-    model = stl(v, period=period, seasonal=seasonal, trend=trend, low_pass=low_pass, robust=robust)
-    return model.fit().trend
 
 def get_sos(da, da_peak_times, da_base_values, da_aos_values, method, factor, thresh_sides, abs_value):
     """
@@ -1327,9 +1231,14 @@ def get_sos(da, da_peak_times, da_base_values, da_aos_values, method, factor, th
             'robust': False
         }
         
+        # prepare stl func
+        def func_stl(v, period, seasonal, trend, low_pass, robust):
+            model = stl(v, period=period, seasonal=seasonal, trend=trend, low_pass=low_pass, robust=robust)
+            return model.fit().trend
+        
         # notify user
         print('Performing seasonal decomposition via LOESS. Warning: this can take a long time.')
-        da_stl = xr.apply_ufunc(__func_stl__, da, 
+        da_stl = xr.apply_ufunc(func_stl, da, 
                                 input_core_dims=[['time']], 
                                 output_core_dims=[['time']], 
                                 vectorize=True, 
@@ -1661,9 +1570,14 @@ def get_eos(da, da_peak_times, da_base_values, da_aos_values, method, factor, th
             'robust': False
         }
         
+        # prepare stl func
+        def func_stl(v, period, seasonal, trend, low_pass, robust):
+            model = stl(v, period=period, seasonal=seasonal, trend=trend, low_pass=low_pass, robust=robust)
+            return model.fit().trend
+        
         # notify user
         print('Performing seasonal decomposition via LOESS. Warning: this can take a long time.')
-        da_stl = xr.apply_ufunc(__func_stl__, da, 
+        da_stl = xr.apply_ufunc(func_stl, da, 
                                 input_core_dims=[['time']], 
                                 output_core_dims=[['time']], 
                                 vectorize=True, 
@@ -2184,7 +2098,7 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
         
     Returns
     -------
-    ds : xarray Dataset/DataArray
+    ds : xarray Dataset
         An xarray DataArray type with 1 or more phenometrics.
     """
     
@@ -2214,19 +2128,6 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x, y dimension in dataset.')
 
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # check if at least one year of data
     if len(ds.groupby('time.year').groups) < 1:
         raise ValueError('Need at least one year in dataset.')
@@ -2240,6 +2141,10 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
     if 'veg_idx' not in temp_vars:
         raise ValueError('Vege var name not in dataset.')
 
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+        
     # get attrs
     attrs = ds.attrs
     
@@ -2364,9 +2269,6 @@ def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', met
     # add attrs back on
     ds.attrs = attrs
     
-    if was_da:
-        ds = ds.to_array()
-
     # notify user
     print('Phenometrics calculated successfully!')
     return ds
