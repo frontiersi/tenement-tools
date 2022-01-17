@@ -31,21 +31,6 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import ExtraTreesClassifier as et
-from sklearn.ensemble import RandomForestClassifier as rt
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import brier_score_loss
-from sklearn.metrics import log_loss
-from sklearn.metrics import f1_score
-from sklearn.metrics import matthews_corrcoef
-from sklearn.metrics import normalized_mutual_info_score
-from sklearn.metrics import cohen_kappa_score
-from scipy.stats import pointbiserialr
 
 sys.path.append('../../shared')
 import tools
@@ -169,34 +154,34 @@ def generate_absences(ds, num_abse=1000, occur_shp_path=None, buff_m=100, res_fa
     # create random points and fill a list with x and y
     counter = 0
     coords = []
-    #for i in range(num_abse): #Appears redundant
-    while counter < num_abse:
+    for i in range(num_abse):
+        while counter < num_abse:
 
-        # get random x and y coord
-        rand_x = random.uniform(x_min, x_max)
-        rand_y = random.uniform(y_min, y_max)
+            # get random x and y coord
+            rand_x = random.uniform(x_min, x_max)
+            rand_y = random.uniform(y_min, y_max)
 
-        # create point and add x and y to it
-        pnt = ogr.Geometry(ogr.wkbPoint)
-        pnt.AddPoint(rand_x, rand_y)
-        
-        try:
-            pixel = int(da_mask.sel(x=rand_x, y=rand_y, 
-                                    method='nearest', 
-                                    tolerance=res * res_factor))
+            # create point and add x and y to it
+            pnt = ogr.Geometry(ogr.wkbPoint)
+            pnt.AddPoint(rand_x, rand_y)
             
-            # if within pixel and buffer areas, else just pixel
-            if pixel == 1 and buff_geom:
-                if not pnt.Within(buff_geom):
+            try:
+                pixel = int(da_mask.sel(x=rand_x, y=rand_y, 
+                                        method='nearest', 
+                                        tolerance=res * res_factor))
+                
+                # if within pixel and buffer areas, else just pixel
+                if pixel == 1 and buff_geom:
+                    if not pnt.Within(buff_geom):
+                        coords.append([pnt.GetX(), pnt.GetY()])
+                        counter += 1
+                        
+                elif pixel == 1:
                     coords.append([pnt.GetX(), pnt.GetY()])
                     counter += 1
                     
-            elif pixel == 1:
-                coords.append([pnt.GetX(), pnt.GetY()])
-                counter += 1
-                
-        except:
-            continue
+            except:
+                continue
 
     # check if list is populated
     if not coords:
@@ -351,24 +336,19 @@ def equalise_abse_records(df_presence, df_absence):
     num_pres = df_presence.shape[0]
     num_abse = df_absence.shape[0]
 
-    #Set default return to df_absence
-    result = df_absence
-
     # select same number of presence in absence random sample.
     if num_abse <= num_pres:
         print('Number of absence records already <= number of presence. No need to equalise.')
+        return df_absence
 
     elif num_abse > num_pres:
         print('Reduced number of absence records from {0} to {1}'.format(num_abse, num_pres))
         df_absence = df_absence.sample(n=num_pres)
-        result = df_absence
+        return df_absence
 
     else:
         raise ValueError('Could not equalise absence records.')
-        return result
-    
-    #Return the result
-    return result
+        return df_absence
 
         
 def combine_pres_abse_records(df_presence, df_absence):
@@ -453,7 +433,7 @@ def generate_correlation_matrix(df_records, rast_cate_list=None, show_fig=False,
     # check raster categorical list
     if rast_cate_list is None:
         rast_cate_list = []
-    elif not isinstance(rast_cate_list, (list, str)):
+    if not isinstance(rast_cate_list, (list, str)):
         raise TypeError('Raster categorical filepath list must be a list or single string.')
 
     # select presence records only
@@ -527,6 +507,9 @@ def generate_vif_scores(df_records, rast_cate_list=None):
         A list or string of raster paths of continous and categorical layers.
     """
     
+    # imports
+    from sklearn.linear_model import LinearRegression
+
     # check dataframe
     if not isinstance(df_records, pd.DataFrame):
         raise TypeError('Presence-absence data is not a dataframe type.')
@@ -677,6 +660,10 @@ def create_estimator(estimator_type='rf', n_estimators=100, criterion='gini', ma
         An estimator object.
     """
     
+    # imports
+    from sklearn.ensemble import ExtraTreesClassifier as et
+    from sklearn.ensemble import RandomForestClassifier as rt
+        
     # notify
     print('Creating species distribution model estimator.')
     
@@ -837,6 +824,9 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
         A dataset with four variables - SDM mean, median, standard dev., variance.
     """
     
+    # imports
+    from sklearn.metrics import accuracy_score
+
     # notify user
     print('Beginning species distribution modelling (SDM) process.')
 
@@ -851,19 +841,19 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
     # check rast cont list
     if rast_cont_list is None:
         rast_cont_list = []
-    elif not isinstance(rast_cont_list, list):
+    if not isinstance(rast_cont_list, list):
         raise TypeError('Raster continuous paths is not a list.')
     
     # check rast cate list
     if rast_cate_list is None:
         rast_cate_list = []
-    elif not isinstance(rast_cate_list, list):
+    if not isinstance(rast_cate_list, list):
         raise TypeError('Raster categorical paths is not a list.')        
 
     # check if valid estimator
     allowed_estimators = ['RandomForestClassifier()', 'ExtraTreeClassifier()', 'DecisionTreeClassifier()']
     if str(estimator.base_estimator) not in allowed_estimators:
-        raise TypeError('Estimator must be a RandomForestClassifier, ExtraTreeClassifier or DecisionTreeClassifier.')
+        raise TypeError('Estimator must be a RandomForestClassifier or ExtraTreeClassifier.')
 
     # check parameters
     if not isinstance(test_ratio, float):
@@ -1109,7 +1099,7 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
 
 def split_train_test(df_records, test_ratio=0.1, shuffle=True, equalise_test_set=False):
     """
-    Split dataframe into a training and testing set by a user-specified ratio.
+    Split dataframe dataframe into a training and testing set by a user-specified ratio.
     The default is 10% of records set aside for testing.
 
     Parameters
@@ -1135,6 +1125,9 @@ def split_train_test(df_records, test_ratio=0.1, shuffle=True, equalise_test_set
     df_test : pandas dataframe
         A pandas dataframe containing testing set.
     """
+    
+    # imports
+    from sklearn.model_selection import train_test_split
 
     # check if we have a numpy record array
     if not isinstance(df_records, pd.DataFrame):
@@ -1382,7 +1375,8 @@ def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', noda
             cont_matrices.append(matrix.T)
     
     except:
-        raise ValueError('Unable to generate Continuous or Categorical matrices')
+        print('Error occurred during lek matrix creation. Aborting.')
+        return [], []
 
     # return
     return cont_matrices, cate_matrices
@@ -1425,9 +1419,6 @@ def plot_mvi_scores(var_names, np_vis):
         print(df_vis_mean.sort_values(by='Mean Importance Score', ascending=False))
         print('- ' * 30)
         print('')
-    else:
-        print('- - - - ERROR: No results to show - - - -')
-        print('')
         
 
 def plot_training_oob_accuracy(np_train_accuracy):
@@ -1454,9 +1445,6 @@ def plot_training_oob_accuracy(np_train_accuracy):
         print('- ' * 30)
         print('Training Out-Of-Bag (OOB) Accuracy:\t\t{0}'.format(train_accuracy_mean))
         print('- ' * 30)
-        print('')
-    else:
-        print('- - - - ERROR: No results to show - - - -')
         print('')
         
     
@@ -1486,6 +1474,9 @@ def generate_roc_curve(y_true, y_prob, num_retain=101):
         Decreasing thresholds on the decision function used to compute 
         fpr and tpr.
     """
+    
+    #imports 
+    from sklearn.metrics import roc_curve
     
     # check y_true type
     if not isinstance(y_true, np.ndarray):
@@ -1610,6 +1601,17 @@ def calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred):
         A array holding predictions of multiple model runs.  
     """
     
+    #imports
+    from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import average_precision_score
+    from sklearn.metrics import brier_score_loss
+    from sklearn.metrics import log_loss
+    from sklearn.metrics import f1_score
+    from sklearn.metrics import matthews_corrcoef
+    from sklearn.metrics import normalized_mutual_info_score
+    from sklearn.metrics import cohen_kappa_score
+    from scipy.stats import pointbiserialr
+    
     # checks
     if not isinstance(np_y_true, np.ndarray):
         raise ValueError('> The response labels are not a numpy array.')
@@ -1714,6 +1716,7 @@ def calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred):
         kappa = cohen_kappa_score(np_y_true, np_y_pred)
 
     except Exception as e:
+        print(e) # todo remove
         raise ValueError('> Could not calculate classification accuracy metrics.')
 
     # show auc result
