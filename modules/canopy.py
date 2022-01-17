@@ -124,8 +124,6 @@ def inc_sigmoid(ds, a=None, b=None, inplace=True):
     # check inputs
     if a is None or b is None:
         raise ValueError('Must provide values for a and b.')
-    elif a >= b:
-        raise ValueError('Value for \'a\' must be less than value for \'b\'.')
     
     # create copy
     if not inplace:
@@ -173,8 +171,6 @@ def dec_sigmoid(ds, c=None, d=None, inplace=True):
     # check inputs
     if c is None or d is None:
         raise ValueError('Must provide values for c and d.')
-    elif d <= c:
-        raise ValueError('Value for \'c\' must be less than value for \'d\'.')
     
     # create copy
     if not inplace:
@@ -224,10 +220,6 @@ def bell_sigmoid(ds, a=None, bc=None, d=None, inplace=True):
     # check inputs
     if a is None or bc is None or d is None:
         raise ValueError('Must provide values for a, bc and d.')
-    elif a > bc or a > d:
-        raise ValueError('Value for \'a\' must be less than value for \'bc\' and \'d\'.')
-    elif bc < d:
-        raise ValueError('Value for \'bc\' must be less than value for \'d\'.')
     
     # create copy
     if not inplace:
