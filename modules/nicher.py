@@ -453,7 +453,7 @@ def generate_correlation_matrix(df_records, rast_cate_list=None, show_fig=False,
     # check raster categorical list
     if rast_cate_list is None:
         rast_cate_list = []
-    elif not isinstance(rast_cate_list, (list, str)):
+    if not isinstance(rast_cate_list, (list, str)):
         raise TypeError('Raster categorical filepath list must be a list or single string.')
 
     # select presence records only
@@ -851,13 +851,13 @@ def generate_sdm(ds, df_records, estimator, rast_cont_list, rast_cate_list,
     # check rast cont list
     if rast_cont_list is None:
         rast_cont_list = []
-    elif not isinstance(rast_cont_list, list):
+    if not isinstance(rast_cont_list, list):
         raise TypeError('Raster continuous paths is not a list.')
     
     # check rast cate list
     if rast_cate_list is None:
         rast_cate_list = []
-    elif not isinstance(rast_cate_list, list):
+    if not isinstance(rast_cate_list, list):
         raise TypeError('Raster categorical paths is not a list.')        
 
     # check if valid estimator
@@ -1713,7 +1713,7 @@ def calc_accuracy_metrics(np_y_true, np_y_prob, np_y_pred):
         # kappa
         kappa = cohen_kappa_score(np_y_true, np_y_pred)
 
-    except Exception as e:
+    except:
         raise ValueError('> Could not calculate classification accuracy metrics.')
 
     # show auc result
