@@ -20,6 +20,7 @@ import scipy.stats
 import rasterio
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -535,8 +536,6 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
  
  
  # todo do checks, do meta
-
-
 def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1):
     """
     geom object from gdal
@@ -575,6 +574,131 @@ def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1)
 
     return mask
     
+    
+# meta
+def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
+    """
+    """
+    
+    # check if ogr layer type
+    if not isinstance(geom, ogr.Geometry):
+        raise TypeError('Layer is not of ogr Geometry type.')
+        
+    # check if epsg codes are ints
+    if not isinstance(from_epsg, int):
+        raise TypeError('From epsg must be integer.')
+    elif not isinstance(to_epsg, int):
+        raise TypeError('To epsg must be integer.')
+        
+    # notify
+    print('Reprojecting layer from EPSG {} to EPSG {}.'.format(from_epsg, to_epsg))
+            
+    try:
+        # init spatial references
+        from_srs = osr.SpatialReference()
+        to_srs = osr.SpatialReference()
+    
+        # set spatial references based on epsgs (inplace)
+        from_srs.ImportFromEPSG(from_epsg)
+        to_srs.ImportFromEPSG(to_epsg)
+        
+        # transform
+        trans = osr.CoordinateTransformation(from_srs, to_srs)
+        
+        # reproject
+        geom.Transform(trans)
+        
+    except: 
+        raise ValueError('Could not transform ogr geometry.')
+        
+    # notify and return
+    print('Successfully reprojected layer.')
+    return geom
+
+
+# meta, checks
+def build_change_cube(ds):
+    """
+    """
+
+    # checks
+
+    # notify
+    print('Detecting change via static and dynamic methods.')
+
+    # sumamrise each image to a single median value
+    ds_summary = ds.median(['x', 'y'], keep_attrs=True)
+
+    # notify
+    print('Detecting change via static and dynamic methods.')
+
+    # perform static ewmacd, add result to new variable in summary
+    ds_summary['static'] = EWMACD(ds=ds_summary, trainingPeriod='static')['veg_idx']
+    ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic')['veg_idx']
+
+    # rename original veg_idx to summary
+    ds_summary = ds_summary.rename({'veg_idx': 'summary'})
+
+    # broadcast summary back on to original dataset and order axes
+    ds_summary, _ = xr.broadcast(ds_summary, ds)
+    ds_summary = ds_summary.transpose('time', 'y', 'x')
+
+    # notify and return
+    print('Successfully created detection cube')
+    return ds_summary
+
+# todo checks, meta
+def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
+    """
+    """
+    
+    # check sent from
+    if not isinstance(sent_from, str):
+        raise TypeError('Sent from must be string.')
+    elif not isinstance(sent_to, str):
+        raise TypeError('Sent to must be string.')
+    elif not isinstance(subject, str):
+        raise TypeError('Subject must be string.')
+    elif not isinstance(body_text, str):
+        raise TypeError('Body text must be string.')     
+    elif not isinstance(smtp_server, str):
+        raise TypeError('SMTP server must be string.')        
+    elif not isinstance(smtp_port, int):
+        raise TypeError('SMTP port must be integer.')
+    elif not isinstance(username, str):
+        raise TypeError('Username must be string.')     
+    elif not isinstance(password, str):
+        raise TypeError('Password must be string.')
+        
+    # notify
+    print('Emailing alert.')
+    
+    # construct header text
+    msg = MIMEMultipart()
+    msg['From'] = sent_from
+    msg['To'] = sent_to
+    msg['Subject'] = subject
+
+    # construct body text (plain)
+    mime_body_text = MIMEText(body_text)
+    msg.attach(mime_body_text)
+
+    # create secure connection with server and send
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+
+        # begin ttls
+        server.starttls()
+
+        # login to server
+        server.login(username, password)
+
+        # send email
+        server.sendmail(sent_from, sent_to, msg.as_string())
+
+        # notify
+        print('Emailed alert area.')
+                
+    return
 
 
 # EWMACD EWMACD EWMACD
@@ -1298,94 +1422,8 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
                         vectorize=True)
     
     # rename veg_idx to change and convert to float32
-    ds = ds.rename({'veg_idx': 'change'}).astype('float32')
+    ds = ds.astype('float32')
     
     #return dataset
     return ds
-
-
-# todo checks
-def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
-    """
-    """
-    
-    # check sent from
-    if not isinstance(sent_from, str):
-        raise TypeError('Sent from must be string.')
-    elif not isinstance(sent_to, str):
-        raise TypeError('Sent to must be string.')
-    elif not isinstance(subject, str):
-        raise TypeError('Subject must be string.')
-    elif not isinstance(body_text, str):
-        raise TypeError('Body text must be string.')     
-    elif not isinstance(smtp_server, str):
-        raise TypeError('SMTP server must be string.')        
-    elif not isinstance(smtp_port, int):
-        raise TypeError('SMTP port must be integer.')
-    elif not isinstance(username, str):
-        raise TypeError('Username must be string.')     
-    elif not isinstance(password, str):
-        raise TypeError('Password must be string.')
-        
-    # notify
-    print('Emailing alert.')
-    
-    # construct header text
-    msg = MIMEMultipart()
-    msg['From'] = sent_from
-    msg['To'] = sent_to
-    msg['Subject'] = subject
-
-    # construct body text (plain)
-    mime_body_text = MIMEText(body_text)
-    msg.attach(mime_body_text)
-
-    # create secure connection with server and send
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-
-        # begin ttls
-        server.starttls()
-
-        # login to server
-        server.login(username, password)
-
-        # send email
-        server.sendmail(sent_from, sent_to, msg.as_string())
-
-        # notify
-        print('Emailed alert area.')
-                
-    return
-
-
-# temp
-if __name__ == '__main__':
-
-    ds_summary = xr.open_dataset(r"C:\Users\Lewis\Desktop\testing ds\ds_static.nc")
-
-    #ds_summary = ds.median(['x', 'y'])
-
-    output = EWMACD(ds=ds_summary, trainingPeriod='static')
-
-    # todo - the order of dims is wrong on output
-    ds_final_veg, _ = xr.broadcast(ds_summary, ds)   # want same median value for every pixel per image
-    ds_final_change, _ = xr.broadcast(output , ds)   # want same change value for every pixel per image
-
-    # ensure dimensions in original order
-    ds_final_veg = ds_final_veg.transpose('time', 'y', 'x')
-    ds_final_change = ds_final_change.transpose('time', 'y', 'x')
-    print(output)
-    
-    
-# what i need to do
-# ui buttons:
-# create project button - calls nrt create project that builds new, empty gdb with monitoring areas features
-# create manage areas button - opens tab that has basic controls for adding, modifying, deleting monitoring areas? leave for last
-# create monitor tool button - opens tab that allows for running tool
-
-
-# todo :
-# prevent 2011, 2012 deom being used
-
-# nrt 
 
