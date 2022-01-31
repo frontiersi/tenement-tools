@@ -617,7 +617,7 @@ def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
 
 
 # meta, checks
-def build_change_cube(ds):
+def build_change_cube(ds, training_start_year=None, training_end_year=None):
     """
     """
 
@@ -633,8 +633,13 @@ def build_change_cube(ds):
     print('Detecting change via static and dynamic methods.')
 
     # perform static ewmacd, add result to new variable in summary
-    ds_summary['static'] = EWMACD(ds=ds_summary, trainingPeriod='static')['veg_idx']
-    ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic')['veg_idx']
+    ds_summary['static'] = EWMACD(ds=ds_summary, 
+                                  trainingPeriod='static',
+                                  trainingStart=training_start_year,
+                                  trainingEnd=training_end_year)['veg_idx']
+    ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
+                                   trainingStart=training_start_year,
+                                   trainingEnd=training_end_year)['veg_idx']
 
     # rename original veg_idx to summary
     ds_summary = ds_summary.rename({'veg_idx': 'summary'})
