@@ -18,6 +18,7 @@ import xarray as xr
 import pandas as pd
 import scipy.stats
 import rasterio
+from scipy.signal import savgol_filter
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -704,6 +705,105 @@ def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None,
         print('Emailed alert area.')
                 
     return
+
+
+# meta, checks 
+def smooth_change(arr):
+    """
+    Basic func to smooth change signal using
+    a savgol filter with win size 3. works best
+    for our data. minimal smoothing, yet removes
+    small spikes.
+    """
+    
+    # check if arr larger than win size
+    if len(arr) <= 3:
+        print('Cannot smooth signal less than window size, returning raw array.')
+        return arr
+    
+    # smooth using savgol filter with win size 3
+    return savgol_filter(arr, 3, 1)
+
+
+def fill_zeros_with_last(arr):
+    """
+    forward fills differences of 0 after a 
+    decline or positive flag.
+    """
+    prev = np.arange(len(arr))
+    prev[arr == 0] = 0
+    prev = np.maximum.accumulate(prev)
+    
+    return arr[prev]
+
+# meta checks
+def apply_rule_one(arr, vector_value=-1, min_consequtives=3, inc_plateaus_in_runs=False):
+    """
+    takes array of smoothed change output, classifies
+    array into binary 1s 0s depending on vector value,
+    calculates consequtive runs, then thresholds out 
+    minimum consequtive values. note min_consequitive
+    is inclusive of the value added. if plateaus are
+    included in runs, plateaus following declines/incline 
+    flags will also be considered in runs.
+    
+    """
+    
+    # checks
+    if vector_value not in [-1, 0, 1]:
+        raise ValueError('Vector value must be -1, 0, 1.')
+        
+    # classify signal into -1, 0 and 1
+    diffs = np.diff(arr, prepend=arr[0])
+    diffs = np.where(diffs == 0, 0, diffs)  # stable (doesnt change anything, inc. for clarity)
+    diffs = np.where(diffs > 0, 1, diffs)   # growth
+    diffs = np.where(diffs < 0, -1, diffs)  # decline
+    
+    # forward fill latest inc/dec flag if plateau directly after
+    if inc_plateaus_in_runs:
+        diffs = fill_zeros_with_last(diffs)
+    
+    # count continuous runs for requested vector value
+    arr_masked = np.where(diffs == vector_value, 1, 0)           # binarise
+    arr_extended = np.concatenate(([0], arr_masked, [0]))        # pad array with empty begin and end elements
+    idx = np.flatnonzero(arr_extended[1:] != arr_extended[:-1])  # get start and end indexes
+    arr_extended[1:][idx[1::2]] = idx[::2] - idx[1::2]           # grab breaks, prev - current, also trim extended elements
+    arr_counted = arr_extended.cumsum()[1:-1]                    # apply cumulative sum
+    
+    # threshold out specific run counts
+    if min_consequtives is not None:
+        arr_counted = np.where(arr_counted >= min_consequtives, arr_counted, 0)
+                
+    # replace 0s with nans
+    arr_counted = np.where(arr_counted != 0, arr_counted, np.nan)
+    
+    return arr_counted
+
+
+# meta checks 
+def apply_rule_two(arr, min_zone=-1, operator='<='):
+    """
+    takes array of smoothed change output and thresholds out
+    any values outside of a specified minimum zone e.g. -1.
+    """
+    
+    # checks
+    if operator not in ['<', '<=', '>', '>=']:
+        raise ValueError('Operator must be <, <=, >, >=')
+    
+    # operate based on 
+    if operator == '<':
+        arr_thresholded = np.where(arr < min_zone, arr, np.nan)
+    elif operator == '<=':
+        arr_thresholded = np.where(arr <= min_zone, arr, np.nan)
+    elif operator == '>':
+        arr_thresholded = np.where(arr > min_zone, arr, np.nan)
+    elif operator == '>=':
+        arr_thresholded = np.where(arr >= min_zone, arr, np.nan)
+        
+    return arr_thresholded
+    
+    
 
 
 # EWMACD EWMACD EWMACD
