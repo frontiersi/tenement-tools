@@ -81,3 +81,6 @@ A bug has been found where the output from a tool (e.g., metric layers from Phen
 
 ### Phenolopy LIOS and SIOS output layers look 'noisey' when using Landsat
 Currently investigating.
+
+### COG Fetch tool missing NIR band when using Sentinel 2
+Currently investigating.
