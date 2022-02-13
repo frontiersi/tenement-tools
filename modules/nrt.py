@@ -725,6 +725,20 @@ def smooth_change(arr):
     return savgol_filter(arr, 3, 1)
 
 
+# meta, checks
+def count_runs(arr, vector_value=-1):
+    
+    # count continuous runs for requested vector value
+    arr_masked = np.where(arr == vector_value, 1, 0)           # binarise
+    arr_extended = np.concatenate(([0], arr_masked, [0]))        # pad array with empty begin and end elements
+    idx = np.flatnonzero(arr_extended[1:] != arr_extended[:-1])  # get start and end indexes
+    arr_extended[1:][idx[1::2]] = idx[::2] - idx[1::2]           # grab breaks, prev - current, also trim extended elements
+    arr_counted = arr_extended.cumsum()[1:-1]                    # apply cumulative sum
+    
+    return arr_counted
+
+
+# meta - deprecated! no longer using
 def fill_zeros_with_last(arr):
     """
     forward fills differences of 0 after a 
@@ -736,35 +750,206 @@ def fill_zeros_with_last(arr):
     
     return arr[prev]
 
+
+# meta, check
+def classify_signal(arr):
+    """
+    takes array, calcs differences between on-going values and classifies 
+    in 0 (no change), 1 (incline), -1 (decline), 2 (plateau after incline), 
+    -2 (plateau after decline).
+    """
+    
+    # classify stable (0), incline (1), decline (-1)
+    diffs = np.diff(arr, prepend=arr[0])
+    diffs = np.where(diffs == 0, 0, diffs)  # inc. for clarity)
+    diffs = np.where(diffs > 0, 1, diffs)
+    diffs = np.where(diffs < 0, -1, diffs)
+    
+    # classify plateau post-incline (2) and post-decline (-2)
+    for i in np.arange(1, len(diffs)):
+        if diffs[i] == 0 and diffs[i - 1] > 0:
+            diffs[i] = 2
+        elif diffs[i] == 0 and diffs[i - 1] < 0:
+            diffs[i] = -2
+            
+    return diffs
+
+  
+# meta, stable zone?
+def get_stdv_from_zone(num_zones=1):
+    """
+    """
+    
+    # checks
+    if num_zones is None or num_zones <= 0:
+        print('Number of zones must be greater than 0. Setting to 1.')
+        num_zones = 1
+    
+    # multiple by zones (3 per zone)
+    std_jumped = num_zones * 3
+    
+    # todo include stable zone -1 to 1?
+    #
+    
+    return std_jumped
+
+  
 # meta checks
-def apply_rule_one(arr, vector_value=-1, min_consequtives=3, inc_plateaus_in_runs=False):
+def apply_rule_one(arr, direction='decline', min_consequtives=3, max_consequtives=None, inc_plateaus=False):
     """
     takes array of smoothed change output, classifies
     array into binary 1s 0s depending on vector value,
     calculates consequtive runs, then thresholds out 
-    minimum consequtive values. note min_consequitive
+    minimum consequtive values and maximum consequtives. note min_consequitive
     is inclusive of the value added. if plateaus are
     included in runs, plateaus following declines/incline 
     flags will also be considered in runs.
+    """
     
+    # check direction
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
+        
+    # check min and max consequtives 
+    if min_consequtives is not None and min_consequtives < 0:
+        print('Minimum consequtives must be either None or >= 0. Setting to None.')
+        min_consequtives = None
+
+    # check min and max consequtives 
+    if max_consequtives is not None and max_consequtives <= 0:
+        print('Maximum consequtives must be either None or > 0. Setting to 1.')
+        max_consequtives = 1
+        
+    # get required directional values
+    dir_values = [1, 2] if direction == 'incline' else [-1, -2]
+        
+    # classify signal into -2, -1, 0, 1, 2
+    diffs = classify_signal(arr=arr)
+    
+    # generate runs
+    arr_runs = count_runs(arr=diffs, 
+                              vector_value=dir_values[0])
+    
+    # flag plateaus if they are after a decline
+    if inc_plateaus:
+        for i in np.arange(1, len(arr_runs)):
+            if arr_runs[i] == 0 and arr_runs[i - 1] != 0:
+                if diffs[i] == dir_values[1]:
+                    arr_runs[i] = arr_runs[i - 1] + 1
+                    
+    # threshold out less than specific number consequtives
+    if min_consequtives is not None:
+        arr_runs = np.where(arr_runs >= min_consequtives, arr_runs, 0)
+
+    # threshold out more than specific number consequtives
+    if max_consequtives is not None:
+        arr_temp = np.where(arr_runs > 0, 1, 0)
+        arr_temp = count_runs(arr=arr_temp, vector_value=1)
+        arr_runs = np.where(arr_temp > max_consequtives, 0, arr_runs)
+        
+    # replace 0s with nans and re-count to merge runs and plateaus
+    arr_counted = np.where(arr_runs != 0, 1, 0)
+    arr_counted = count_runs(arr=arr_counted, vector_value=1)
+    
+    # finally, replace 0s with nans
+    arr_counted = np.where(arr_runs == 0, np.nan, arr_runs)
+    
+    return arr_counted
+
+
+# meta checks 
+def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<='):
+    """
+    takes array of smoothed change output and thresholds out
+    any values outside of a specified minimum zone e.g. 1.
+    """
+    
+    # check direction
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
+        
+    # check stdv value 
+    if min_stdv < 0: 
+        print('Minimum stdv must be greater than 0. Setting to 0.')
+        min_stdv = 0
+        
+    # checks
+    if operator not in ['<', '<=', '>', '>=']:
+        raise ValueError('Operator must be <, <=, >, >=')
+        
+    # set stdv to negative if decline
+    if direction == 'decline':
+        min_stdv = min_stdv * -1
+        
+    # check operator matches direction 
+    if direction == 'incline' and operator not in ['>', '>=']:
+        print('Operator must be > or >= when using incline. Setting to >=.')
+        operator = '>='
+    elif direction == 'decline' and operator not in ['<', '<=']:
+        print('Operator must be < or <= when using decline. Setting to <=.')
+        operator = '<='
+
+    # operate based on 
+    if operator == '<':
+        arr_thresholded = np.where(arr < min_stdv, arr, np.nan)
+    elif operator == '<=':
+        arr_thresholded = np.where(arr <= min_stdv, arr, np.nan)
+    elif operator == '>':
+        arr_thresholded = np.where(arr > min_stdv, arr, np.nan)
+    elif operator == '>=':
+        arr_thresholded = np.where(arr >= min_stdv, arr, np.nan)
+        
+    return arr_thresholded
+
+  
+# meta checks
+def apply_rule_three(arr, direction='decline', num_stdv_jumped=3, min_consequtives=3, max_consequtives=3):
+    """
+    takes array of smoothed (or raw) change output and detects large, multi zone
+    jumps. candidates only registered if a specific number of post jump
+    runs detected (set min_consequtives to 0 for any spike regardless of runs).
+    jump_size is number of zones required to jump - default is 3 stdv (1 zone). max
+    consequtives will cut the run off after certain number of indices detected.
     """
     
     # checks
-    if vector_value not in [-1, 0, 1]:
-        raise ValueError('Vector value must be -1, 0, 1.')
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
         
-    # classify signal into -1, 0 and 1
-    diffs = np.diff(arr, prepend=arr[0])
-    diffs = np.where(diffs == 0, 0, diffs)  # stable (doesnt change anything, inc. for clarity)
-    diffs = np.where(diffs > 0, 1, diffs)   # growth
-    diffs = np.where(diffs < 0, -1, diffs)  # decline
+    # prepare max consequtives
+    if max_consequtives <= 0:
+        print('Warning, max consequtives must be > 0. Resetting to three.')
+        max_consequtives = 3
+            
+    # get diffs
+    diffs = np.diff(np.insert(arr, 0, arr[0]))
     
-    # forward fill latest inc/dec flag if plateau directly after
-    if inc_plateaus_in_runs:
-        diffs = fill_zeros_with_last(diffs)
+    # threshold by magnitude of jump
+    if direction == 'incline':
+        arr_jumps = diffs > num_stdv_jumped
+    elif direction == 'decline':
+        arr_jumps = diffs < (num_stdv_jumped * -1)
+        
+    # iter each spike index and detect post-spike runs (as 1s)
+    indices = []
+    for i in np.where(arr_jumps)[0]:
+
+        # loop each element in array from current index and calc diff
+        for e, v in enumerate(arr[i:]):
+            diff = np.abs(np.abs(arr[i]) - np.abs(v))
+
+            # if diff is less than certain jump size record it, else skip
+            # todo diff < 3 is check to see if stays within one zone of devs
+            if diff < 3 and e <= max_consequtives:
+                indices.append(i + e)
+            else:
+                break 
+                
+    # set 1 to every flagged index, 0 to all else
+    arr_masked = np.zeros_like(arr)
+    arr_masked[indices] = 1
     
     # count continuous runs for requested vector value
-    arr_masked = np.where(diffs == vector_value, 1, 0)           # binarise
     arr_extended = np.concatenate(([0], arr_masked, [0]))        # pad array with empty begin and end elements
     idx = np.flatnonzero(arr_extended[1:] != arr_extended[:-1])  # get start and end indexes
     arr_extended[1:][idx[1::2]] = idx[::2] - idx[1::2]           # grab breaks, prev - current, also trim extended elements
@@ -773,37 +958,75 @@ def apply_rule_one(arr, vector_value=-1, min_consequtives=3, inc_plateaus_in_run
     # threshold out specific run counts
     if min_consequtives is not None:
         arr_counted = np.where(arr_counted >= min_consequtives, arr_counted, 0)
-                
+
     # replace 0s with nans
     arr_counted = np.where(arr_counted != 0, arr_counted, np.nan)
     
     return arr_counted
 
 
-# meta checks 
-def apply_rule_two(arr, min_zone=-1, operator='<='):
+# meta checks todo count runs???
+def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
     """
-    takes array of smoothed change output and thresholds out
-    any values outside of a specified minimum zone e.g. -1.
+    take pre-generated rule arrays and combine where requested.
     """
+    
+    allowed_rules = [
+        '1', '2', '3', '1&2', '1&3', '2&3', 
+        '1|2', '1|3', '2|3', '1&2&3', '1|2&3',
+        '1&2|3', '1|2|3']
     
     # checks
-    if operator not in ['<', '<=', '>', '>=']:
-        raise ValueError('Operator must be <, <=, >, >=')
+    if ruleset not in allowed_rules:
+        raise ValueError('Ruleset set is not supported.')
     
-    # operate based on 
-    if operator == '<':
-        arr_thresholded = np.where(arr < min_zone, arr, np.nan)
-    elif operator == '<=':
-        arr_thresholded = np.where(arr <= min_zone, arr, np.nan)
-    elif operator == '>':
-        arr_thresholded = np.where(arr > min_zone, arr, np.nan)
-    elif operator == '>=':
-        arr_thresholded = np.where(arr >= min_zone, arr, np.nan)
+    # convert rule arrays to binary masks
+    arr_r1_mask = ~np.isnan(arr_r1)
+    arr_r2_mask = ~np.isnan(arr_r2)
+    arr_r3_mask = ~np.isnan(arr_r3)
         
-    return arr_thresholded
+    # set signular rules
+    if ruleset == '1':
+        arr_comb = np.where(arr_r1_mask, 1, 0)
+    elif ruleset == '2':
+        arr_comb = np.where(arr_r2_mask, 1, 0)
+    elif ruleset == '3':
+        arr_comb = np.where(arr_r3_mask, 1, 0)
     
+    # set combined dual ruleset
+    elif ruleset == '1&2':
+        arr_comb = np.where(arr_r1_mask & arr_r2_mask, 1, 0)
+    elif ruleset == '1&3':
+        arr_comb = np.where(arr_r1_mask & arr_r3_mask, 1, 0)        
+    elif ruleset == '2&3':
+        arr_comb = np.where(arr_r2_mask & arr_r3_mask, 1, 0)             
+        
+    # set either or dual ruleset
+    elif ruleset == '1|2':
+        arr_comb = np.where(arr_r1_mask | arr_r2_mask, 1, 0)  
+    elif ruleset == '1|3':
+        arr_comb = np.where(arr_r1_mask | arr_r3_mask, 1, 0) 
+    elif ruleset == '2|3':
+        arr_comb = np.where(arr_r2_mask | arr_r3_mask, 1, 0)     
+        
+    # set combined several ruleset
+    elif ruleset == '1&2&3':  
+        arr_comb = np.where(arr_r1_mask & arr_r2_mask & arr_r3_mask, 1, 0)
+    elif ruleset == '1|2&3':  
+        arr_comb = np.where(arr_r1_mask | (arr_r2_mask & arr_r3_mask), 1, 0)        
+    elif ruleset == '1&2|3':  
+        arr_comb = np.where((arr_r1_mask & arr_r2_mask) | arr_r3_mask, 1, 0)  
+    elif ruleset == '1|2|3':  
+        arr_comb = np.where(arr_r1_mask | arr_r2_mask | arr_r3_mask, 1, 0)
+        
+    # count runs todo
     
+        
+    # replace 0s with nans
+    arr_comb = np.where(arr_comb != 0, arr_comb, np.nan)
+        
+    return arr_comb
+
 
 
 # EWMACD EWMACD EWMACD
