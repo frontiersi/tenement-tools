@@ -69,6 +69,22 @@ def remove_var(in_nc, var='nbart_red'):
         ds.to_netcdf(in_nc)
 
 
+def limit_years(in_nc, s_year=2000, e_year=2010):
+    """limit dataset to a number of years e.g. 2000-2010"""
+    print('Limiting years to {} - {}.'.format(s_year, e_year))
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds = ds.sel(time=((ds['time.year'] >= s_year) & 
+                          (ds['time.year'] <= e_year)))
+        
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+        
+
 def set_nc_vars_all_nan(in_nc):
     """set all nc var data to nan"""
     print('Setting nc var data to all nan')
@@ -80,6 +96,22 @@ def set_nc_vars_all_nan(in_nc):
         ds = ds.astype('float32')
         
         ds = xr.full_like(ds, fill_value=np.nan)
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+
+
+def set_nc_vars_all_zero(in_nc):
+    """set all nc var data to zero"""
+    print('Setting nc var data to all zero')
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds = ds.astype('int16')
+        
+        ds = xr.full_like(ds, fill_value=0)
         ds.close()
         
         ds.to_netcdf(in_nc)
@@ -257,4 +289,52 @@ def remove_specific_years_season_nan(in_nc, years=[], months=[]):
         ds.to_netcdf(in_nc)
 
 
+def remove_crs_attr(in_nc):
+    """strip crs attribute from nc"""
+    print('Stripping crs attribute from nc dim')
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        if isinstance(ds, xr.Dataset):
+            if hasattr(ds, 'crs'):
+                ds.attrs.pop('crs')
 
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+
+
+def invalidate_crs_attr(in_nc, crs_text='EPSG:4326'):
+    """invalidate crs attribute from nc"""
+    print('Invalidating crs attribute from nc dim with: {}'.format(crs_text))
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        if isinstance(ds, xr.Dataset):
+            if hasattr(ds, 'crs'):
+                ds.attrs['crs'] = crs_text
+
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+        
+
+def remove_nodatavals_attr(in_nc):
+    """strip nodatavals attribute from nc"""
+    print('Stripping nodatavals attribute from nc dim')
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        if isinstance(ds, xr.Dataset):
+            if hasattr(ds, 'nodatavals'):
+                ds.attrs.pop('nodatavals')
+
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
