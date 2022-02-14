@@ -17,7 +17,7 @@ The Tenement Tools setup process can take up to 30 minutes. Please follow the be
 
 ### 1. Download Tenement Tools plug-in and tutorial material
 Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files here: 
-- https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.1-prerelease-alpha.
+- https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.2-prerelease-alpha.
 
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
