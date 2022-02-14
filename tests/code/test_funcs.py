@@ -20,9 +20,14 @@ def create_temp_nc(in_nc, out_nc):
         del ds
 
 
+def default(in_nc):
+    """no changes to raw dataset, used for default test"""
+    print('No changes, setting up for default dataset.')
+
+
 def remove_coord(in_nc, coord='x'):
     """remove coord - e.g. x, y, time, spatial_ref"""
-    print('Removing dim: {}'.format(coord))
+    print('Removing coord: {}'.format(coord))
     
     if os.path.exists(in_nc):
         ds = xr.open_dataset(in_nc)
@@ -250,6 +255,6 @@ def remove_specific_years_season_nan(in_nc, years=[], months=[]):
         ds.close()
         
         ds.to_netcdf(in_nc)
-        
-        
-# combo functions
+
+
+
