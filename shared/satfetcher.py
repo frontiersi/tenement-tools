@@ -487,7 +487,7 @@ def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
             ds = xr.open_dataset(nc_path, chunks=-1)
         else:
             ds = xr.open_dataset(nc_path)
-
+            
         # check if no data val attributes exist, replace with nan
         if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
 

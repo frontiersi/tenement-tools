@@ -168,6 +168,10 @@ def resample_to_wet_dry_medians(ds, wet_month=None, dry_month=None, inplace=True
     # split into wet, dry
     ds_wet = ds.where(ds['time.month'].isin(wet_months), drop=True)
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
+    
+    # check if any data remains 
+    if len(ds_wet['time']) == 0 or len(ds_dry['time']) == 0:
+        raise ValueError('Not enough data available within wet/dry season. Add more years/months.')
 
     # create month map
     month_map = {
