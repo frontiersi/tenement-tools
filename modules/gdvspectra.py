@@ -1612,24 +1612,11 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         else:
             print('AUC: {0} for whole dataset.'.format(round(auc, 3)))
            
-        
-        for e in fpr:
-            print(e)
-        print('\n')
-        for e in tpr:
-            print(e)
-        print('\n')
-        print(auc)
-        print('\n')
-        print(cut_off)
-
-        
-
-        # show
-        print('- ' * 30)
-        plt.show()
-        print('- ' * 30)
-        print('')
+        # show (non-arcgis only, disabled)
+        #print('- ' * 30)
+        #plt.show()
+        #print('- ' * 30)
+        #print('')
 
     # concat array back together
     if len(thresh_list) > 1:
@@ -1794,7 +1781,7 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
     print('Thresholded likelihood succuessfully.')
     return ds_thresh
 
-# define original mk function
+
 def __mk__(x, y, p, d, nd):
     """
     Helper function, should only be called by perform_mk_original()
@@ -1833,7 +1820,8 @@ def __mk__(x, y, p, d, nd):
                 result = nd
     
     return result
-        
+
+
 def perform_mk_original(ds, pvalue=None, direction='both'):
     """
     Takes a xarray dataset/array of gdv likelihood values (thresholded or not)
@@ -1920,7 +1908,7 @@ def perform_mk_original(ds, pvalue=None, direction='both'):
 
     return ds_mk
 
-# define ts function (note: y, x different to mk)
+
 def __ts__(y, x, a, nd):
     """
     Helper function, should only be called by perform_theilsen_slope
@@ -1944,6 +1932,7 @@ def __ts__(y, x, a, nd):
     
     # return
     return medslope
+
 
 def perform_theilsen_slope(ds, alpha):
     """
@@ -2024,7 +2013,7 @@ def perform_theilsen_slope(ds, alpha):
 
     return ds_ts
 
-# define cva here
+
 def __cva__(ds_base, ds_comp, vege_var='tcg', soil_var='tcb', tmf=2):
     """
     Helper function, should only be called by perform_cva()

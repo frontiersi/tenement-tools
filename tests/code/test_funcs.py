@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 import arcpy
 
-# singlur functions
+# netcdf corruptors
 def create_temp_nc(in_nc, out_nc):
     """duplicate a good nc for use in testing"""
     print('Duplicating cube: {}'.format(in_nc))
@@ -20,7 +20,7 @@ def create_temp_nc(in_nc, out_nc):
         del ds
 
 
-def default(in_nc):
+def nc_default(in_nc):
     """no changes to raw dataset, used for default test"""
     print('No changes, setting up for default dataset.')
 
@@ -338,3 +338,162 @@ def remove_nodatavals_attr(in_nc):
         ds.close()
         
         ds.to_netcdf(in_nc)
+
+
+# shapefile corruptors
+def shp_default(shp_path):
+    """no changes to raw shapefile, used for default test"""
+    print('No changes, setting up for default shapefile.')
+
+
+def project_shp_to_wgs84(shp_path, temp_shp):
+    """takes shp path and projects to wgs84"""
+    print('Projecting shapefile to wgs84')
+
+    arcpy.env.addOutputsToMap = False
+
+    out_srs = arcpy.SpatialReference(4326)
+    arcpy.management.Project(in_dataset=shp_path, 
+                             out_dataset=temp_shp, 
+                             out_coor_system=out_srs)
+
+
+def subset_shp_to_area(shp_path, temp_shp, area_code='a'):
+    """subset shapefile to specific area"""
+    print('Subsetting shapefile to records with area: {}'.format(area_code))
+
+    arcpy.env.addOutputsToMap = False
+
+    arcpy.analysis.Select(in_features=shp_path, 
+                          out_feature_class=temp_shp, 
+                          where_clause="area = '{}'".format(area_code))
+
+
+def strip_shp_proj_file(shp_path, temp_shp):
+    """strips projection file from shapefile"""
+    print('Stripping shapefile of projection file')
+    
+    arcpy.env.addOutputsToMap = False
+
+    arcpy.management.CopyFeatures(in_features=shp_path, 
+                                  out_feature_class=temp_shp)
+
+    prj_file = os.path.splitext(temp_shp)[0] + '.prj'
+    os.remove(prj_file)
+
+
+def convert_shp_pa_field_to_text(shp_path, temp_shp, pa_column='p_a'):
+    """converts long field to text for pres/abse field"""
+    print('Converting pres/abse field {} to string'.format(pa_column))
+
+    arcpy.env.addOutputsToMap = True
+
+    arcpy.management.CopyFeatures(in_features=shp_path, out_feature_class=temp_shp)
+
+    arcpy.management.AddField(in_table=temp_shp, field_name=pa_column + '_txt', field_type='TEXT')
+    arcpy.management.CalculateField(in_table=temp_shp, field=pa_column + '_txt', expression="str(!{}!)".format(pa_column))
+    arcpy.management.DeleteField(in_table=temp_shp, drop_field=pa_column)
+
+    arcpy.management.AddField(in_table=temp_shp, field_name=pa_column, field_type='TEXT')
+    arcpy.management.CalculateField(in_table=temp_shp, field=pa_column, expression="!{}!".format(pa_column + '_txt'))
+
+    arcpy.management.DeleteField(in_table=temp_shp, drop_field=pa_column + '_txt')
+
+
+def random_set_shp_p_a_value(shp_path, temp_shp, pa_column, num_rand_samples, set_to_value):
+    """random set a specified number of pres/abse values to specified value"""
+    print('Setting random {} pres/abse values to {}'.format(num_rand_samples, set_to_value))
+
+    arcpy.env.addOutputsToMap = False
+
+    arcpy.management.CopyFeatures(in_features=shp_path, out_feature_class=temp_shp)
+
+    num_rows = int(arcpy.management.GetCount(temp_shp)[0])
+    rand_fids = random.sample(range(0, num_rows - 1), num_rand_samples)
+
+    with arcpy.da.UpdateCursor(temp_shp, ['FID', pa_column]) as cursor:
+        for row in cursor:
+            if row[0] in rand_fids:
+                row[1] = set_to_value
+                cursor.updateRow(row)
+
+
+def random_set_shp_p_a_null(shp_path, temp_shp, pa_column, num_rand_samples):
+    """random set a specified number of pres/abse values to null"""
+    print('Setting random {} pres/abse values to null'.format(num_rand_samples))
+
+    arcpy.env.addOutputsToMap = False
+    
+    arcpy.management.CopyFeatures(in_features=shp_path, out_feature_class=temp_shp)
+
+    arcpy.management.AddField(in_table=temp_shp, field_name=pa_column + '_tmp', field_type='LONG')
+    arcpy.management.CalculateField(in_table=temp_shp, field=pa_column + '_tmp', expression="!{}!".format(pa_column))
+    arcpy.management.DeleteField(in_table=temp_shp, drop_field=pa_column)
+
+    arcpy.management.AddField(in_table=temp_shp, field_name=pa_column, field_type='LONG', field_is_nullable='NULLABLE')
+    arcpy.management.CalculateField(in_table=temp_shp, field=pa_column, expression="!{}!".format(pa_column + '_tmp'))
+    arcpy.management.DeleteField(in_table=temp_shp, drop_field=pa_column + '_tmp')
+
+    num_rows = int(arcpy.management.GetCount(temp_shp)[0])
+    rand_fids = random.sample(range(0, num_rows - 1), num_rand_samples)
+
+    with arcpy.da.UpdateCursor(temp_shp, ['FID', pa_column]) as cursor:
+        for row in cursor:
+            if row[0] in rand_fids:
+                row[1] = None
+                cursor.updateRow(row)
+
+
+def reduce_shp_pa_num_points(shp_path, temp_shp, area_code='a', pa_column='p_a', num_points=5):
+    """reduce number of pa points to specified num of points for specified area code"""
+    print('Reducing num of pres/abse points to: {} each for area: {}'.format(num_points, area_code))
+
+    arcpy.env.addOutputsToMap = False
+
+    arcpy.analysis.Select(in_features=shp_path, 
+                          out_feature_class=temp_shp, 
+                          where_clause="area = '{}'".format(area_code))
+    
+    p_fids, a_fids = [], []
+    with arcpy.da.SearchCursor(temp_shp, ['FID', pa_column]) as cursor:
+        for row in cursor:
+            if row[1] == 1:
+                p_fids.append(row[0])
+            elif row[1] == 0:
+                a_fids.append(row[0])
+                
+    rand_fids = random.sample(p_fids, num_points) + random.sample(a_fids, num_points)
+    
+    with arcpy.da.UpdateCursor(temp_shp, ['FID']) as cursor:
+        for row in cursor:
+            if row[0] not in rand_fids:
+                cursor.deleteRow()
+
+
+def remove_all_shp_points(shp_path, temp_shp):
+    """remove all rows in shapefile to create empty shapefile"""
+    print('Removing all rows in shapefile to create empty shapefile')
+
+    arcpy.env.addOutputsToMap = True
+
+    arcpy.management.CopyFeatures(in_features=shp_path, out_feature_class=temp_shp)
+    
+    with arcpy.da.UpdateCursor(temp_shp, ['FID']) as cursor:
+        for row in cursor:
+            cursor.deleteRow()
+
+ 
+def set_all_shp_points_to_value(shp_path, temp_shp, pa_column='p_a', new_val=1):
+    """set all pres/abse values in shapefile to specified new value"""
+    print('Setting all pres/abse values in shapefile to {}'.format(new_val))
+
+    arcpy.env.addOutputsToMap = True
+
+    arcpy.management.CopyFeatures(in_features=shp_path, out_feature_class=temp_shp)
+    
+    with arcpy.da.UpdateCursor(temp_shp, ['FID', pa_column]) as cursor:
+        for row in cursor:
+            row[1] = new_val
+            cursor.updateRow(row)
+
+# 
