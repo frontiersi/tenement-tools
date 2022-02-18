@@ -1,5 +1,6 @@
 # imports
 import os
+import random
 import numpy as np
 import xarray as xr
 import arcpy
@@ -341,9 +342,14 @@ def remove_nodatavals_attr(in_nc):
 
 
 # shapefile corruptors
-def shp_default(shp_path):
+def shp_default(shp_path, temp_shp):
     """no changes to raw shapefile, used for default test"""
     print('No changes, setting up for default shapefile.')
+    
+    arcpy.env.addOutputsToMap = False
+    
+    arcpy.management.CopyFeatures(in_features=shp_path, 
+                                  out_feature_class=temp_shp)
 
 
 def project_shp_to_wgs84(shp_path, temp_shp):
@@ -470,8 +476,8 @@ def reduce_shp_pa_num_points(shp_path, temp_shp, area_code='a', pa_column='p_a',
                 cursor.deleteRow()
 
 
-def remove_all_shp_points(shp_path, temp_shp):
-    """remove all rows in shapefile to create empty shapefile"""
+def remove_all_shp_points(shp_path, temp_shp, pa_column='p_a'):
+    """remove all rows in shapefile to create empty shapefile. note, pa_column not used"""
     print('Removing all rows in shapefile to create empty shapefile')
 
     arcpy.env.addOutputsToMap = True
@@ -496,4 +502,3 @@ def set_all_shp_points_to_value(shp_path, temp_shp, pa_column='p_a', new_val=1):
             row[1] = new_val
             cursor.updateRow(row)
 
-# 
