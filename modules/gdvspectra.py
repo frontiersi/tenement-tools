@@ -476,7 +476,7 @@ def drop_incomplete_wet_dry_years(ds, inplace=True):
 
     return ds
 
-# helper func to fill edges via bfill, ffill
+# deprecated: helper func to fill edges via bfill, ffill
 def __fill_edge__(ds, edge=None):
     """
     Helper function for fill_empty_wet_dry_edges()
@@ -536,6 +536,101 @@ def __fill_edge__(ds, edge=None):
             break
 
     return ds
+
+
+def __manual_bfill__(ds, gap_size=25):
+    """
+    The xarray backfill is not great, here is a more manual
+    and quicker implementation.
+    """
+    
+    # get original dataset type
+    ds_type = ds.to_array().dtype
+    
+    # get a 1d array of all times of all pixels == nan, sum Trues for each var
+    ds_all_nans = ds.isnull().all(['x', 'y']).to_array()
+    ds_all_nans = ds_all_nans.sum('variable') > 0
+
+    # backfill only if first index on left (earliest) is all nan
+    if ds_all_nans.isel(time=0) == True:
+        print('First index in dataset is all nan. Checking data.')
+
+        # get first non-empty index and raw data array
+        first_full_idx = np.where(ds_all_nans == False)[0][0]
+        first_full_data = ds.isel(time=first_full_idx).to_array()
+
+        # if first non nan index is <= 3 times away, fill, else dont
+        if first_full_idx <= gap_size:
+            print('Full index exists close to missing. Backfilling.')
+
+            # set main ds to array temporarily
+            ds = ds.to_array()
+
+            # back fill data in first index
+            ds[:, 0] = first_full_data
+            
+            # note: to fill all indices before first full, use this code
+            #for i in range(0, first_full_idx):
+                #ds[:, i] = first_full_data   
+
+            # convert back to dataset original dtype
+            ds = ds.to_dataset(dim='variable').astype(ds_type)
+            
+        else:
+            print('Gap too large, not backfilling.')
+        
+    return ds
+
+
+def __manual_ffill__(ds, gap_size=25):
+    """
+    The xarray forwardfill is not great, here is a more manual
+    and quicker implementation.
+    """
+    
+    # get original dataset type
+    ds_type = ds.to_array().dtype
+    
+    # reverse order of ds by time
+    ds = ds.sortby('time', ascending=False)
+    
+    # get a 1d array of all times of all pixels == nan, sum Trues for each var
+    ds_all_nans = ds.isnull().all(['x', 'y']).to_array()
+    ds_all_nans = ds_all_nans.sum('variable') > 0
+
+    # backfill only if first index on left (earliest) is all nan
+    if ds_all_nans.isel(time=0) == True:
+        print('First index in dataset is all nan. Checking data.')
+
+        # get first non-empty index and raw data array
+        first_full_idx = np.where(ds_all_nans == False)[0][0]
+        first_full_data = ds.isel(time=first_full_idx).to_array()
+
+        # if first non nan index is <= 3 times away, fill, else dont
+        if first_full_idx <= gap_size:
+            print('Full index exists close to missing. Backfilling.')
+
+            # set main ds to array temporarily
+            ds = ds.to_array()
+
+            # back fill data in first index
+            ds[:, 0] = first_full_data
+            
+            # note: to fill all indices before first full, use this code
+            #for i in range(0, first_full_idx):
+                #ds[:, i] = first_full_data   
+
+            # convert back to dataset original dtype
+            ds = ds.to_dataset(dim='variable').astype(ds_type)
+            
+        else:
+            print('Gap too large, not backfilling.')
+        
+    # sort back
+    ds = ds.sortby('time', ascending=True)
+    
+    return ds
+
 
 def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     """
@@ -604,15 +699,27 @@ def fill_empty_wet_dry_edges(ds, wet_month=None, dry_month=None, inplace=True):
     ds_dry = ds.where(ds['time.month'].isin(dry_months), drop=True)
 
     # fill edges for wet first, last
-    print('Filling wet season edges.')
-    ds_wet = __fill_edge__(ds_wet, edge='first')
-    ds_wet = __fill_edge__(ds_wet, edge='last')
+    try:
+        print('Filling wet season edges.')
+        ds_wet = __manual_bfill__(ds_wet, gap_size=25)
+        ds_wet = __manual_ffill__(ds_wet, gap_size=25)
+        #ds_wet = __fill_edge__(ds_wet, edge='first')
+        #ds_wet = __fill_edge__(ds_wet, edge='last')
+    except:
+        print('Could not fill missing wet season edges. Skipping.')
+        return ds
 
     # fill edges for wet first, last
-    print('Filling dry season edges.')
-    ds_dry = __fill_edge__(ds_dry, edge='first')
-    ds_dry = __fill_edge__(ds_dry, edge='last')
-
+    try:
+        print('Filling dry season edges.')
+        ds_dry = __manual_bfill__(ds_dry, gap_size=25)
+        ds_dry = __manual_ffill__(ds_dry, gap_size=25)
+        #ds_dry = __fill_edge__(ds_dry, edge='first')
+        #ds_dry = __fill_edge__(ds_dry, edge='last')
+    except:
+        print('Could not fill missing dry season edges. Skipping.')
+        return ds        
+    
     # concat wet, dry datasets back together
     ds = xr.concat([ds_wet, ds_dry], dim='time').sortby('time')
     
@@ -1663,9 +1770,9 @@ def threshold_xr_via_std(ds, num_stdevs=3, inplace=True):
     elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
         raise ValueError('No x or y dimensions in dataset.')  
     
-    # check num_stdv > 0 and <= 5
-    if num_stdevs <= 0 or num_stdevs > 5:
-        raise ValueError('Number of standard devs must be > 0 and <= 5.')
+    # check num_stdv > 0 and <= 10
+    if num_stdevs < 0 or num_stdevs > 10:
+        raise ValueError('Number of standard devs must be >= 0 and <= 10.')
         
     # create copy ds if not inplace
     if not inplace:
@@ -1752,9 +1859,9 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
         if var not in ['like']:
             raise ValueError('Likelihood variable missing.')
 
-    # check num_stdevs > 0 and <= 5
-    if num_stdevs <= 0 or num_stdevs > 5:
-        raise ValueError('Number of standard deviations must be > 0 and <= 5.')
+    # check num_stdevs > 0 and < 10
+    if num_stdevs < 0 or num_stdevs > 10:
+        raise ValueError('Number of standard deviations must be >= 0 and <= 10.')
 
     # if records given, thresh via auc, else standard dev
     if df is not None:
