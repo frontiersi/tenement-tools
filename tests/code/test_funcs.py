@@ -11,6 +11,10 @@ def create_temp_nc(in_nc, out_nc):
     print('Duplicating cube: {}'.format(in_nc))
     
     if os.path.exists(out_nc):
+        ds = xr.open_dataset(out_nc)  # if locked, reset lock and close
+        ds = ds.load()
+        ds.close()
+        
         os.remove(out_nc)
         
     if os.path.exists(in_nc):
@@ -113,6 +117,22 @@ def set_nc_vars_all_zero(in_nc):
         ds = ds.astype('int16')
         
         ds = xr.full_like(ds, fill_value=0)
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+
+
+def set_nc_vars_all_ones(in_nc):
+    """set all nc var data to ones"""
+    print('Setting nc var data to all ones')
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds = ds.astype('int16')
+        
+        ds = xr.full_like(ds, fill_value=1)
         ds.close()
         
         ds.to_netcdf(in_nc)
@@ -502,3 +522,50 @@ def set_all_shp_points_to_value(shp_path, temp_shp, pa_column='p_a', new_val=1):
             row[1] = new_val
             cursor.updateRow(row)
 
+
+
+# mask nc corruptors
+def shift_dataset_via_coords(in_nc, x=300, y=500):
+    """shift mask dataset via coordinates"""
+    print('Shifting dataset x: {}, y: {}'.format(x, y))
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds['x'] = ds['x'] + x
+        ds['y'] = ds['y'] + y
+        
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+
+
+def reduce_resolution(in_nc, factor=2):
+    """reduces dataset resolution by a factor"""
+    print('Reducing dataset resolution by factor of: {}'.format(factor))
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds = ds.coarsen(x=factor, y=factor, boundary='exact').mean()
+        
+        ds.close()
+        
+        ds.to_netcdf(in_nc)
+        
+        
+def multiply_values(in_nc, factor=30):
+    """multiply dataset by a factor"""
+    print('Multiplyinh dataset by factor of: {}'.format(factor))
+    
+    if os.path.exists(in_nc):
+        ds = xr.open_dataset(in_nc)
+        ds = ds.load()
+        
+        ds['like'] = ds['like'] * factor
+        
+        ds.close()
+        
+        ds.to_netcdf(in_nc)

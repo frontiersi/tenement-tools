@@ -6,6 +6,14 @@ Contacts:
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
+# set gdal global environ
+# import os
+# os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
+# os.environ['CPL_VSIL_CURL_ALLOWED_EXTENSIONS '] = 'tif'
+# os.environ['VSI_CACHE '] = 'TRUE'
+# os.environ['GDAL_HTTP_MULTIRANGE '] = 'YES'
+# os.environ['GDAL_HTTP_MERGE_CONSECUTIVE_RANGES '] = 'YES'
+
 # import required libraries
 import os
 import sys
@@ -276,26 +284,47 @@ def create_nrt_project(out_folder, out_filename):
     print('Created new monitoring project database successfully.')
 
 
-# checks, dtype, fillvalueto, fillvalue_from need doing, metadata
-def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=3577, slc_off=False, resolution=30, ds_existing=None, chunks={}):
+# meta, checks
+def safe_load_nc(in_path):
+    """Performs a safe load on local netcdf. Reads 
+    NetCDF, loads it, and closes connection to file
+    whilse maintaining data in memory"""
+    
+    # check if file existd and try safe open
+    if os.path.exists(in_path):
+        try:
+            with xr.open_dataset(in_path) as ds_local:
+                ds_local.load()
+            
+            return ds_local
+                    
+        except:
+            print('Could not open cube: {}, returning None.'.format(in_path))
+            return
+    
+    else:
+        print('File does not exist: {}, returning None.'.format(in_path))
+        return
+
+
+# checks, metadata
+def fetch_cube_data(out_nc, collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
     """
     Takes a path to a netcdf file, a start and end date, bounding box and
     obtains the latest satellite imagery from DEA AWS. If an existing
     dataset is provided, the metadata from that is used to define the
-    coordinates, etc. This function is used to 'sync' existing cubes
-    to the latest scene (time = now). New scenes are appended on to
-    the existing cube and re-exported to a new file (overwrite).
+    coordinates, etc. This function is used to 'grab' all existing cubes
+    Note: currently this func contains a temp solution to the sentinel nrt 
+    fmask band name issue
     
     Parameters
     ----------
-    in_feat: str
+    out_nc: str
         A path to an existing monitoring areas gdb feature class.
-    in_epsg: int
-        A integer representing a specific epsg code for coordinate system.
-      
     """
     
     # checks
+    #
     
     # notify
     print('Syncing cube for monitoring area: {}'.format(out_nc))
@@ -306,7 +335,7 @@ def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=35
                                          start_dt=start_dt, 
                                          end_dt=end_dt, 
                                          bbox=bbox,
-                                         slc_off=slc_off,
+                                         slc_off=False,    # never want slc-off data
                                          limit=250)
 
     # replace s3 prefix with https for each band - arcgis doesnt like s3
@@ -314,34 +343,94 @@ def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=35
                                               from_prefix='s3://dea-public-data', 
                                               to_prefix='https://data.dea.ga.gov.au')
 
-    # construct an xr of items (lazy)
+    # build xarray dataset from stac data
     ds = cog_odc.build_xr_odc(items=items,
                               bbox=bbox,
                               bands=bands,
-                              crs=in_epsg,
+                              crs=3577,                   # always albers
                               resolution=resolution,
-                              group_by='solar_day',
-                              skip_broken_datasets=True,
+                              group_by='solar_day',       # always group by solar day
+                              skip_broken_datasets=True,  # always skip errors
                               like=ds_existing,
-                              chunks=chunks)
+                              chunks={})                  # always want lazy load
 
     # prepare lazy ds with data type, type, time etc
-    ds = cog_odc.convert_type(ds=ds, to_type='int16')  # input?
-    ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)  # input?
+    ds = cog_odc.convert_type(ds=ds, to_type='float32')                       # always want float32 for nrt
+    ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)    # always want -999 to be nodata
     ds = cog_odc.fix_xr_time_for_arc_cog(ds)
+    
+    return ds
 
-    # return dataset instantly if new, else append
-    if ds_existing is None:
-        return ds
-    else:
-        # existing netcdf - append
-        ds_new = ds_existing.combine_first(ds).copy(deep=True)
 
-        # close everything safely
-        ds.close()
-        ds_existing.close()
-
+# checks, meta
+def sync_new_and_old_cubes(ds_exist, ds_new, out_nc):
+    """Takes two structurally idential xarray datasets and 
+    combines them into one, where only new data from the latest 
+    new dataset is combined with all of the old. Either way, a 
+    file of this process is written to output path. This drives 
+    the nrt on-going approach of the module."""
+    
+    # also set rasterio env variables
+    rasterio_env = {
+        'GDAL_DISABLE_READDIR_ON_OPEN': 'EMPTY_DIR',
+        'CPL_VSIL_CURL_ALLOWED_EXTENSIONS':'tif',
+        'VSI_CACHE': True,
+        'GDAL_HTTP_MULTIRANGE': 'YES',
+        'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
+    }
+    
+    # checks
+    # 
+    
+    # if a new dataset provided only, write and load new
+    if ds_exist is None and ds_new is not None:
+        print('Existing dataset not provided. Creating and loading for first time.')
+        
+        # write netcdf file
+        with rasterio.Env(**rasterio_env):
+            ds_new = ds_new.astype('float32')
+            tools.export_xr_as_nc(ds=ds_new, filename=out_nc)
+            
+        # safeload new dataset and return
+        ds_new = safe_load_nc(out_nc)
         return ds_new
+            
+    elif ds_exist is not None and ds_new is not None:
+        print('Existing and New dataset provided. Combining, writing and loading.')  
+        
+        # ensure existing is not locked via safe load (new always in mem)
+        ds_exist = safe_load_nc(out_nc)
+                
+        # extract only new datetimes from new dataset
+        dts = ds_exist['time']
+        ds_new = ds_new.where(~ds_new['time'].isin(dts), drop=True)
+        
+        # check if any new images
+        if len(ds_new['time']) > 0:
+            print('New images detected ({}), adding and overwriting existing cube.'.format(len(ds_new['time'])))
+                        
+            # combine new with old (concat converts to float)
+            ds_combined = xr.concat([ds_exist, ds_new], dim='time').copy(deep=True) 
+
+            # write netcdf file
+            with rasterio.Env(**rasterio_env):
+                ds_combined = ds_combined.astype('float32')
+                tools.export_xr_as_nc(ds=ds_combined, filename=out_nc)            
+             
+            # safeload new dataset and return
+            ds_combined = safe_load_nc(out_nc)
+            return ds_combined
+        
+        else:
+            print('No new images detected, returning existing cube.')
+            
+            # safeload new dataset and return
+            ds_exist = safe_load_nc(out_nc)
+            return ds_exist
+
+    else:
+        raise ValueError('At a minimum, a new dataset must be provided.')
+        return
 
   
 # todo - include provisional products too. finish meta
@@ -361,7 +450,7 @@ def get_satellite_params(platform=None):
     # check platform name
     if platform is None:
         raise ValueError('Must provide a platform name.')
-    elif platform.lower() not in ['landsat', 'sentinel']:
+    elif platform.lower() not in ['landsat', 'sentinel', 'sentinel_provisional']:
         raise ValueError('Platform must be Landsat or Sentinel.')
         
     # set up dict
@@ -374,7 +463,9 @@ def get_satellite_params(platform=None):
         collections = [
             'ga_ls5t_ard_3', 
             'ga_ls7e_ard_3', 
-            'ga_ls8c_ard_3']
+            'ga_ls8c_ard_3',
+            #'ga_ls7e_ard_provisional_3',  # will always be slc-off
+            'ga_ls8c_ard_provisional_3']
         
         # get bands
         bands = [
@@ -395,12 +486,16 @@ def get_satellite_params(platform=None):
             'bands': bands,
             'resolution': resolution}
         
-    else:
+    # the product 3 is not yet avail on dea. we use s2 for now.
+    elif platform.lower() == 'sentinel':
         
         # get collections
         collections = [
             's2a_ard_granule', 
-            's2b_ard_granule']
+            's2b_ard_granule',
+            'ga_s2am_ard_provisional_3', 
+            'ga_s2bm_ard_provisional_3'
+            ]
         
         # get bands
         bands = [
@@ -419,8 +514,8 @@ def get_satellite_params(platform=None):
         params = {
             'collections': collections,
             'bands': bands,
-            'resolution': resolution}        
-        
+            'resolution': resolution}   
+
     return params
  
  
@@ -536,17 +631,28 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
     return True 
  
  
- # todo do checks, do meta
-def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1):
+# todo do checks, do meta
+def mask_xr_via_polygon(ds, geom, mask_value=1):
     """
     geom object from gdal
     x, y = arrays of coordinates from xr dataset
     bbox 
     transform from geobox
     ncols, nrows = len of x, y
-
     """
-
+    
+    # check dataset
+    if 'x' not in ds or 'y' not in ds:
+        raise ValueError('Dataset has no x or y dimensions.')
+    elif not hasattr(ds, 'geobox'):
+        raise ValueError('Dataset does not have a geobox.')
+        
+    # extract raw x and y value arrays, bbox, transform and num col, row
+    x, y = ds['x'].data, ds['y'].data
+    bbox = ds.geobox.extent.boundingbox
+    transform = ds.geobox.transform
+    ncols, nrows = len(ds['x']), len(ds['y'])
+    
     # extract bounding box extents
     xmin, ymin, xmax, ymax = bbox.left, bbox.bottom, bbox.right, bbox.top
 
@@ -576,7 +682,7 @@ def mask_xr_via_polygon(geom, x, y, bbox, transform, ncols, nrows, mask_value=1)
     return mask
     
     
-# meta
+# deprecated! meta
 def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
     """
     """
@@ -618,7 +724,7 @@ def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
 
 
 # meta, checks
-def build_change_cube(ds, training_start_year=None, training_end_year=None):
+def build_change_cube(ds, training_start_year=None, training_end_year=None, persistence_per_year=1, add_extra_vars=True):
     """
     """
 
@@ -626,32 +732,50 @@ def build_change_cube(ds, training_start_year=None, training_end_year=None):
 
     # notify
     print('Detecting change via static and dynamic methods.')
-
+    
+    # get attributes from dataset
+    data_attrs = ds.attrs
+    band_attrs = ds[list(ds.data_vars)[0]].attrs
+    sref_attrs = ds['spatial_ref'].attrs
+    
     # sumamrise each image to a single median value
     ds_summary = ds.median(['x', 'y'], keep_attrs=True)
 
-    # notify
-    print('Detecting change via static and dynamic methods.')
-
-    # perform static ewmacd, add result to new variable in summary
+    # perform static ewmacd and add as new var
     ds_summary['static'] = EWMACD(ds=ds_summary, 
                                   trainingPeriod='static',
                                   trainingStart=training_start_year,
-                                  trainingEnd=training_end_year)['veg_idx']
+                                  trainingEnd=training_end_year,
+                                  persistence_per_year=persistence_per_year)['veg_idx']
+    
+    # perform dynamic ewmacd and add as new var
     ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
                                    trainingStart=training_start_year,
-                                   trainingEnd=training_end_year)['veg_idx']
+                                   persistence_per_year=persistence_per_year)['veg_idx']
 
     # rename original veg_idx to summary
-    ds_summary = ds_summary.rename({'veg_idx': 'summary'})
+    #ds_summary = ds_summary.rename({'veg_idx': 'summary'})
 
     # broadcast summary back on to original dataset and order axes
     ds_summary, _ = xr.broadcast(ds_summary, ds)
     ds_summary = ds_summary.transpose('time', 'y', 'x')
+    
+    # add extra empty vars (zones, cands, conseqs) to dataset if new
+    if add_extra_vars:
+        for var in ['zones', 'cands_inc', 'cands_dec', 'consq_inc', 'consq_dec']:
+            if var not in ds_summary:
+                ds_summary[var] = xr.full_like(ds_summary['veg_idx'], np.nan)    
+                
+    # append attrbutes back on
+    ds_summary.attrs = data_attrs
+    ds_summary['spatial_ref'].attrs = sref_attrs
+    for var in list(ds_summary.data_vars):
+        ds_summary[var].attrs = band_attrs
 
     # notify and return
     print('Successfully created detection cube')
     return ds_summary
+
 
 # todo checks, meta
 def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
@@ -858,7 +982,7 @@ def apply_rule_one(arr, direction='decline', min_consequtives=3, max_consequtive
 
 
 # meta checks 
-def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<='):
+def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<=', bidirectional=False):
     """
     takes array of smoothed change output and thresholds out
     any values outside of a specified minimum zone e.g. 1.
@@ -867,11 +991,6 @@ def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<='):
     # check direction
     if direction not in ['incline', 'decline']:
         raise ValueError('Direction must be incline or decline.')
-        
-    # check stdv value 
-    if min_stdv < 0: 
-        print('Minimum stdv must be greater than 0. Setting to 0.')
-        min_stdv = 0
         
     # checks
     if operator not in ['<', '<=', '>', '>=']:
@@ -890,7 +1009,16 @@ def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<='):
         operator = '<='
 
     # operate based on 
-    if operator == '<':
+    if bidirectional:
+        print('Bidrectional enabled, ignoring direction.')
+        arr_abs = np.abs(arr)
+        
+        if '=' in operator:
+            arr_thresholded = np.where(arr_abs >= abs(min_stdv), arr, np.nan)
+        else:
+            arr_thresholded = np.where(arr_abs > abs(min_stdv), arr, np.nan)
+        
+    elif operator == '<':
         arr_thresholded = np.where(arr < min_stdv, arr, np.nan)
     elif operator == '<=':
         arr_thresholded = np.where(arr <= min_stdv, arr, np.nan)
@@ -1028,6 +1156,184 @@ def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
     return arr_comb
 
 
+# meta, checks, check rule 2 operator is right
+def get_candidates(vec, direction='incline', min_consequtives=3, max_consequtives=None, inc_plateaus=False, min_stdv=1, num_zones=1, bidirectional=False, ruleset='1&2|3', binarise=True):
+    """
+    min_conseq = rule 1
+    max_conseq = rule 1
+    inc_plateaus = rule 1
+    min_stdv = rule 2
+    num_zones = rule 3
+    rulset = all
+    binarise = set out to 1,0 not 1, nan
+    """
+    
+    # checks
+    # min_conseq >= 0
+    # max_conseq >= 0, > min, or None
+    # min_stdv >= 0 
+    # operator only > >= < <=
+    
+    # set up parameters reliant on direction
+    if direction == 'incline':
+        operator = '>='
+    elif direction == 'decline':
+        operator = '<='
+    
+    # calculate rule 1 (consequtive runs)
+    print('Calculating rule one: consequtive runs {}.'.format(direction))
+    vec_rule_1 = apply_rule_one(arr=vec,
+                                direction=direction,
+                                min_consequtives=min_consequtives,        # min consequtive before candidate
+                                max_consequtives=max_consequtives,        # max num consequtives before reset
+                                inc_plateaus=inc_plateaus)                # include plateaus after decline
+    
+    # calculate rule 2 (zone threshold)
+    print('Calculating rule two: zone threshold {}.'.format(direction))
+    vec_rule_2 = apply_rule_two(arr=vec,
+                                direction=direction,
+                                min_stdv=min_stdv,                        # min stdv threshold
+                                operator=operator,
+                                bidirectional=bidirectional)              # operator e.g. <=
+        
+    # calculate rule 3 (jumps) increase
+    print('Calculating rule three: sharp jump {}.'.format(direction))
+    num_stdvs = get_stdv_from_zone(num_zones=num_zones)
+    vec_rule_3 = apply_rule_three(arr=vec,
+                                  direction=direction,
+                                  num_stdv_jumped=num_stdvs,               
+                                  min_consequtives=min_consequtives,
+                                  max_consequtives=min_consequtives)      # careful !!!!!!
+
+    
+    # combine rules 1, 2, 3 decreasing
+    print('Combining rule 1, 2, 3 via ruleset {}.'.format(ruleset))
+    vec_rules_combo = apply_rule_combo(arr_r1=vec_rule_1, 
+                                       arr_r2=vec_rule_2, 
+                                       arr_r3=vec_rule_3, 
+                                       ruleset=ruleset)
+    
+    # binarise 1, nan to 1, 0 if requested
+    if binarise:
+        vec_rules_combo = np.where(vec_rules_combo == 1, 1.0, 0.0)
+    
+    
+    return vec_rules_combo
+
+
+# meta, checks
+def reclassify_signal_to_zones(arr):
+    """
+    takes a smoothed (or raw) ewmacd change detection
+    signal and classifies into 1 of 11 zones based on the
+    stdv values. this is used to help flag and colour
+    outputs for nrt monitoring. Outputs include 
+    zone direction information in way of sign (-/+).
+    """   
+
+    # set up zone ranges (stdvs)
+    zones = [
+        [0, 1],    # zone 1 - from 0 to 1 (+/-)
+        [1, 3],    # zone 2 - between 1 and 3 (+/-)
+        [3, 5],    # zone 3 - between 3 and 5 (+/-)
+        [5, 7],    # zone 4 - between 5 and 7 (+/-)
+        [7, 9],    # zone 5 - between 7 and 9 (+/-)
+        [9, 11],   # zone 6 - between 9 and 11 (+/-)
+        [11, 13],  # zone 7 - between 11 and 13 (+/-)
+        [13, 15],  # zone 8 - between 13 and 15 (+/-)
+        [15, 17],  # zone 9 - between 15 and 17 (+/-)
+        [17, 19],  # zone 10 - between 17 and 19 (+/-)
+        [19]       # zone 11- above 19 (+/-)
+    ]
+
+    # create template vector
+    vec_temp = np.full_like(arr, fill_value=np.nan)
+
+    # iter zones
+    for i, z in enumerate(zones, start=1):
+
+        # 
+        if i == 1:
+            vec_temp[np.where((arr >= z[0]) & (arr <= z[1]))] = i
+            vec_temp[np.where((arr < z[0]) & (arr >= z[1] * -1))] = i * -1
+
+        elif i == 11:       
+            vec_temp[np.where(arr > z[0])] = i
+            vec_temp[np.where(arr < z[0] * -1)] = i * -1
+
+        else:
+            vec_temp[np.where((arr > z[0]) & (arr <= z[1]))] = i
+            vec_temp[np.where((arr < z[0] * -1) & (arr >= z[1] * -1))] = i * -1
+        
+    return vec_temp
+
+
+# need params from feat, conseq count e.g., 3)
+def prepare_and_send_alert(ds, back_idx=-2, send_email=False):
+    """
+    ds = change dataset with required vars
+    back_idx = set backwards index (-1 is latest image, -2 is second last, etc)
+    """
+    
+    # check if we have all vars required
+
+    # get second latest date
+    latest_date = ds['time'].isel(time=back_idx)
+    latest_date = latest_date.dt.strftime('%Y-%m-%d %H:%M:%S')
+    latest_date = str(latest_date.values)
+
+    # get latest zone
+    latest_zone = ds['zones'].isel(time=back_idx)
+    latest_zone = latest_zone.mean(['x', 'y']).values
+
+    # get latest incline candidate
+    latest_inc_candidate = ds['cands_inc'].isel(time=back_idx)
+    latest_inc_candidate = latest_inc_candidate.mean(['x', 'y']).values
+
+    # get latest decline candidate
+    latest_dec_candidate = ds['cands_dec'].isel(time=back_idx)
+    latest_dec_candidate = latest_dec_candidate.mean(['x', 'y']).values
+
+    # get latest incline consequtives
+    latest_inc_consequtives = ds['consq_inc'].isel(time=back_idx)
+    latest_inc_consequtives = latest_inc_consequtives.mean(['x', 'y']).values
+
+    # get latest incline consequtives
+    latest_dec_consequtives = ds['consq_dec'].isel(time=back_idx)
+    latest_dec_consequtives = latest_dec_consequtives.mean(['x', 'y']).values
+    
+    
+    # alert user via ui and python before email
+    if latest_inc_candidate == 1:
+        print('- ' * 10)
+        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
+        print('An increasing vegetation trajectory has been detected.')
+        print('Alert triggered via image captured on {}.'.format(str(latest_date)))
+        print('Area is in zone {}.'.format(int(latest_zone)))
+        print('Increase has been on-going for {} images (i.e., dates).'.format(int(latest_inc_consequtives)))       
+        print('')
+
+        
+    elif latest_dec_candidate == 1:
+        print('- ' * 10)
+        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
+        print('An decreasing vegetation trajectory has been detected.')
+        print('Alert triggered via image captured  {}.'.format(str(latest_date)))
+        print('Area is in zone {}.'.format(int(latest_zone)))
+        print('Decrease has been on-going for {} images (i.e., dates).'.format(int(latest_dec_consequtives)))
+        print('')  
+        
+    else:
+        print('- ' * 10)
+        print('No alert was triggered for Monitoring Area: {}.'.format('<placeholder>'))
+        print('')
+        
+    # if requested, send email
+    if send_email:
+        print('todo...')
+
+
+
 
 # EWMACD EWMACD EWMACD
 # TODO LIST
@@ -1036,7 +1342,6 @@ def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
 # todo 2: force type where needed... important!
 
 # note: check the pycharm project pyEWMACD for original, working code if i break this!!!
-
 
 def harmonic_matrix(timeSeries0to2pi, numberHarmonicsSine,  numberHarmonicsCosine):
 

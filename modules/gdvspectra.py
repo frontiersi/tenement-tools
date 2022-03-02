@@ -24,6 +24,7 @@ import os, sys
 import numpy as np
 import pandas as pd
 import xarray as xr
+from scipy.stats import kendalltau, theilslopes
 
 sys.path.append('../../shared')
 import tools

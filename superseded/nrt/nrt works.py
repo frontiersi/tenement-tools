@@ -1454,3 +1454,72 @@ class NRT_Sync_Cube(object):
         # notify user
         arcpy.AddMessage('Monitoring areas synced successfully.')
         return
+        
+    # checks, dtype, fillvalueto, fillvalue_from need doing, metadata
+def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=3577, slc_off=False, resolution=30, ds_existing=None, chunks={}):
+    """
+    Takes a path to a netcdf file, a start and end date, bounding box and
+    obtains the latest satellite imagery from DEA AWS. If an existing
+    dataset is provided, the metadata from that is used to define the
+    coordinates, etc. This function is used to 'sync' existing cubes
+    to the latest scene (time = now). New scenes are appended on to
+    the existing cube and re-exported to a new file (overwrite).
+    Note: currently this func contains a temp solution to the sentinel nrt 
+    fmask band name issue
+    
+    Parameters
+    ----------
+    in_feat: str
+        A path to an existing monitoring areas gdb feature class.
+    in_epsg: int
+        A integer representing a specific epsg code for coordinate system.
+      
+    """
+    
+    # checks
+    
+    # notify
+    print('Syncing cube for monitoring area: {}'.format(out_nc))
+
+    # query stac endpoint
+    items = cog_odc.fetch_stac_items_odc(stac_endpoint='https://explorer.sandbox.dea.ga.gov.au/stac', 
+                                         collections=collections, 
+                                         start_dt=start_dt, 
+                                         end_dt=end_dt, 
+                                         bbox=bbox,
+                                         slc_off=slc_off,
+                                         limit=250)
+
+    # replace s3 prefix with https for each band - arcgis doesnt like s3
+    items = cog_odc.replace_items_s3_to_https(items=items, 
+                                              from_prefix='s3://dea-public-data', 
+                                              to_prefix='https://data.dea.ga.gov.au')
+
+    # construct an xr of items (lazy)
+    ds = cog_odc.build_xr_odc(items=items,
+                              bbox=bbox,
+                              bands=bands,
+                              crs=in_epsg,
+                              resolution=resolution,
+                              group_by='solar_day',
+                              skip_broken_datasets=True,
+                              like=ds_existing,
+                              chunks=chunks)
+
+    # prepare lazy ds with data type, type, time etc
+    ds = cog_odc.convert_type(ds=ds, to_type='int16')  # input?
+    ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)  # input?
+    ds = cog_odc.fix_xr_time_for_arc_cog(ds)
+
+    # return dataset instantly if new, else append
+    if ds_existing is None:
+        return ds
+    #else:
+        # existing netcdf - append
+        #ds_new = ds_existing.combine_first(ds).copy(deep=True)
+
+        # close everything safely
+        #ds.close()
+        #ds_existing.close()
+
+        #return ds_new

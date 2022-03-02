@@ -11,9 +11,10 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
 # import required libraries
-from datetime import datetime
-import numpy as np
 import arcpy
+import tempfile
+import numpy as np
+from datetime import datetime
 
 
 def prepare_collections_list(in_platform):
@@ -326,6 +327,59 @@ def convert_smoother_code(code):
         raise
 
 
+def get_bbox_from_geom(in_geom):
+    """Helper func to take an arcpy geom type and
+    project it to albers. The bbox is obtained from 
+    this projected geometry"""       
+    
+    # make a copy of input geom
+    out_geom = in_geom
+    
+    # transform from albers to wgs84 if needed
+    if out_geom.spatialReference.factoryCode == 3577:
+        srs = arcpy.SpatialReference(4326)
+        out_geom = out_geom.projectAs(srs)
+
+    # get bbox in wgs84 from geometry
+    bbox = [out_geom.extent.XMin, out_geom.extent.YMin, 
+            out_geom.extent.XMax, out_geom.extent.YMax]
+
+    return bbox
+    
+   
+# checks, meta
+def convert_arcpy_geom_to_gjson(arcpy_geom):
+    """Arcpy and ogr geom dont play nicely. The easiest
+    way to convert arcpy geometry to ogr geometry is via
+    geojson conversion from arcpy to gjson first."""
+    
+    
+    try:
+        # check if input is arcpy geometry type
+        if arcpy_geom.type != 'polygon':
+            print('Arcpy geometry object is not polygon type.')
+            return
+    except:
+        print('Could not read input arcpy geometry.')
+        return
+        
+    try:
+        # create temp named file for geojson
+        tmp = tempfile.NamedTemporaryFile().name + '.geojson'
+
+        # perform feature conversion to geojson via arcpy
+        arcpy.conversion.FeaturesToJSON(in_features=arcpy_geom, 
+                                        out_json_file=tmp, 
+                                        geoJSON='GEOJSON')
+        
+        return tmp
+    
+    except Exception as e:
+        print(e)
+        print('Could not convert geojson to OGR geometry.')
+        return
+
+   
 def check_savitsky_inputs(window_length, polyorder):
     """Based on scipy, savitsk golay window length 
     must be odd, positive number, and polyorder must

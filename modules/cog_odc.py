@@ -276,6 +276,12 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
         raise ValueError('Group_by must be either solar_day or time.')
         
     try:
+        # handle incosistent fmask name for sent nrt coll 3
+        config = {
+            "ga_s2am_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
+            "ga_s2bm_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
+        }
+    
         # use the odc-stac module to build lazy xr dataset
         ds = stac.load(items=items,
                        bbox=bbox,
@@ -285,6 +291,7 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
                        chunks=chunks,
                        group_by=group_by,
                        skip_broken_datasets=skip_broken_datasets,
+                       stac_cfg=config,
                        like=like)
         
     except:
