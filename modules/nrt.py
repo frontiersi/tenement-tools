@@ -184,7 +184,6 @@ def create_nrt_project(out_folder, out_filename):
                                             min_value=1, 
                                             max_value=99)
 
-
     # create rule 3 num zones domain
     arcpy.management.CreateDomain(in_workspace=out_filepath, 
                                   domain_name='dom_rule_3_num_zones', 
@@ -205,21 +204,21 @@ def create_nrt_project(out_folder, out_filename):
                                   field_type='TEXT', 
                                   domain_type='CODED')
 
-    # generate coded values to ruleset domain
+    # generate coded values to ruleset domain   
     dom_values = {
-        '1 Only': '1',
-        '2 Only': '2',
-        '3 Only': '3',
-        '1 and 2': '1&2',
-        '1 and 3': '1&3',
-        '2 and 3': '2&3',
-        '1 or 2': '1|2',
-        '1 or 3': '1|3',
-        '2 or 3': '2|3',
-        '1 and 2 and 3': '1&2&3',
-        '1 or 2 and 3': '1|2&3',
-        '1 and 2 or 3': '1&2|3',
-        '1 or 2 or 3': '1|2|3' 
+        '1':     '1 Only',
+        '2':     '2 Only',
+        '3':     '3 Only',
+        '1&2':   '1 and 2',
+        '1&3':   '1 and 3',
+        '2&3':   '2 and 3',
+        '1|2':   '1 or 2',
+        '1|3':   '1 or 3',
+        '2|3':   '2 or 3',
+        '1&2&3': '1 and 2 and 3',
+        '1|2&3': '1 or 2 and 3',
+        '1&2|3': '1 and 2 or 3',
+        '1|2|3': '1 or 2 or 3'
         }      
     for dom_value in dom_values:
         arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
@@ -390,7 +389,8 @@ def create_nrt_project(out_folder, out_filename):
                               field_name='ignore', 
                               field_type='TEXT', 
                               field_alias='Ignore When Run',
-                              field_is_required='REQUIRED')   
+                              field_is_required='REQUIRED',
+                              field_domain='dom_boolean')   
 
 
     # notify todo - delete if we dont want defaults
@@ -439,7 +439,7 @@ def create_nrt_project(out_folder, out_filename):
     # set default ruleset
     arcpy.management.AssignDefaultToField(in_table=out_feat, 
                                           field_name='ruleset',
-                                          default_value='1 and 2 or 3')
+                                          default_value='1&2|3')
 
     # set default alert
     arcpy.management.AssignDefaultToField(in_table=out_feat, 
@@ -755,12 +755,6 @@ def validate_monitoring_areas(in_feat):
             data_source = driver.Open(os.path.dirname(in_feat), 0)
             lyr = data_source.GetLayer('monitoring_areas')
             
-            # get and check feat count
-            feat_count = lyr.GetFeatureCount()
-            if feat_count == 0:
-                print('No monitoring areas found in feature, flagging as invalid.')
-                is_valid = False
-            
             # get epsg
             epsg = lyr.GetSpatialRef()
             if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
@@ -775,6 +769,21 @@ def validate_monitoring_areas(in_feat):
             # check if duplicate area ids
             if len(set(area_ids)) != len(area_ids):
                 print('Duplicate area ids detected, flagging as invalid.')
+                is_valid = False
+                
+                
+            # check if feature has required fields
+            fields = [field.name for field in lyr.schema]
+            required_fields = ['area_id', 'platform', 's_year', 'e_year', 
+                               'index', 'persistence', 'rule_1_min_conseqs', 
+                               'rule_1_inc_plateaus', 'rule_2_min_stdv', 
+                               'rule_2_bidirectional', 'rule_3_num_zones',
+                               'ruleset', 'alert', 'alert_direction', 'email', 
+                               'ignore']
+            
+            # check if all fields in feat
+            if not all(f in fields for f in required_fields):
+                raise ValueError('Not all required fields in monitoring shapefile.')
                 is_valid = False
                 
             # close data source

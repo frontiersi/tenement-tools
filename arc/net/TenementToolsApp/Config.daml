@@ -90,7 +90,7 @@
         <gallery id="TenementToolsApp_ensembleGallery" caption="Ensemble" className="ensembleGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" templateID="ensembleGalleryItemTemplate" resizable="true" itemWidth="400" showItemCaption="true" largeImage="Images\Ensemble_Wizard_32.png">
           <tooltip heading="Ensemble Module">Combine outputs to the left into ensemble models.<disabledText /></tooltip>
         </gallery>
-        <gallery id="TenementToolsApp_nrtGallery" caption="Monitor" className="nrtGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" templateID="nrtGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="pack://application:,,,/ArcGIS.Desktop.Resources;component/Images/MarsCat32.png">
+        <gallery id="TenementToolsApp_nrtGallery" caption="Monitor" className="nrtGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" templateID="nrtGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\NRT_Wizard_32.png">
           <tooltip heading="NRT Monitoring Module">Perform near-real time monitoring of vegetation areas.<disabledText /></tooltip>
         </gallery>
       </galleries>

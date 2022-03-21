@@ -243,6 +243,24 @@
   <ItemGroup>
     <Resource Include="Images\Placeholder.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Create_Project_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Create_Area_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Modify_Area_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Delete_Area_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Monitor_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\NRT_Wizard_32.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
   PackageAction can be:
