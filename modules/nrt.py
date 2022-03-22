@@ -939,7 +939,7 @@ def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
     return geom
 
 
-# meta, checks
+# meta, checks - DYNAMIC DISABLED, NOT USING
 def build_change_cube(ds, training_start_year=None, training_end_year=None, persistence_per_year=1, add_extra_vars=True):
     """
     """
@@ -958,6 +958,7 @@ def build_change_cube(ds, training_start_year=None, training_end_year=None, pers
     ds_summary = ds.median(['x', 'y'], keep_attrs=True)
 
     # perform static ewmacd and add as new var
+    print('Generating static model')
     ds_summary['static'] = EWMACD(ds=ds_summary, 
                                   trainingPeriod='static',
                                   trainingStart=training_start_year,
@@ -965,9 +966,10 @@ def build_change_cube(ds, training_start_year=None, training_end_year=None, pers
                                   persistence_per_year=persistence_per_year)['veg_idx']
     
     # perform dynamic ewmacd and add as new var
-    ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
-                                   trainingStart=training_start_year,
-                                   persistence_per_year=persistence_per_year)['veg_idx']
+    #print('Generating dynamic model')
+    #ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
+                                   #trainingStart=training_start_year,
+                                   #persistence_per_year=persistence_per_year)['veg_idx']
 
     # rename original veg_idx to summary
     #ds_summary = ds_summary.rename({'veg_idx': 'summary'})
@@ -2255,7 +2257,7 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
                                          summaryMethod=summaryMethod)
 
         except Exception as e:
-            print('ERROR CHECK!')
+            print('Could not train model adequately, please add more years.')
             print(e)
             final_out = NAvector
 
