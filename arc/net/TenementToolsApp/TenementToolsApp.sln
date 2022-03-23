@@ -5,6 +5,11 @@ VisualStudioVersion = 16.0.31321.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TenementToolsApp", "TenementToolsApp.csproj", "{C1625709-CBCA-47D5-8DAD-180629878450}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CDB5D14D-B0C2-46A8-816C-A48AE4DEBB03}"
+	ProjectSection(SolutionItems) = preProject
+		template.html = template.html
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
