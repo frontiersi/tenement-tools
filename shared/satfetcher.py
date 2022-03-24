@@ -528,3 +528,49 @@ def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
     return ds
 
 
+def group_dupe_times(ds):
+    """
+    Read a netcdf file (e.g. nc) and combine duplicate times.
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A netcdf dataset file.
+
+    Returns
+    ----------
+    ds : xarray Dataset
+    """
+    
+    # check if time in cube
+    if not isinstance(ds, xr.Dataset):
+        print('Input is not xarray dataset type.')
+        raise
+    elif 'time' not in ds:
+        print('No time dimension in input dataset.')
+        raise
+        
+    # get attributes from dataset
+    ds_attrs = ds.attrs
+    ds_band_attrs = ds[list(ds.data_vars)[0]].attrs
+    ds_spatial_ref_attrs = ds['spatial_ref'].attrs
+    
+    # get datetimes in array, count unique counts
+    dts = ds['time'].values
+    _, num_dupes = np.unique(dts, return_counts=True)
+    
+    # flag if duplicate times occur
+    if len(np.unique(num_dupes)) > 1:
+        print('Duplicate times detected in dataset. Merging duplicates.')
+        
+        # group by times
+        ds = ds.groupby('time').max()
+        
+        # append attrbutes on to dataset and bands
+        ds.attrs = ds_attrs
+        ds['spatial_ref'].attrs = ds_spatial_ref_attrs
+        for var in list(ds.data_vars):
+            ds[var].attrs = ds_band_attrs
+
+        
+    return ds
