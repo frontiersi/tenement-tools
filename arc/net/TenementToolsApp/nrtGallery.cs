@@ -184,45 +184,11 @@ namespace TenementToolsApp
             }
             else if (gallery_item == "Graph Monitoring Area")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Fetch_Dates";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
 
-                // open toolpane
-                //try
-                //{
-                var result = await Geoprocessing.ExecuteToolAsync(toolname, inputs);  // set this await if want to get values before moving on and set async above
-                //Geoprocessing.ShowMessageBox(result.Messages, "GP Messages", result.IsFailed ? GPMessageBoxStyle.Error : GPMessageBoxStyle.Default);
+                string outPath = "";
 
-                int index = 0;
-                foreach (var msg in result.Messages)
-                {
-                    if (msg.Type == 0)
-                    {
-                        string dts = msg.Text;
-                        List<string> dates = dts.Split(',').ToList();
-                        //string[] dates;
-
-
-                        // x is the element and index the current index
-                        System.Diagnostics.Debug.WriteLine("Val:{0} Index:{1}", msg.Text, index);
-                        index++;
-                    }
-                }
-
-                //}
-                //catch (Exception)
-                //{
-                //Debug.WriteLine("Could not find NRT Create Monitoring Area tool. Did you add the Tenement Tools toolbox?");
-                //};
-
-                // temp: warn not yet implemented
-                //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Oh.");
-
-
-                // get selected feature and flash (temp)
-                QueuedTask.Run(() =>
+                // get selected feature and flash (temp)  // remvoe await if async above
+                await QueuedTask.Run(() =>
                 {
                     // get active map 
                     var mapView = MapView.Active;
@@ -231,44 +197,86 @@ namespace TenementToolsApp
                         return;
                     }
 
-                    // get selected feature and filter to selected feature row
-                    var selectedFeatures = mapView.Map.GetSelection()
-                    .Where(kvp => kvp.Key is BasicFeatureLayer)
-                    .ToDictionary(kvp => (BasicFeatureLayer)kvp.Key, kvp => kvp.Value);
+                    // get the currently selected features in the map
+                    var selectedFeatures = mapView.Map.GetSelection();
 
-                    // flash the collection of features.
-                    mapView.FlashFeature(selectedFeatures);
+                    // if only one feature selected...
+                    if (selectedFeatures.Count() == 1)
+                    {
+                        // get the first layer and its corresponding selected feature OIDs
+                        var firstFeature = selectedFeatures.First();
+
+                        if (firstFeature.Value.Count() == 1)
+                        {
+                            // if layer is called monitoring areas
+                            if (firstFeature.Key.Name == "monitoring_areas")
+                            {
+
+                                // get path to selected feature feature
+                                var featurePath = firstFeature.Key.GetPath().AbsolutePath;
+                                var gdbPath = Path.GetDirectoryName(featurePath);
+                                var folderPath = System.IO.Path.ChangeExtension(gdbPath, null);
+                                folderPath = folderPath + "_" + "cubes";
+
+                                // get selected monitoring area code 
+                                var inspector = new ArcGIS.Desktop.Editing.Attributes.Inspector();
+                                inspector.Load(firstFeature.Key, firstFeature.Value);
+                                var area_id = inspector["area_id"];
+                                string cubeFilePath = "cube" + "_" + area_id + "_" + "change.nc";
+
+                                // combine expected cube name with current folder
+                                string cubePath = Path.Combine(folderPath, cubeFilePath);
+
+                                // check if file exists
+                                if (File.Exists(cubePath)) {
+                                    outPath = cubePath;
+                                }
+
+                            }
+                        }  
+                        // todo tell user only one mont area selected at a time
+                    }
+                    // todo tell user that features from only one layer selected at a time allowed
                 });
 
-                // check if num selected == 1, else return
 
-                // get area_id from current selection
 
-                // call geoprocessor to get datetimes and values from associated cube
-
-                // prepare html via stringwritter for javascripts like so: https://github.com/Esri/arcgis-pro-sdk/wiki/ProGuide-Custom-Pop-ups
-
-                // create html via text (or via template.html) and use google api to graph
-
-                // display html in popupcontent
-
-                // html time!
-                // https://github.com/Esri/arcgis-pro-sdk/wiki/ProGuide-Custom-Pop-ups
-                var htmlPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "template.html");
-
-                // custom popup
-                var popups = new List<PopupContent>();
-                popups.Add(new PopupContent("<b>This text is bold.</b>", "Yeah yeah!"));
-                //popups.Add(new PopupContent(new Uri(@"C:\Users\Lewis\Desktop\operations-tab2-weather-operations.png"), "URI")); // works!!!
-
-                // define popup style
-                var popupDef = new PopupDefinition()
+                // now, send to geoprocessor
+                if (outPath != "")
                 {
-                    Size = new System.Windows.Size(800, 500)
-                };
+                    // set toolname and create input array 
+                    string toolname = "NRT_Fetch_Dates";
+                    var inputs = Geoprocessing.MakeValueArray(outPath);
 
-                // show popup
-                MapView.Active.ShowCustomPopup(popups, null, false, popupDef);
+                    // run geoprocessor
+                    var result = await Geoprocessing.ExecuteToolAsync(toolname, inputs);
+                    
+                    // get output message (i.e. html) from result
+                    foreach (var msg in result.Messages)
+                    {
+                        if (msg.Type == 0)
+                        {
+                            string html = msg.Text;
+
+                            // if not empty... todo!
+
+                            // custom popup
+                            var popups = new List<PopupContent>();
+                            
+                            // add veg signal to popup
+                            popups.Add(new PopupContent(html, "Vegetation (Average)"));
+
+                            // define popup style
+                            var popupDef = new PopupDefinition()
+                            {
+                                Size = new System.Windows.Size(800, 500)
+                            };
+
+                            // show popup
+                            MapView.Active.ShowCustomPopup(popups, null, false, popupDef);
+                        }
+                    }
+                }
             }
         }
     }
