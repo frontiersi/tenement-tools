@@ -184,99 +184,140 @@ namespace TenementToolsApp
             }
             else if (gallery_item == "Graph Monitoring Area")
             {
-
+                // set up parameter and cube out path
                 string outPath = "";
+                string outParams = "";
 
-                // get selected feature and flash (temp)  // remvoe await if async above
+                // get selected feature (remvoe await if async above)
                 await QueuedTask.Run(() =>
                 {
-                    // get active map 
+                    // get active map if exists, else abort
                     var mapView = MapView.Active;
                     if (mapView == null)
                     {
                         return;
                     }
 
-                    // get the currently selected features in the map
+                    // get the currently selected features on map, abort if multi-select
                     var selectedFeatures = mapView.Map.GetSelection();
-
-                    // if only one feature selected...
-                    if (selectedFeatures.Count() == 1)
+                    if (selectedFeatures.Count() != 1)
                     {
-                        // get the first layer and its corresponding selected feature OIDs
-                        var firstFeature = selectedFeatures.First();
-
-                        if (firstFeature.Value.Count() == 1)
-                        {
-                            // if layer is called monitoring areas
-                            if (firstFeature.Key.Name == "monitoring_areas")
-                            {
-
-                                // get path to selected feature feature
-                                var featurePath = firstFeature.Key.GetPath().AbsolutePath;
-                                var gdbPath = Path.GetDirectoryName(featurePath);
-                                var folderPath = System.IO.Path.ChangeExtension(gdbPath, null);
-                                folderPath = folderPath + "_" + "cubes";
-
-                                // get selected monitoring area code 
-                                var inspector = new ArcGIS.Desktop.Editing.Attributes.Inspector();
-                                inspector.Load(firstFeature.Key, firstFeature.Value);
-                                var area_id = inspector["area_id"];
-                                string cubeFilePath = "cube" + "_" + area_id + "_" + "change.nc";
-
-                                // combine expected cube name with current folder
-                                string cubePath = Path.Combine(folderPath, cubeFilePath);
-
-                                // check if file exists
-                                if (File.Exists(cubePath)) {
-                                    outPath = cubePath;
-                                }
-
-                            }
-                        }  
-                        // todo tell user only one mont area selected at a time
+                        ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select only one area at a time.");
+                        return;
                     }
-                    // todo tell user that features from only one layer selected at a time allowed
+
+                    // get first feature in selection, abort if multi-select
+                    var firstFeature = selectedFeatures.First();
+                    if (firstFeature.Value.Count() != 1)
+                    {
+                        ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select only one area at a time.");
+                        return;
+                    }
+
+                    // check if feature name is adequate, abort if not
+                    if (firstFeature.Key.Name != "monitoring_areas")
+                    {
+                        ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Your selected area must be called monitoring_areas.");
+                        return;
+                    }
+
+                    // construct expected path to current layers cube data folder
+                    var featurePath = firstFeature.Key.GetPath().AbsolutePath;
+                    var gdbPath = Path.GetDirectoryName(featurePath);
+                    var folderPath = System.IO.Path.ChangeExtension(gdbPath, null);
+                    folderPath = folderPath + "_" + "cubes";
+
+                    // get attributes from current feature selection
+                    var ins = new ArcGIS.Desktop.Editing.Attributes.Inspector();
+                    ins.Load(firstFeature.Key, firstFeature.Value);
+
+                    // construct expected cube filepath and filename
+                    string cubeFilePath = "cube" + "_" + ins["area_id"] + "_" + "change.nc";
+                    string cubePath = Path.Combine(folderPath, cubeFilePath);
+
+                    // check if file exists, abort if missing
+                    if (!File.Exists(cubePath))
+                    {
+                        ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("No cube detected for this area. Run the monitoring area tool first.");
+                        return;
+                    }
+
+                    // return cube path
+                    outPath = cubePath;
+
+                    // build feature parameter string
+                    outParams = ins["area_id"].ToString() + ";" +
+                                ins["platform"].ToString() + ";" +
+                                ins["s_year"].ToString() + ";" +
+                                ins["e_year"].ToString() + ";" +
+                                ins["index"].ToString() + ";" +
+                                ins["persistence"].ToString() + ";" +
+                                ins["rule_1_min_conseqs"].ToString() + ";" +
+                                ins["rule_1_inc_plateaus"].ToString() + ";" +
+                                ins["rule_2_min_stdv"].ToString() + ";" +
+                                ins["rule_2_bidirectional"].ToString() + ";" +
+                                ins["rule_3_num_zones"].ToString() + ";" +
+                                ins["ruleset"].ToString() + ";" +
+                                ins["alert"].ToString() + ";" +
+                                ins["alert_direction"].ToString() + ";" +
+                                ins["email"].ToString() + ";" +
+                                ins["ignore"].ToString() + ";";
+
+                    return;
                 });
 
-
-
-                // now, send to geoprocessor
-                if (outPath != "")
+                // check if path exists, if not abort
+                if (outPath == "")
                 {
-                    // set toolname and create input array 
-                    string toolname = "NRT_Fetch_Dates";
-                    var inputs = Geoprocessing.MakeValueArray(outPath);
+                    return;
+                }
 
-                    // run geoprocessor
-                    var result = await Geoprocessing.ExecuteToolAsync(toolname, inputs);
-                    
-                    // get output message (i.e. html) from result
-                    foreach (var msg in result.Messages)
+                // set up toolbox geoprocessor inputs
+                string toolname = "NRT_Build_Graphs";
+                var inputs = Geoprocessing.MakeValueArray(outPath, outParams);
+
+                // run geoprocessor
+                var result = await Geoprocessing.ExecuteToolAsync(toolname, inputs);
+
+                //create popup list
+                var popups = new List<PopupContent>();
+
+                // iter through result messages, append to list
+                int i = 0;
+                foreach (var msg in result.Messages)
+                {
+                    if (msg.Type == 0)
                     {
-                        if (msg.Type == 0)
+                        if (i == 0)
                         {
-                            string html = msg.Text;
-
-                            // if not empty... todo!
-
-                            // custom popup
-                            var popups = new List<PopupContent>();
-                            
-                            // add veg signal to popup
-                            popups.Add(new PopupContent(html, "Vegetation (Average)"));
-
-                            // define popup style
-                            var popupDef = new PopupDefinition()
-                            {
-                                Size = new System.Windows.Size(800, 500)
-                            };
-
-                            // show popup
-                            MapView.Active.ShowCustomPopup(popups, null, false, popupDef);
+                            popups.Add(new PopupContent(msg.Text, "Overview"));
                         }
+                        else if (i == 1) {
+                            popups.Add(new PopupContent(msg.Text, "Raw Vegetation"));
+                        }
+                        else if (i == 2)
+                        {
+                            popups.Add(new PopupContent(msg.Text, "Change Deviation"));
+                        }
+                        else if (i == 3)
+                        {
+                            popups.Add(new PopupContent(msg.Text, "Alert History"));
+                        }
+
+                        // increment counter 
+                        i++;
                     }
                 }
+
+                // define popup stylings
+                //var popupDef = new PopupDefinition()
+                //{
+                //Size = new System.Windows.Size(800, 800)
+                //};
+
+                // show me!
+                //MapView.Active.ShowCustomPopup(popups, null, false, popupDef);
+                MapView.Active.ShowCustomPopup(popups, null, false);
             }
         }
     }
