@@ -36,7 +36,7 @@ def prepare_collections_list(in_platform):
     """
     
     # checks
-    if in_platform not in ['Landsat', 'Sentinel']:
+    if in_platform not in ['Landsat', 'Sentinel', 'Sentinel 2A', 'Sentinel 2B']:
         raise ValueError('Platform must be Landsat or Sentinel.')
         
     # prepare collections
@@ -45,6 +45,12 @@ def prepare_collections_list(in_platform):
     
     elif in_platform == 'Sentinel':
         return ['s2a_ard_granule', 's2b_ard_granule']
+    
+    elif in_platform == 'Sentinel 2A':
+        return ['s2a_ard_granule']
+        
+    elif in_platform == 'Sentinel 2B':
+        return ['s2b_ard_granule']
 
 
 def datetime_to_string(dt):
@@ -118,11 +124,11 @@ def get_selected_layer_extent(lyr):
     uni = None
     with arcpy.da.SearchCursor(lyr, ['SHAPE@']) as cursor:
         for idx, row in enumerate(cursor):
-            geom = row[0]
-            if idx == 0:
-                uni = geom
-            else:
-                uni = uni.union(geom)
+            if row[0] is not None:
+                if idx == 0:
+                    uni = row[0]
+                else:
+                    uni = uni.union(row[0])
 
     # check if user selected a feat
     if uni is None:
@@ -173,7 +179,7 @@ def prepare_band_names(in_bands, in_platform):
     elif not isinstance(in_bands, str):
         raise TypeError('Expecting a string of band names.')
     
-    elif in_platform not in ['Landsat', 'Sentinel']:
+    elif in_platform not in ['Landsat', 'Sentinel', 'Sentinel 2A', 'Sentinel 2B']:
         raise ValueError('Only Landsat or Sentinel platforms supported.')
 
     # split bands by semi-colon
@@ -194,7 +200,7 @@ def prepare_band_names(in_bands, in_platform):
             elif band == 'oa_mask':
                 out_bands.append('oa_fmask')
 
-        elif in_platform == 'Sentinel':
+        elif 'Sentinel' in in_platform:
             if band == 'nir1':
                 out_bands.append('nbart' + '_' + band[:-1] + '_' + band[-1])
             elif band in ['swir2', 'swir3']:

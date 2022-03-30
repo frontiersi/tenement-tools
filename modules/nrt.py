@@ -26,6 +26,7 @@ import xarray as xr
 import pandas as pd
 import scipy.stats
 import rasterio
+import json
 from scipy.signal import savgol_filter
 from osgeo import gdal
 from osgeo import ogr
@@ -43,452 +44,350 @@ try:
 except:
     print('TEMP DELETE THIS TRYCATCH LATER ONCE WEMACD UP AND RUNNING')
 
-# prints
-def create_nrt_project(out_folder, out_filename):
+
+def write_empty_json(filepath):
+    with open(filepath, 'w') as f:
+        json.dump([], f)
+
+
+
+
+# meta
+def load_json(filepath):
+    """load json file"""
+    
+    # check if file exists 
+    if not os.path.exists(filepath):
+        raise ValueError('File does not exist: {}.'.format(filepath))
+    
+    # read json file
+    with open(filepath, 'r') as f:
+        data = json.load(f)
+        
+    return data
+
+def save_json(filepath, data):
+    """save json file"""
+    
+    # check if file exists 
+    if not os.path.exists(filepath):
+        raise ValueError('File does not exist: {}.'.format(filepath))
+    
+    # read json file
+    with open(filepath, 'w') as f:
+        json.dump(data, f)
+        
+    return data
+
+
+def get_item_from_json(filepath, global_id):
+    """"""
+    
+    # check if file exists, else none
+    if not os.path.exists(filepath):
+        return
+    elif global_id is None or not isinstance(global_id, str):
+        return
+    
+    # read json file
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+    except:
+        return
+
+    # check json data for item
+    for item in data:
+        if item.get('global_id') == global_id:
+            return item
+
+    # empty handed
+    return
+    
+
+def get_latest_date_from_json_item(json_item):
+    """"""
+    
+    # check if item is dict, else default
+    if json_item is None:
+        return '1980-01-01'
+    elif not isinstance(json_item, dict):
+        return '1980-01-01'
+    
+    # fetch latest date if exists, else default 
+    dates = json_item.get('dates')
+    if dates is not None and len(dates) > 0:
+        return dates[-1]
+    
+    # otherwise default
+    return '1980-01-01'
+
+
+def get_json_array_via_key(json_item, key):
+    """"""
+    
+    # check json item (none, not array, key not in it)
+    if json_item is None:
+        return np.array([])
+    elif not isinstance(json_item, dict):
+        return np.array([])
+    elif key not in json_item:
+        return np.array([])
+    
+    # fetch values if exists, else default 
+    vals = json_item.get(key)
+    if vals is not None and len(vals) > 0:
+        return np.array(vals)
+    
+    # otherwise default
+    return np.array([])
+
+  
+def extract_new_dates(ds, date_string):
+    """"""
+    
+    # check if xarray is adequate 
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not of Xarray type.')
+    elif 'time' not in ds:
+        raise ValueError('Dataset does not have a time coordinate.')
+    elif len(ds['time']) == 0:
+        raise ValueError('Dataset is empty.')
+    
+    # check date string 
+    if not isinstance(date_string, str):
+        raise TypeError('Date must be of type string in format YYYY-MM-DD.')
+
+    # get a list of all xr dates in string format 
+    all_times = ds['time'].dt.strftime('%Y-%m-%d')
+    
+    # select only those times greater than current string 
+    new_dates = ds['time'].where(all_times > date_string, drop=True)
+    ds = ds.sel(time=new_dates)
+    
+    # return 
+    return ds
+    
+    
+def remove_spikes_xr(ds, user_factor=2, win_size=3):
     """
-    Creates a new empty geodatabase with required features
-    for nrt monitoring tools.
+    Takes an xarray dataset containing vegetation index variable and removes outliers within 
+    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
+    with outliers set to nan. Can work on datasets with or without existing nan values. Note:
+    Zscore method will compute memory.
     
     Parameters
     ----------
-    out_folder: str
-        An output path for new project folder.
-    out_filename: str
-        An output filename for new project.
-    """
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional array containing a vegetation 
+        index variable (i.e. 'veg_index').
+    user_factor: float
+        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
+        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
         
-    # imports 
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with all detected outliers in the
+        veg_index variable set to nan.
+    """
+    
+    # notify user
+    print('Removing spike outliers.')
+            
+    # check xr type, dims
+    if ds is None:
+        raise ValueError('Dataset is empty.')
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in ds:
+        raise ValueError('No time dimension in dataset.')
+
+    # check if user factor provided
+    if user_factor <= 0:
+        print('User factor is less than 0, setting to 1.')
+        user_factor = 1
+                
+    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
+    cutoffs = ds.std('time') * user_factor
+
+    # calc mask of existing nan values (nan = True) in orig ds
+    ds_mask = xr.where(ds.isnull(), True, False)
+
+    # calc win size via num of dates in dataset
+    #win_size = int(len(ds['time']) / 7)
+    #win_size = int(win_size / int(len(ds.resample(time='1Y'))))
+    
+    
+
+    if win_size < 3:
+        win_size = 3
+        print('Generated roll window size less than 3, setting to default (3).')
+    elif win_size % 2 == 0:
+        win_size = win_size + 1
+        print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
+    else:
+        print('Generated roll window size is: {0}'.format(win_size))
+
+    # calc rolling median for whole dataset
+    ds_med = ds.rolling(time=win_size, center=True).median()
+
+    # calc nan mask of start/end nans from roll, replace them with orig vals
+    med_mask = xr.where(ds_med.isnull(), True, False)
+    med_mask = xr.where(ds_mask != med_mask, True, False)
+    ds_med = xr.where(med_mask, ds, ds_med)
+
+    # calc abs diff between orig ds and med ds vals at each pixel
+    ds_diffs = abs(ds - ds_med)
+
+    # calc mask of outliers (outlier = True) where absolute diffs exceed cutoff
+    outlier_mask = xr.where(ds_diffs > cutoffs, True, False)
+
+    # shift values left and right one time index and combine, get mean and max for each window
+    lefts = ds.shift(time=1).where(outlier_mask)
+    rights = ds.shift(time=-1).where(outlier_mask)
+    nbr_means = (lefts + rights) / 2
+    nbr_maxs = xr.ufuncs.fmax(lefts, rights)
+
+    # keep nan only if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs
+    outlier_mask = xr.where((ds.where(outlier_mask) < (nbr_means - cutoffs)) | 
+                            (ds.where(outlier_mask) > (nbr_maxs + cutoffs)), True, False)
+
+    # flag outliers as nan in original da
+    ds = ds.where(~outlier_mask)
+
+
+    # notify user and return
+    print('Outlier removal successful.')
+    return ds
+
+
+def interp_nans_xr(ds):
+    """"""
+    
+    # check if xarray is adequate 
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not of Xarray type.')
+    elif 'time' not in ds:
+        raise ValueError('Dataset does not have a time coordinate.')
+    elif len(ds['time']) == 0:
+        raise ValueError('Dataset is empty.')
+        
     try:
-        import arcpy 
+        # interpolate all values via linear interp
+        ds = ds.interpolate_na('time')
+    
+        # remove any remaining nan (first and last indices, for e.g.)
+        ds = ds.where(~ds.isnull(), drop=True)
     except:
-        raise ValueError('Could not import arcpy.')
-
-    # notify
-    print('Creating new monitoring project database...')
-
-    # check inputs are not none and strings
-    if out_folder is None or out_filename is None:
-        raise ValueError('Blank folder or filename provided.')
-    elif not isinstance(out_folder, str) or not isinstance(out_folder, str):
-        raise TypeError('Folder or filename not strings.')
-
-    # get full path
-    out_filepath = os.path.join(out_folder, out_filename + '.gdb')
-
-    # check folder exists
-    if not os.path.exists(out_folder):
-        raise ValueError('Requested folder does not exist.')
-    elif os.path.exists(out_filepath):
-        raise ValueError('Requested file location already exists. Choose a different name.')
-
-    # build project geodatbase
-    out_filepath = arcpy.management.CreateFileGDB(out_folder, out_filename)
-
-
-    # notify
-    print('Generating database feature class...')
-
-    # temporarily disable auto-visual of outputs
-    arcpy.env.addOutputsToMap = False
-
-    # create feature class and aus albers spatial ref sys
-    srs = arcpy.SpatialReference(3577)
-    out_feat = arcpy.management.CreateFeatureclass(out_path=out_filepath, 
-                                                   out_name='monitoring_areas', 
-                                                   geometry_type='POLYGON',
-                                                   spatial_reference=srs)
-
-
-    # notify
-    print('Generating database domains...')
-
-    # create platform domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_platforms', 
-                                  domain_description='Platform name (Landsat or Sentinel)',
-                                  field_type='TEXT', 
-                                  domain_type='CODED')
-
-    # generate coded values to platform domain
-    dom_values = {'Landsat': 'Landsat', 'Sentinel': 'Sentinel'}
-    for dom_value in dom_values:
-        arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
-                                               domain_name='dom_platforms', 
-                                               code=dom_value, 
-                                               code_description=dom_values.get(dom_value))
-
-    # create year domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_years', 
-                                  domain_description='Training years (1980 - 2050)',
-                                  field_type='LONG', 
-                                  domain_type='RANGE')
-
-    # generate range values to year domain
-    arcpy.management.SetValueForRangeDomain(in_workspace=out_filepath, 
-                                            domain_name='dom_years', 
-                                            min_value=1980, 
-                                            max_value=2050)
-
-    # create index domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_indices', 
-                                  domain_description='Vegetation index name',
-                                  field_type='TEXT', 
-                                  domain_type='CODED')
-
-    # generate coded values to index domain
-    dom_values = {'NDVI': 'NDVI', 'MAVI': 'MAVI', 'kNDVI': 'kNDVI'}
-    for dom_value in dom_values:
-        arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
-                                               domain_name='dom_indices', 
-                                               code=dom_value, 
-                                               code_description=dom_values.get(dom_value))
-
-    # create persistence domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_persistence', 
-                                  domain_description='Vegetation persistence (0.001 - 9.999)',
-                                  field_type='FLOAT', 
-                                  domain_type='RANGE')
-
-    # generate range values to persistence domain
-    arcpy.management.SetValueForRangeDomain(in_workspace=out_filepath, 
-                                            domain_name='dom_persistence', 
-                                            min_value=0.001, 
-                                            max_value=9.999)
-
-    # create rule 1 min consequtives domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_rule_1_consequtives', 
-                                  domain_description='Rule 1 Consequtives (0 - 999)',
-                                  field_type='LONG', 
-                                  domain_type='RANGE')
-
-    # generate range values to consequtives domain
-    arcpy.management.SetValueForRangeDomain(in_workspace=out_filepath, 
-                                            domain_name='dom_rule_1_consequtives', 
-                                            min_value=0, 
-                                            max_value=999)
-
-    # create rule 2 min stdv domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_rule_2_min_stdv', 
-                                  domain_description='Rule 2 Minimum Stdvs (1 - 99)',
-                                  field_type='LONG', 
-                                  domain_type='RANGE')
-
-    # generate range values to consequtives domain
-    arcpy.management.SetValueForRangeDomain(in_workspace=out_filepath, 
-                                            domain_name='dom_rule_2_min_stdv', 
-                                            min_value=1, 
-                                            max_value=99)
-
-    # create rule 3 num zones domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_rule_3_num_zones', 
-                                  domain_description='Rule 3 Num Zones (1 - 12)',
-                                  field_type='LONG', 
-                                  domain_type='RANGE')
-
-    # generate range values to consequtives domain
-    arcpy.management.SetValueForRangeDomain(in_workspace=out_filepath, 
-                                            domain_name='dom_rule_3_num_zones', 
-                                            min_value=1, 
-                                            max_value=11)
-
-    # create ruleset domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_ruleset', 
-                                  domain_description='Various rulesets',
-                                  field_type='TEXT', 
-                                  domain_type='CODED')
-
-    # generate coded values to ruleset domain   
-    dom_values = {
-        '1':     '1 Only',
-        '2':     '2 Only',
-        '3':     '3 Only',
-        '1&2':   '1 and 2',
-        '1&3':   '1 and 3',
-        '2&3':   '2 and 3',
-        '1|2':   '1 or 2',
-        '1|3':   '1 or 3',
-        '2|3':   '2 or 3',
-        '1&2&3': '1 and 2 and 3',
-        '1|2&3': '1 or 2 and 3',
-        '1&2|3': '1 and 2 or 3',
-        '1|2|3': '1 or 2 or 3'
-        }      
-    for dom_value in dom_values:
-        arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
-                                               domain_name='dom_ruleset', 
-                                               code=dom_value, 
-                                               code_description=dom_values.get(dom_value))                                            
-
-    # create alert direction domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_alert_direction', 
-                                  domain_description='Alert directions',
-                                  field_type='TEXT', 
-                                  domain_type='CODED')
-
-    # generate coded values to boolean domain
-    dom_values = {'Incline Only': 'Incline Only', 'Decline Only': 'Decline Only', 'Both': 'Both'}
-    for dom_value in dom_values:
-        arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
-                                               domain_name='dom_alert_direction', 
-                                               code=dom_value, 
-                                               code_description=dom_values.get(dom_value))
-
-    # create boolean domain
-    arcpy.management.CreateDomain(in_workspace=out_filepath, 
-                                  domain_name='dom_boolean', 
-                                  domain_description='Boolean (Yes or No)',
-                                  field_type='TEXT', 
-                                  domain_type='CODED')
-
-    # generate coded values to boolean domain
-    dom_values = {'Yes': 'Yes', 'No': 'No'}
-    for dom_value in dom_values:
-        arcpy.management.AddCodedValueToDomain(in_workspace=out_filepath, 
-                                               domain_name='dom_boolean', 
-                                               code=dom_value, 
-                                               code_description=dom_values.get(dom_value))
-
-
-    # notify
-    print('Generating database fields...') 
-
-    # add area id field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='area_id', 
-                              field_type='TEXT', 
-                              field_alias='Area ID',
-                              field_length=200,
-                              field_is_required='REQUIRED')
-
-    # add platforms field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='platform', 
-                              field_type='TEXT', 
-                              field_alias='Platform',
-                              field_length=20,
-                              field_is_required='REQUIRED',
-                              field_domain='dom_platforms')    
-
-    # add s_year field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='s_year', 
-                              field_type='LONG', 
-                              field_alias='Start Year of Training Period',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_years')
-
-    # add e_year field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='e_year', 
-                              field_type='LONG', 
-                              field_alias='End Year of Training Period',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_years')
-
-    # add index field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='index', 
-                              field_type='TEXT', 
-                              field_alias='Vegetation Index',
-                              field_length=20,
-                              field_is_required='REQUIRED',
-                              field_domain='dom_indices')
-
-    # add persistence field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='persistence', 
-                              field_type='FLOAT', 
-                              field_alias='Vegetation Persistence',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_persistence')
-
-    # add rule 1 min consequtives field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='rule_1_min_conseqs', 
-                              field_type='LONG', 
-                              field_alias='Rule 1 Minimum Consequtives',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_rule_1_consequtives')
-
-    # add include plateaus field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='rule_1_inc_plateaus', 
-                              field_type='TEXT', 
-                              field_alias='Rule 1 Include Pleateaus',
-                              field_length=20,
-                              field_is_required='REQUIRED',
-                              field_domain='dom_boolean')
-
-    # add rule 2 min stdv field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='rule_2_min_stdv', 
-                              field_type='LONG', 
-                              field_alias='Rule 2 Minimum Std Dev',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_rule_2_min_stdv')
-
-    # add rule 2 bidirectional field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='rule_2_bidirectional', 
-                              field_type='TEXT', 
-                              field_alias='Rule 2 Bidirectional',
-                              field_length=20,
-                              field_is_required='REQUIRED',
-                              field_domain='dom_boolean')
-
-    # add rule 3 num zones field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='rule_3_num_zones', 
-                              field_type='LONG', 
-                              field_alias='Rule 3 Number of Zones',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_rule_3_num_zones')                              
-
-    # add ruleset field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='ruleset', 
-                              field_type='TEXT', 
-                              field_alias='Ruleset',
-                              field_length=20,
-                              field_is_required='REQUIRED',
-                              field_domain='dom_ruleset')      
-
-    # add alert field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='alert', 
-                              field_type='TEXT', 
-                              field_alias='Alert via Email',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_boolean')
-                              
-    # add alert direction field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='alert_direction', 
-                              field_type='TEXT', 
-                              field_alias='Change Direction to Trigger Alert',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_alert_direction')
-
-    # add email field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='email', 
-                              field_type='TEXT', 
-                              field_alias='Email of User',
-                              field_is_required='REQUIRED')
-
-    # add last_run field to featureclass   
-    arcpy.management.AddField(in_table=out_feat, 
-                              field_name='ignore', 
-                              field_type='TEXT', 
-                              field_alias='Ignore When Run',
-                              field_is_required='REQUIRED',
-                              field_domain='dom_boolean')   
-
-
-    # notify todo - delete if we dont want defaults
-    print('Generating database defaults...')  
-
-    # set default platform
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='platform',
-                                          default_value='Landsat')   
-
-    # set default index
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='index',
-                                          default_value='MAVI')  
-
-    # set default persistence
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='persistence',
-                                          default_value=0.5)
-
-    # set default min conseqs
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='rule_1_min_conseqs',
-                                          default_value=2)
-
-    # set default inc plateaus
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='rule_1_inc_plateaus',
-                                          default_value='No')
-
-    # set default min stdvs
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='rule_2_min_stdv',
-                                          default_value=1)
-
-    # set default bidirectional
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='rule_2_bidirectional',
-                                          default_value='Yes')
-
-    # set default num zones
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='rule_3_num_zones',
-                                          default_value=1)
-
-    # set default ruleset
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='ruleset',
-                                          default_value='1&2|3')
-
-    # set default alert
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='alert_direction',
-                                          default_value='Both')   
-
-    # set default alert
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='alert',
-                                          default_value='No')    
-
-    # set default ignore
-    arcpy.management.AssignDefaultToField(in_table=out_feat, 
-                                          field_name='ignore',
-                                          default_value='No')   
-
-
-    # notify
-    print('Creating NetCDF data folder...') 
-
-    # create output folder
-    out_nc_folder = os.path.join(out_folder, '{}_cubes'.format(out_filename))
-    if os.path.exists(out_nc_folder):
+        return
+    
+    return ds
+
+    
+def load_nc(ds):
+    """this method loads existing dataset"""
+
+    # check if file existd and try safe open
+    if ds is not None:
         try:
-            shutil.rmtree(out_nc_folder)
+            ds = ds.load()
+            return ds
+                    
         except:
-            raise ValueError('Could not delete {}'.format(out_nc_folder))
+            print('Could not open dataset, returning None.')
+            return
+    else:
+        print('Dataset not provided')
+        return
 
-    # create new folder
-    os.makedirs(out_nc_folder)
 
 
-    # notify
-    print('Adding data to current map...') 
+def remove_spikes_np(arr, user_factor=2, win_size=3):
+    """
+    Takes an numpy array containing vegetation index variable and removes outliers within 
+    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
+    with outliers set to nan.
+    
+    Parameters
+    ----------
+    arr: numpy ndarray
+        A one-dimensional array containing a vegetation index values.
+    user_factor: float
+        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
+        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
+    win_size: int
+        Number of samples to include in rolling median window.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with all detected outliers in the
+        veg_index variable set to nan.
+    """
+    
+    # notify user
+    print('Removing spike outliers.')
+            
+    # check inputs
+    if arr is None:
+        raise ValueError('Array is empty.')
 
-    # enable auto-visual of outputs
-    arcpy.env.addOutputsToMap = True
+    # get nan mask (where nan is True)
+    cutoffs = np.std(arr) * user_factor
 
-    try:
-        # get active map, add feat
-        aprx = arcpy.mp.ArcGISProject('CURRENT')
-        mp = aprx.activeMap
-        mp.addDataFromPath(out_feat)
+    # do moving win median, back to numpy, fill edge nans 
+    roll = pd.Series(arr).rolling(window=win_size, center=True)
+    arr_win = roll.median().to_numpy()
+    arr_med = np.where(np.isnan(arr_win), arr, arr_win)
 
-    except:
-        arcpy.AddWarning('Could not find active map. Add monitor areas manually.')        
+    # calc abs diff between orig arr and med arr
+    arr_dif = np.abs(arr - arr_med)
 
-    # notify
-    print('Created new monitoring project database successfully.')
+    # make mask where absolute diffs exceed cutoff
+    mask = np.where(arr_dif > cutoffs, True, False)
+
+    # get value left, right of each outlier and get mean
+    l = np.where(mask, np.roll(arr, shift=1), np.nan)  # ->
+    r = np.where(mask, np.roll(arr, shift=-1), np.nan) # <-
+    arr_mean = (l + r) / 2
+    arr_fmax = np.fmax(l, r)
+
+    # mask if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs 
+    arr_outliers = ((np.where(mask, arr, np.nan) < (arr_mean - cutoffs)) | 
+                    (np.where(mask, arr, np.nan) > (arr_fmax + cutoffs)))
+
+    # apply the mask
+    arr = np.where(arr_outliers, np.nan, arr)
+    
+    return arr
+
+
+def interp_nan_np(arr):
+    """equal to interpolate_na in xr"""
+
+    # notify user
+    print('Interpolating nan values.')
+            
+    # check inputs
+    if arr is None:
+        raise ValueError('Array is empty.')
+        
+    # get range of indexes
+    idxs = np.arange(len(arr))
+    
+    # interpolate linearly 
+    arr = np.interp(idxs, 
+                    idxs[~np.isnan(arr)], 
+                    arr[~np.isnan(arr)])
+                    
+    return arr
+
+
+
+
+
+
 
 
 # meta, checks
@@ -515,7 +414,7 @@ def safe_load_nc(in_path):
 
 
 # checks, metadata
-def fetch_cube_data(out_nc, collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
+def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
     """
     Takes a path to a netcdf file, a start and end date, bounding box and
     obtains the latest satellite imagery from DEA AWS. If an existing
@@ -531,41 +430,47 @@ def fetch_cube_data(out_nc, collections, bands, start_dt, end_dt, bbox, resoluti
     """
     
     # checks
-    #
+    # todo
     
     # notify
-    print('Syncing cube for monitoring area: {}'.format(out_nc))
+    print('Obtaining all satellite data for monitoring area.')
 
     # query stac endpoint
-    items = cog_odc.fetch_stac_items_odc(stac_endpoint='https://explorer.sandbox.dea.ga.gov.au/stac', 
-                                         collections=collections, 
-                                         start_dt=start_dt, 
-                                         end_dt=end_dt, 
-                                         bbox=bbox,
-                                         slc_off=False,    # never want slc-off data
-                                         limit=250)
-
-    # replace s3 prefix with https for each band - arcgis doesnt like s3
-    items = cog_odc.replace_items_s3_to_https(items=items, 
-                                              from_prefix='s3://dea-public-data', 
-                                              to_prefix='https://data.dea.ga.gov.au')
+    try:
+        items = cog_odc.fetch_stac_items_odc(stac_endpoint='https://explorer.sandbox.dea.ga.gov.au/stac', 
+                                             collections=collections, 
+                                             start_dt=start_dt, 
+                                             end_dt=end_dt, 
+                                             bbox=bbox,
+                                             slc_off=False,    # never want slc-off data
+                                             limit=250)
+               
+        # replace s3 prefix with https for each band - arcgis doesnt like s3
+        items = cog_odc.replace_items_s3_to_https(items=items, 
+                                          from_prefix='s3://dea-public-data', 
+                                          to_prefix='https://data.dea.ga.gov.au')                            
+    except:
+        raise ValueError('Error occurred during fetching of stac metadata.')
 
     # build xarray dataset from stac data
-    ds = cog_odc.build_xr_odc(items=items,
-                              bbox=bbox,
-                              bands=bands,
-                              crs=3577,                   # always albers
-                              resolution=resolution,
-                              group_by='solar_day',       # always group by solar day
-                              skip_broken_datasets=True,  # always skip errors
-                              like=ds_existing,
-                              chunks={})                  # always want lazy load
+    try:
+        ds = cog_odc.build_xr_odc(items=items,
+                                  bbox=bbox,
+                                  bands=bands,
+                                  crs=3577,
+                                  resolution=resolution,
+                                  group_by='solar_day',
+                                  skip_broken_datasets=True,  
+                                  like=ds_existing,
+                                  chunks={})
+                                  
+        # prepare lazy ds with data type, type, time etc
+        ds = cog_odc.convert_type(ds=ds, to_type='float32')
+        ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)
+        ds = cog_odc.fix_xr_time_for_arc_cog(ds)
+    except:
+        raise ValueError('Error occurred building of xarray dataset.')
 
-    # prepare lazy ds with data type, type, time etc
-    ds = cog_odc.convert_type(ds=ds, to_type='float32')                       # always want float32 for nrt
-    ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)    # always want -999 to be nodata
-    ds = cog_odc.fix_xr_time_for_arc_cog(ds)
-    
     return ds
 
 
@@ -747,7 +652,18 @@ def validate_monitoring_areas(in_feat):
         print('Feature class is not in a geodatabase, flagging as invalid.')
         is_valid = False
         
-    # if we've made it, check shapefile
+    # prepare path toe xpected json file
+    in_path = os.path.dirname(in_feat)
+    in_path = os.path.splitext(in_path)[0]
+    in_path = os.path.dirname(in_path)
+    in_data_path = os.path.join(in_path, 'data.json')
+    
+    # check json file exists
+    if not os.path.exists(in_data_path):
+        print('Associated data json not found, flagging as invalid.')
+        is_valid = False
+
+    # if we've made it, check featureclass
     if is_valid:
         try:
             # get feature
@@ -779,7 +695,7 @@ def validate_monitoring_areas(in_feat):
                                'rule_1_inc_plateaus', 'rule_2_min_stdv', 
                                'rule_2_bidirectional', 'rule_3_num_zones',
                                'ruleset', 'alert', 'alert_direction', 'email', 
-                               'ignore']
+                               'ignore', 'color', 'global_id']
             
             # check if all fields in feat
             if not all(f in fields for f in required_fields):
@@ -798,12 +714,34 @@ def validate_monitoring_areas(in_feat):
     return is_valid
  
  
-# todo - meta
-def validate_monitoring_area(area_id, platform, s_year, e_year, index):
+# todo - meta, consider other fields
+def validate_monitoring_area(row):
     """
     Does relevant checks for information for a
     single monitoring area.
     """
+    
+    # check if row is tuple
+    if not isinstance(row, tuple):
+        raise ValueError('Row must be of type tuple.')
+            
+    # parse row info
+    area_id = row[0]
+    platform = row[1]
+    s_year = row[2]
+    e_year = row[3]
+    index = row[4]
+    persistence = row[5]
+    rule_1_min_conseqs = row[6]
+    rule_1_inc_plateaus = row[7]
+    rule_2_min_stdv = row[8]
+    rule_2_bidirectional = row[9]
+    rule_3_num_zones = row[10]
+    ruleset = row[11]
+    alert = row[12]
+    alert_direction = row[13]
+    email = row[14]
+    ignore = row[15]
     
     # check area id exists
     if area_id is None:
@@ -842,6 +780,89 @@ def validate_monitoring_area(area_id, platform, s_year, e_year, index):
     elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
         print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
         return False
+    
+    # check if persistence is accepptable
+    if persistence is None:
+        print('No persistence exists, flagging as invalid.')
+        return False
+    elif persistence < 0.001 or persistence > 9.999:
+        print('Persistence must be before 0.0001 and 9.999, flagging as invalid.')
+        return False
+
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_min_conseqs is None:
+        print('No rule_1_min_conseqs exists, flagging as invalid.')
+        return False
+    elif rule_1_min_conseqs < 0 or rule_1_min_conseqs > 99:
+        print('Rule_1_min_conseqs must be between 0 and 99, flagging as invalid.')
+        return False
+    
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_inc_plateaus is None:
+        print('No rule_1_inc_plateaus exists, flagging as invalid.')
+        return False
+    elif rule_1_inc_plateaus not in ['Yes', 'No']:
+        print('Rule_1_inc_plateaus must be Yes or No, flagging as invalid.')
+        return False    
+    
+    # check if rule_2_min_stdv is accepptable
+    if rule_2_min_stdv is None:
+        print('No rule_2_min_stdv exists, flagging as invalid.')
+        return False
+    elif rule_2_min_stdv < 0 or rule_2_min_stdv > 99:
+        print('Rule_2_min_stdv must be between 0 and 99, flagging as invalid.')
+        return False    
+
+    # check if rule_2_bidirectional is accepptable
+    if rule_2_bidirectional is None:
+        print('No rule_2_bidirectional exists, flagging as invalid.')
+        return False
+    elif rule_2_bidirectional not in ['Yes', 'No']:
+        print('Rule_2_bidirectional must be Yes or No, flagging as invalid.')
+        return False     
+
+    # check if rule_2_bidirectional is accepptable
+    if rule_3_num_zones is None:
+        print('No rule_3_num_zones exists, flagging as invalid.')
+        return False
+    elif rule_3_num_zones < 0 or rule_2_min_stdv > 99:
+        print('Rule_3_num_zones must be between 0 and 99, flagging as invalid.')
+        return False       
+
+    # check if ruleset is accepptable   
+    if ruleset is None:
+        print('No ruleset exists, flagging as invalid.')
+        return False
+    
+    # check if alert is accepptable
+    if alert is None:
+        print('No alert exists, flagging as invalid.')
+        return False
+    elif alert not in ['Yes', 'No']:
+        print('Alert must be Yes or No, flagging as invalid.')
+        return False
+    
+    # check if alert_direction is accepptable
+    if alert_direction is None:
+        print('No alert_direction exists, flagging as invalid.')
+        return False
+    elif alert_direction not in ['Incline Only', 'Decline Only', 'Both']:
+        print('Alert_direction must be Incline Only, Decline Only, Both, flagging as invalid.')
+        return False  
+
+    # check if alert_direction is accepptable
+    if email is not None:
+        if '@' not in email or '.' not in email:
+            print('No @ or . character in email exists, flagging as invalid.')
+            return False
+
+    # check if ignore is accepptable
+    if ignore is None:
+        print('No ignore exists, flagging as invalid.')
+        return False
+    elif ignore not in ['Yes', 'No']:
+        print('Ignore must be Yes or No, flagging as invalid.')
+        return False    
 
     # all good!
     return True 
@@ -993,6 +1014,38 @@ def build_change_cube(ds, training_start_year=None, training_end_year=None, pers
     # notify and return
     print('Successfully created detection cube')
     return ds_summary
+
+# meta
+def create_email_dicts(row_count):
+    """meta"""
+    
+    if row_count is None or row_count == 0:
+        print('No rows to build email dictionaries.')
+        return
+    
+    # setup email contents list
+    email_contents = []
+            
+    # pack list full of 'empty' dicts
+    for i in range(row_count):
+    
+        # set up empty email dict
+        email_dict = {
+            'area_id': None,
+            's_year': None,
+            'e_year': None,
+            'index': None,
+            'ruleset': None,
+            'alert': None,
+            'alert_direction': None,
+            'email': None,
+            'ignore': None,
+            'triggered': None
+        }
+    
+        email_contents.append(email_dict)
+        
+    return email_contents
 
 
 # todo checks, meta

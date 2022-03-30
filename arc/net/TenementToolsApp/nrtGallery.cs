@@ -303,20 +303,17 @@ namespace TenementToolsApp
                         {
                             popups.Add(new PopupContent(msg.Text, "Alert History"));
                         }
+                        else if (i == 4)
+                        {
+                            popups.Add(new PopupContent(msg.Text, "Zone Legend"));
+                        }
 
                         // increment counter 
                         i++;
                     }
                 }
 
-                // define popup stylings
-                //var popupDef = new PopupDefinition()
-                //{
-                //Size = new System.Windows.Size(800, 800)
-                //};
-
                 // show me!
-                //MapView.Active.ShowCustomPopup(popups, null, false, popupDef);
                 MapView.Active.ShowCustomPopup(popups, null, false);
             }
         }
