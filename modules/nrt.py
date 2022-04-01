@@ -45,253 +45,100 @@ except:
     print('TEMP DELETE THIS TRYCATCH LATER ONCE WEMACD UP AND RUNNING')
 
 
-def write_empty_json(filepath):
-    with open(filepath, 'w') as f:
-        json.dump([], f)
 
 
 
 
 # meta
-def load_json(filepath):
-    """load json file"""
-    
-    # check if file exists 
-    if not os.path.exists(filepath):
-        raise ValueError('File does not exist: {}.'.format(filepath))
-    
-    # read json file
-    with open(filepath, 'r') as f:
-        data = json.load(f)
-        
-    return data
-
-def save_json(filepath, data):
-    """save json file"""
-    
-    # check if file exists 
-    if not os.path.exists(filepath):
-        raise ValueError('File does not exist: {}.'.format(filepath))
-    
-    # read json file
-    with open(filepath, 'w') as f:
-        json.dump(data, f)
-        
-    return data
-
-
-def get_item_from_json(filepath, global_id):
+def interp_nans(ds, drop_edge_nans=False):
     """"""
     
-    # check if file exists, else none
-    if not os.path.exists(filepath):
-        return
-    elif global_id is None or not isinstance(global_id, str):
-        return
-    
-    # read json file
-    try:
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-    except:
-        return
-
-    # check json data for item
-    for item in data:
-        if item.get('global_id') == global_id:
-            return item
-
-    # empty handed
-    return
-    
-
-def get_latest_date_from_json_item(json_item):
-    """"""
-    
-    # check if item is dict, else default
-    if json_item is None:
-        return '1980-01-01'
-    elif not isinstance(json_item, dict):
-        return '1980-01-01'
-    
-    # fetch latest date if exists, else default 
-    dates = json_item.get('dates')
-    if dates is not None and len(dates) > 0:
-        return dates[-1]
-    
-    # otherwise default
-    return '1980-01-01'
-
-
-def get_json_array_via_key(json_item, key):
-    """"""
-    
-    # check json item (none, not array, key not in it)
-    if json_item is None:
-        return np.array([])
-    elif not isinstance(json_item, dict):
-        return np.array([])
-    elif key not in json_item:
-        return np.array([])
-    
-    # fetch values if exists, else default 
-    vals = json_item.get(key)
-    if vals is not None and len(vals) > 0:
-        return np.array(vals)
-    
-    # otherwise default
-    return np.array([])
-
-  
-def extract_new_dates(ds, date_string):
-    """"""
-    
-    # check if xarray is adequate 
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('Dataset is not of Xarray type.')
-    elif 'time' not in ds:
-        raise ValueError('Dataset does not have a time coordinate.')
-    elif len(ds['time']) == 0:
-        raise ValueError('Dataset is empty.')
-    
-    # check date string 
-    if not isinstance(date_string, str):
-        raise TypeError('Date must be of type string in format YYYY-MM-DD.')
-
-    # get a list of all xr dates in string format 
-    all_times = ds['time'].dt.strftime('%Y-%m-%d')
-    
-    # select only those times greater than current string 
-    new_dates = ds['time'].where(all_times > date_string, drop=True)
-    ds = ds.sel(time=new_dates)
-    
-    # return 
-    return ds
-    
-    
-def remove_spikes_xr(ds, user_factor=2, win_size=3):
-    """
-    Takes an xarray dataset containing vegetation index variable and removes outliers within 
-    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
-    with outliers set to nan. Can work on datasets with or without existing nan values. Note:
-    Zscore method will compute memory.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_index').
-    user_factor: float
-        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
-        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
-        
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with all detected outliers in the
-        veg_index variable set to nan.
-    """
-    
-    # notify user
-    print('Removing spike outliers.')
-            
-    # check xr type, dims
-    if ds is None:
-        raise ValueError('Dataset is empty.')
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in ds:
-        raise ValueError('No time dimension in dataset.')
-
-    # check if user factor provided
-    if user_factor <= 0:
-        print('User factor is less than 0, setting to 1.')
-        user_factor = 1
-                
-    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
-    cutoffs = ds.std('time') * user_factor
-
-    # calc mask of existing nan values (nan = True) in orig ds
-    ds_mask = xr.where(ds.isnull(), True, False)
-
-    # calc win size via num of dates in dataset
-    #win_size = int(len(ds['time']) / 7)
-    #win_size = int(win_size / int(len(ds.resample(time='1Y'))))
-    
-    
-
-    if win_size < 3:
-        win_size = 3
-        print('Generated roll window size less than 3, setting to default (3).')
-    elif win_size % 2 == 0:
-        win_size = win_size + 1
-        print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
-    else:
-        print('Generated roll window size is: {0}'.format(win_size))
-
-    # calc rolling median for whole dataset
-    ds_med = ds.rolling(time=win_size, center=True).median()
-
-    # calc nan mask of start/end nans from roll, replace them with orig vals
-    med_mask = xr.where(ds_med.isnull(), True, False)
-    med_mask = xr.where(ds_mask != med_mask, True, False)
-    ds_med = xr.where(med_mask, ds, ds_med)
-
-    # calc abs diff between orig ds and med ds vals at each pixel
-    ds_diffs = abs(ds - ds_med)
-
-    # calc mask of outliers (outlier = True) where absolute diffs exceed cutoff
-    outlier_mask = xr.where(ds_diffs > cutoffs, True, False)
-
-    # shift values left and right one time index and combine, get mean and max for each window
-    lefts = ds.shift(time=1).where(outlier_mask)
-    rights = ds.shift(time=-1).where(outlier_mask)
-    nbr_means = (lefts + rights) / 2
-    nbr_maxs = xr.ufuncs.fmax(lefts, rights)
-
-    # keep nan only if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs
-    outlier_mask = xr.where((ds.where(outlier_mask) < (nbr_means - cutoffs)) | 
-                            (ds.where(outlier_mask) > (nbr_maxs + cutoffs)), True, False)
-
-    # flag outliers as nan in original da
-    ds = ds.where(~outlier_mask)
-
-
-    # notify user and return
-    print('Outlier removal successful.')
-    return ds
-
-
-def interp_nans_xr(ds):
-    """"""
-    
-    # check if xarray is adequate 
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('Dataset is not of Xarray type.')
-    elif 'time' not in ds:
-        raise ValueError('Dataset does not have a time coordinate.')
-    elif len(ds['time']) == 0:
-        raise ValueError('Dataset is empty.')
+    # check if time dimension exists 
+    if isinstance(ds, xr.Dataset) and 'time' not in ds:
+        raise ValueError('Dataset has no time dimension.')
+    elif isinstance(ds, xr.DataArray) and 'time' not in ds.dims:
+        raise ValueError('DataArray has no time dimension.')
         
     try:
         # interpolate all values via linear interp
         ds = ds.interpolate_na('time')
     
         # remove any remaining nan (first and last indices, for e.g.)
-        ds = ds.where(~ds.isnull(), drop=True)
+        if drop_edge_nans is True:
+            ds = ds.where(~ds.isnull(), drop=True)
     except:
         return
     
     return ds
 
+
+# meta
+def add_required_vars(ds):
+    """"""
+
+    new_vars = [
+        'veg_clean', 
+        'static_raw', 
+        'static_clean',    
+        'static_can_inc',
+        'static_can_dec',
+        'static_con_inc',
+        'static_con_dec',
+        'static_zones',
+        'dynamic_raw', 
+        'dynamic_clean',    
+        'dynamic_can_inc',
+        'dynamic_can_dec',
+        'dynamic_con_inc',
+        'dynamic_con_dec',
+        'dynamic_zones'
+    ]
+
+    # iter each var and add as nans to xr, if not exist
+    for new_var in new_vars:
+        if new_var not in ds:
+            ds[new_var] = xr.full_like(ds['veg_idx'], np.nan)
+            
+    return ds
+
+
+# meta, check the checks
+def combine_old_new_xrs(ds_old, ds_new):
+    """"""
     
-def load_nc(ds):
+    # check if old provided, else return new
+    if ds_old is None:
+        print('Old dataset is empty, returning new.')
+        return ds_new
+    elif ds_new is None:
+        print('New dataset is empty, returning old.')
+        return ds_old
+        
+    # check time dimension
+    if 'time' not in ds_old or 'time' not in ds_new:
+        print('Datasets lack time coordinates.')
+        return
+    
+    # combien old with new
+    try:
+        ds_cmb = xr.concat([ds_old, ds_new], dim='time')
+    except:
+        print('Could not combine old and new datasets.')
+        return
+    
+    return ds_cmb
+    
+    
+# meta
+def safe_load_ds(ds):
     """this method loads existing dataset"""
 
     # check if file existd and try safe open
     if ds is not None:
         try:
             ds = ds.load()
+            ds.close()
+            
             return ds
                     
         except:
@@ -302,99 +149,11 @@ def load_nc(ds):
         return
 
 
-
-def remove_spikes_np(arr, user_factor=2, win_size=3):
-    """
-    Takes an numpy array containing vegetation index variable and removes outliers within 
-    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
-    with outliers set to nan.
-    
-    Parameters
-    ----------
-    arr: numpy ndarray
-        A one-dimensional array containing a vegetation index values.
-    user_factor: float
-        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
-        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
-    win_size: int
-        Number of samples to include in rolling median window.
-        
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with all detected outliers in the
-        veg_index variable set to nan.
-    """
-    
-    # notify user
-    print('Removing spike outliers.')
-            
-    # check inputs
-    if arr is None:
-        raise ValueError('Array is empty.')
-
-    # get nan mask (where nan is True)
-    cutoffs = np.std(arr) * user_factor
-
-    # do moving win median, back to numpy, fill edge nans 
-    roll = pd.Series(arr).rolling(window=win_size, center=True)
-    arr_win = roll.median().to_numpy()
-    arr_med = np.where(np.isnan(arr_win), arr, arr_win)
-
-    # calc abs diff between orig arr and med arr
-    arr_dif = np.abs(arr - arr_med)
-
-    # make mask where absolute diffs exceed cutoff
-    mask = np.where(arr_dif > cutoffs, True, False)
-
-    # get value left, right of each outlier and get mean
-    l = np.where(mask, np.roll(arr, shift=1), np.nan)  # ->
-    r = np.where(mask, np.roll(arr, shift=-1), np.nan) # <-
-    arr_mean = (l + r) / 2
-    arr_fmax = np.fmax(l, r)
-
-    # mask if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs 
-    arr_outliers = ((np.where(mask, arr, np.nan) < (arr_mean - cutoffs)) | 
-                    (np.where(mask, arr, np.nan) > (arr_fmax + cutoffs)))
-
-    # apply the mask
-    arr = np.where(arr_outliers, np.nan, arr)
-    
-    return arr
-
-
-def interp_nan_np(arr):
-    """equal to interpolate_na in xr"""
-
-    # notify user
-    print('Interpolating nan values.')
-            
-    # check inputs
-    if arr is None:
-        raise ValueError('Array is empty.')
-        
-    # get range of indexes
-    idxs = np.arange(len(arr))
-    
-    # interpolate linearly 
-    arr = np.interp(idxs, 
-                    idxs[~np.isnan(arr)], 
-                    arr[~np.isnan(arr)])
-                    
-    return arr
-
-
-
-
-
-
-
-
 # meta, checks
 def safe_load_nc(in_path):
     """Performs a safe load on local netcdf. Reads 
     NetCDF, loads it, and closes connection to file
-    whilse maintaining data in memory"""
+    whilse maintaining data in memory"""    
     
     # check if file existd and try safe open
     if os.path.exists(in_path):
@@ -468,84 +227,40 @@ def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, d
         ds = cog_odc.convert_type(ds=ds, to_type='float32')
         ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)
         ds = cog_odc.fix_xr_time_for_arc_cog(ds)
-    except:
+    except Exception as e:
+        #raise ValueError(e)
         raise ValueError('Error occurred building of xarray dataset.')
 
     return ds
 
 
-# checks, meta
-def sync_new_and_old_cubes(ds_exist, ds_new, out_nc):
-    """Takes two structurally idential xarray datasets and 
-    combines them into one, where only new data from the latest 
-    new dataset is combined with all of the old. Either way, a 
-    file of this process is written to output path. This drives 
-    the nrt on-going approach of the module."""
+# meta
+def extract_new_xr_dates(ds_old, ds_new):
+    """"""
     
-    # also set rasterio env variables
-    rasterio_env = {
-        'GDAL_DISABLE_READDIR_ON_OPEN': 'EMPTY_DIR',
-        'CPL_VSIL_CURL_ALLOWED_EXTENSIONS':'tif',
-        'VSI_CACHE': True,
-        'GDAL_HTTP_MULTIRANGE': 'YES',
-        'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
-    }
+    # check if xarray is adequate 
+    if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
+        raise TypeError('Datasets not of Xarray type.')
+    elif 'time' not in ds_old or 'time' not in ds_new:
+        raise ValueError('Datasets do not have a time coordinate.')
+    elif len(ds_old['time']) == 0 or len(ds_new['time']) == 0:
+        raise ValueError('Datasets empty.')
     
-    # checks
-    # 
-    
-    # if a new dataset provided only, write and load new
-    if ds_exist is None and ds_new is not None:
-        print('Existing dataset not provided. Creating and loading for first time.')
+    try:
+        # select only those times greater than current string 
+        new_dates = ds_new['time'].where(~ds_new['time'].isin(ds_old['time']), drop=True)
+        ds_new = ds_new.sel(time=new_dates)
         
-        # write netcdf file
-        with rasterio.Env(**rasterio_env):
-            ds_new = ds_new.astype('float32')
-            tools.export_xr_as_nc(ds=ds_new, filename=out_nc)
-            
-        # safeload new dataset and return
-        ds_new = safe_load_nc(out_nc)
-        return ds_new
-            
-    elif ds_exist is not None and ds_new is not None:
-        print('Existing and New dataset provided. Combining, writing and loading.')  
-        
-        # ensure existing is not locked via safe load (new always in mem)
-        ds_exist = safe_load_nc(out_nc)
-                
-        # extract only new datetimes from new dataset
-        dts = ds_exist['time']
-        ds_new = ds_new.where(~ds_new['time'].isin(dts), drop=True)
-        
-        # check if any new images
-        if len(ds_new['time']) > 0:
-            print('New images detected ({}), adding and overwriting existing cube.'.format(len(ds_new['time'])))
-                        
-            # combine new with old (concat converts to float)
-            ds_combined = xr.concat([ds_exist, ds_new], dim='time').copy(deep=True) 
-
-            # write netcdf file
-            with rasterio.Env(**rasterio_env):
-                ds_combined = ds_combined.astype('float32')
-                tools.export_xr_as_nc(ds=ds_combined, filename=out_nc)            
-             
-            # safeload new dataset and return
-            ds_combined = safe_load_nc(out_nc)
-            return ds_combined
-        
-        else:
-            print('No new images detected, returning existing cube.')
-            
-            # safeload new dataset and return
-            ds_exist = safe_load_nc(out_nc)
-            return ds_exist
-
-    else:
-        raise ValueError('At a minimum, a new dataset must be provided.')
+        # check if new dates, else return none
+        if len(ds_new['time']) != 0:
+            return ds_new
+    except:
         return
 
-  
-# todo - include provisional products too. finish meta
+    return 
+
+
+# meta
 def get_satellite_params(platform=None):
     """
     Helper function to generate Landsat or Sentinel query information
@@ -631,7 +346,7 @@ def get_satellite_params(platform=None):
     return params
  
  
-# todo - meta, remove arcpy dependency
+# meta
 def validate_monitoring_areas(in_feat):
     """
     Does relevant checks for information for a
@@ -650,17 +365,6 @@ def validate_monitoring_areas(in_feat):
         is_valid = False
     elif not os.path.dirname(in_feat).endswith('.gdb'):
         print('Feature class is not in a geodatabase, flagging as invalid.')
-        is_valid = False
-        
-    # prepare path toe xpected json file
-    in_path = os.path.dirname(in_feat)
-    in_path = os.path.splitext(in_path)[0]
-    in_path = os.path.dirname(in_path)
-    in_data_path = os.path.join(in_path, 'data.json')
-    
-    # check json file exists
-    if not os.path.exists(in_data_path):
-        print('Associated data json not found, flagging as invalid.')
         is_valid = False
 
     # if we've made it, check featureclass
@@ -714,7 +418,7 @@ def validate_monitoring_areas(in_feat):
     return is_valid
  
  
-# todo - meta, consider other fields
+# meta
 def validate_monitoring_area(row):
     """
     Does relevant checks for information for a
@@ -867,8 +571,59 @@ def validate_monitoring_area(row):
     # all good!
     return True 
  
+
+# meta
+def remove_spikes(da, user_factor=2, win_size=3):
+    """
+    Takes a xarray data array. Removes spikes based on timesat
+    formula.
+    """
+
+    # notify user
+    print('Removing spike outliers.')
+
+    # check if user factor provided
+    if user_factor <= 0:
+        user_factor = 1
+
+    # check win_size not less than 3 and odd num
+    if win_size < 3:
+        win_size == 3
+    elif win_size % 2 == 0:
+        win_size += 1
+
+    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
+    #cutoff = float(da.std('time') * user_factor)
+    cutoff = da.std('time') * user_factor
+
+    # calc rolling median for whole dataset
+    da_med = da.rolling(time=win_size, center=True).median()
+
+    # calc abs diff of orig and med vals
+    da_dif = abs(da - da_med)
+
+    # calc mask
+    da_mask = da_dif > cutoff
+
+    # shift vals left, right one time index, get mean and fmax per center
+    l = da.shift(time=1).where(da_mask)
+    r = da.shift(time=-1).where(da_mask)
+    da_mean = (l + r) / 2
+    da_fmax = xr.ufuncs.fmax(l, r)
+
+    # flag only if mid val < mean of l, r - cutoff or mid val > max val + cutoff
+    da_spikes = xr.where((da.where(da_mask) < (da_mean - cutoff)) | 
+                         (da.where(da_mask) > (da_fmax + cutoff)), True, False)
+
+    # set spikes to nan
+    da = da.where(~da_spikes)
+
+    # notify and return
+    print('Spike removal completed successfully.')
+    return da
  
-# todo do checks, do meta
+ 
+# meta
 def mask_xr_via_polygon(ds, geom, mask_value=1):
     """
     geom object from gdal
@@ -918,102 +673,91 @@ def mask_xr_via_polygon(ds, geom, mask_value=1):
 
     return mask
     
-    
-# deprecated! meta
-def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
-    """
-    """
-    
-    # check if ogr layer type
-    if not isinstance(geom, ogr.Geometry):
-        raise TypeError('Layer is not of ogr Geometry type.')
-        
-    # check if epsg codes are ints
-    if not isinstance(from_epsg, int):
-        raise TypeError('From epsg must be integer.')
-    elif not isinstance(to_epsg, int):
-        raise TypeError('To epsg must be integer.')
-        
-    # notify
-    print('Reprojecting layer from EPSG {} to EPSG {}.'.format(from_epsg, to_epsg))
-            
-    try:
-        # init spatial references
-        from_srs = osr.SpatialReference()
-        to_srs = osr.SpatialReference()
-    
-        # set spatial references based on epsgs (inplace)
-        from_srs.ImportFromEPSG(from_epsg)
-        to_srs.ImportFromEPSG(to_epsg)
-        
-        # transform
-        trans = osr.CoordinateTransformation(from_srs, to_srs)
-        
-        # reproject
-        geom.Transform(trans)
-        
-    except: 
-        raise ValueError('Could not transform ogr geometry.')
-        
-    # notify and return
-    print('Successfully reprojected layer.')
-    return geom
 
-
-# meta, checks - DYNAMIC DISABLED, NOT USING
-def build_change_cube(ds, training_start_year=None, training_end_year=None, persistence_per_year=1, add_extra_vars=True):
-    """
-    """
-
+# meta, other genera improvements - check if error results in da with nan, or numpy with nan. will cause issues
+def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0, add_to_ds=True):
+    """"""
+    
     # checks
-
+    if ds is None:
+        raise ValueError('Dataset is empty.')
+    elif not isinstance(ds, xr.Dataset):
+        raise ValueError('Dataset type expected.')
+    elif 'time' not in ds:
+        raise ValueError('Dataset needs a time dimension.')
+        
+    # check method is supported, set default if wrong
+    if method not in ['static', 'dynamic', 'both']:
+        method = 'both'
+    
+    # check if var in dataset
+    if var not in ds:
+        raise ValueError('Requested variable not found.')
+        
+    # check training start
+    if train_start is None:
+        raise ValueError('Provide a training start year.')
+    elif train_start >= ds['time.year'].max():
+        raise ValueError('Training start must be lower within dataset range.')
+        
     # notify
-    print('Detecting change via static and dynamic methods.')
+    print('Beginning change detection.')
     
-    # get attributes from dataset
-    data_attrs = ds.attrs
-    band_attrs = ds[list(ds.data_vars)[0]].attrs
-    sref_attrs = ds['spatial_ref'].attrs
+    # check if any data exists
+    if len(ds['time']) == 0:
+        raise ValueError('Training period lacks data, change training start.')
+        
+    try:
+        # perform change detection (static)
+        ds_stc = EWMACD(ds=ds[var].to_dataset(),
+                        trainingPeriod='static',
+                        trainingStart=train_start,
+                        trainingEnd=train_end,
+                        persistence_per_year=persistence)
+    except:
+        print('Error occurred during static detection. Creating nan array.')
+        ds_stc = xr.full_like(ds[var].to_dataset(), np.nan)
+   
+    try:
+        # perform change detection (dynamic)
+        ds_dyn = EWMACD(ds=ds[var].to_dataset(),
+                        trainingPeriod='dynamic',
+                        trainingStart=train_start,
+                        trainingEnd=train_end,
+                        persistence_per_year=persistence)
+    except:
+        print('Error occurred during dynamic detection. Creating nan array.')
+        ds_dyn = xr.full_like(ds[var].to_dataset(), np.nan) 
+                    
+    # rename static, dynamic output var
+    ds_stc = ds_stc.rename({var: 'static_raw'})
+    ds_dyn = ds_dyn.rename({var: 'dynamic_raw'})
     
-    # sumamrise each image to a single median value
-    ds_summary = ds.median(['x', 'y'], keep_attrs=True)
-
-    # perform static ewmacd and add as new var
-    print('Generating static model')
-    ds_summary['static'] = EWMACD(ds=ds_summary, 
-                                  trainingPeriod='static',
-                                  trainingStart=training_start_year,
-                                  trainingEnd=training_end_year,
-                                  persistence_per_year=persistence_per_year)['veg_idx']
+    # return based on method (both, static, dynamic)
+    if method == 'both':
+        if add_to_ds == True:
+            ds['static_raw'] = ds_stc['static_raw']
+            ds['dynamic_raw'] = ds_dyn['dynamic_raw']
+            return ds
+        else:
+            return ds_stc, ds_dyn
     
-    # perform dynamic ewmacd and add as new var
-    #print('Generating dynamic model')
-    #ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
-                                   #trainingStart=training_start_year,
-                                   #persistence_per_year=persistence_per_year)['veg_idx']
+    elif method == 'static':
+        if add_to_ds == True:
+            ds['static_raw'] = ds_stc['static_raw']
+            return ds
+        else:
+            return ds_stc
 
-    # rename original veg_idx to summary
-    #ds_summary = ds_summary.rename({'veg_idx': 'summary'})
-
-    # broadcast summary back on to original dataset and order axes
-    ds_summary, _ = xr.broadcast(ds_summary, ds)
-    ds_summary = ds_summary.transpose('time', 'y', 'x')
+    else:
+        if add_to_ds == True:
+            ds['dynamic_raw'] = ds_dyn['dynamic_raw']
+            return ds
+        else:
+            return ds_dyn    
     
-    # add extra empty vars (zones, cands, conseqs) to dataset if new
-    if add_extra_vars:
-        for var in ['zones', 'cands_inc', 'cands_dec', 'consq_inc', 'consq_dec']:
-            if var not in ds_summary:
-                ds_summary[var] = xr.full_like(ds_summary['veg_idx'], np.nan)    
-                
-    # append attrbutes back on
-    ds_summary.attrs = data_attrs
-    ds_summary['spatial_ref'].attrs = sref_attrs
-    for var in list(ds_summary.data_vars):
-        ds_summary[var].attrs = band_attrs
+    return
 
-    # notify and return
-    print('Successfully created detection cube')
-    return ds_summary
 
 # meta
 def create_email_dicts(row_count):
@@ -1102,8 +846,8 @@ def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None,
     return
 
 
-# meta, checks 
-def smooth_change(arr):
+# meta 
+def smooth_signal(da):
     """
     Basic func to smooth change signal using
     a savgol filter with win size 3. works best
@@ -1111,13 +855,22 @@ def smooth_change(arr):
     small spikes.
     """
     
-    # check if arr larger than win size
-    if len(arr) <= 3:
-        print('Cannot smooth signal less than window size, returning raw array.')
-        return arr
+    # check if data array 
+    if not isinstance(da, xr.DataArray):
+        print('Only numpy arrays supported, returning original array.')
+        return da
+    elif len(da) <= 3:
+        print('Cannot smooth array <= 3 values. Returning raw array.')
+        return da
     
-    # smooth using savgol filter with win size 3
-    return savgol_filter(arr, 3, 1)
+    try:
+        # smooth using savgol filter with win size 3
+        da_out = xr.apply_ufunc(savgol_filter, da, 3, 1)
+        return da_out
+    except:
+        print('Couldnt smooth, returning raw array.')
+    
+    return da
 
 
 # meta, checks
@@ -1131,19 +884,6 @@ def count_runs(arr, vector_value=-1):
     arr_counted = arr_extended.cumsum()[1:-1]                    # apply cumulative sum
     
     return arr_counted
-
-
-# meta - deprecated! no longer using
-def fill_zeros_with_last(arr):
-    """
-    forward fills differences of 0 after a 
-    decline or positive flag.
-    """
-    prev = np.arange(len(arr))
-    prev[arr == 0] = 0
-    prev = np.maximum.accumulate(prev)
-    
-    return arr[prev]
 
 
 # meta, check
@@ -2235,7 +1975,6 @@ def annual_summaries(Values, yearIndex, summaryMethod='date-by-date'):
         #finalOutput = (np.round(aggregate(Values, by=list(yearIndex), FUN=mean, na.rm = T)))$x
         ...
 
-
 # todo check use of inf... not sure its purpose yet...
 def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
     """main function"""
@@ -2331,3 +2070,487 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
     #return dataset
     return ds
 
+
+
+
+
+
+
+# DEPRECATED
+def write_empty_json(filepath):
+    with open(filepath, 'w') as f:
+        json.dump([], f)
+
+
+# DEPRECATED
+def load_json(filepath):
+    """load json file"""
+    
+    # check if file exists 
+    if not os.path.exists(filepath):
+        raise ValueError('File does not exist: {}.'.format(filepath))
+    
+    # read json file
+    with open(filepath, 'r') as f:
+        data = json.load(f)
+        
+    return data
+
+
+# DEPRECATED
+def save_json(filepath, data):
+    """save json file"""
+    
+    # check if file exists 
+    if not os.path.exists(filepath):
+        raise ValueError('File does not exist: {}.'.format(filepath))
+    
+    # read json file
+    with open(filepath, 'w') as f:
+        json.dump(data, f)
+        
+    return data
+
+
+# DEPRECATED
+def get_item_from_json(filepath, global_id):
+    """"""
+    
+    # check if file exists, else none
+    if not os.path.exists(filepath):
+        return
+    elif global_id is None or not isinstance(global_id, str):
+        return
+    
+    # read json file
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+    except:
+        return
+
+    # check json data for item
+    for item in data:
+        if item.get('global_id') == global_id:
+            return item
+
+    # empty handed
+    return
+    
+
+# DEPRECATED
+def get_latest_date_from_json_item(json_item):
+    """"""
+    
+    # check if item is dict, else default
+    if json_item is None:
+        return '1980-01-01'
+    elif not isinstance(json_item, dict):
+        return '1980-01-01'
+    
+    # fetch latest date if exists, else default 
+    if json_item.get('data') is not None:
+        dates = [dt for dt in json_item.get('data')]
+        if dates is not None and len(dates) > 0:
+            return dates[-1]
+    
+    # otherwise default
+    return '1980-01-01'
+
+
+# DEPRECATED
+def get_json_array_via_key(json_item, key):
+    """"""
+    
+    # check json item (none, not array, key not in it)
+    if json_item is None:
+        return np.array([])
+    elif not isinstance(json_item, dict):
+        return np.array([])
+    elif key not in json_item:
+        return np.array([])
+    
+    # fetch values if exists, else default 
+    vals = json_item.get(key)
+    if vals is not None and len(vals) > 0:
+        return np.array(vals)
+    
+    # otherwise default
+    return np.array([])
+
+  
+# DEPRECATED meta, checks - DYNAMIC DISABLED, NOT USING 
+def build_change_cube(ds, training_start_year=None, training_end_year=None, persistence_per_year=1, add_extra_vars=True):
+    """
+    """
+
+    # checks
+
+    # notify
+    print('Detecting change via static and dynamic methods.')
+    
+    # get attributes from dataset
+    data_attrs = ds.attrs
+    band_attrs = ds[list(ds.data_vars)[0]].attrs
+    sref_attrs = ds['spatial_ref'].attrs
+    
+    # sumamrise each image to a single median value
+    ds_summary = ds.median(['x', 'y'], keep_attrs=True)
+
+    # perform static ewmacd and add as new var
+    print('Generating static model')
+    ds_summary['static'] = EWMACD(ds=ds_summary, 
+                                  trainingPeriod='static',
+                                  trainingStart=training_start_year,
+                                  trainingEnd=training_end_year,
+                                  persistence_per_year=persistence_per_year)['veg_idx']
+    
+    # perform dynamic ewmacd and add as new var
+    #print('Generating dynamic model')
+    #ds_summary['dynamic'] = EWMACD(ds=ds_summary, trainingPeriod='dynamic',
+                                   #trainingStart=training_start_year,
+                                   #persistence_per_year=persistence_per_year)['veg_idx']
+
+    # rename original veg_idx to summary
+    #ds_summary = ds_summary.rename({'veg_idx': 'summary'})
+
+    # broadcast summary back on to original dataset and order axes
+    ds_summary, _ = xr.broadcast(ds_summary, ds)
+    ds_summary = ds_summary.transpose('time', 'y', 'x')
+    
+    # add extra empty vars (zones, cands, conseqs) to dataset if new
+    if add_extra_vars:
+        for var in ['zones', 'cands_inc', 'cands_dec', 'consq_inc', 'consq_dec']:
+            if var not in ds_summary:
+                ds_summary[var] = xr.full_like(ds_summary['veg_idx'], np.nan)    
+                
+    # append attrbutes back on
+    ds_summary.attrs = data_attrs
+    ds_summary['spatial_ref'].attrs = sref_attrs
+    for var in list(ds_summary.data_vars):
+        ds_summary[var].attrs = band_attrs
+
+    # notify and return
+    print('Successfully created detection cube')
+    return ds_summary
+
+# DEPRECATED meta, checks, clean!
+def perform_change_detection(ds, var_name=None, training_start_year=None, training_end_year=None, persistence=1):
+    """"""
+    
+    # checks
+    #
+    
+    # notify
+    print('Detecting change via static method.')
+    
+    # reduce down to select variable 
+    ds = ds[var_name]
+    
+    # limit to the start of training time
+    ds = ds.where(ds['time'] >= training_start_year, drop=True)
+    
+    # perform it
+    result = nrt.EWMACD(ds=ds,
+                        trainingPeriod='static',
+                        trainingStart=training_start_year,
+                        trainingEnd=training_end_year,
+                        persistence_per_year=persistence)
+    
+    return result
+
+
+# DEPRECATED
+def EWMACD_np(dates, arr, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
+    """main function"""
+
+
+    # get day of years and associated year as int 16
+    DOYs = dates['time.dayofyear'].data.astype('int16')
+    Years = dates['time.year'].data.astype('int16')
+    
+    # check if training start is < max year 
+    if trainingStart >= Years[-1]:
+        raise ValueError('Training year must be lower than maximum year in data.')
+
+    # check doys, years
+    if len(DOYs) != len(Years):
+        raise ValueError('DOYs and Years are not same length.')
+
+    # if no training date provided, choose first year
+    if trainingStart is None:
+        trainingStart = np.min(Years)
+
+    # if no testing date provided, choose last year + 1
+    if testingEnd is None:
+        testingEnd = np.max(Years) + 1
+
+    # generate array of nans for every year between start of train and test period
+    NAvector = np.repeat(np.nan, len(Years[(Years >= trainingStart) & (Years < testingEnd)]))
+
+    # if not date to date, use year to year (?) may not need this
+    if summaryMethod != 'date-by-date':
+        num_nans = len(np.unique(Years[(Years >= trainingStart) & (Years < testingEnd)]))
+        NAvector = np.repeat(np.nan, num_nans)
+
+    # set cos harmonics value (default 2) to same as sine, if requested
+    if numberHarmonicsCosine == 'same as Sine':
+        numberHarmonicsCosine = numberHarmonicsSine
+
+    # set simple output if chart values requested (?)
+    if outputType == 'chart.values':
+        simple_output = True
+
+    # create per-pixel vectorised version of ewmacd per-pixel func       
+    try:
+        change = EWMACD_pixel_date_by_date(myPixel=arr,
+                                           DOYs=DOYs,
+                                           Years=Years,
+                                           _lambda=_lambda,
+                                           numberHarmonicsSine=numberHarmonicsSine,
+                                           numberHarmonicsCosine=numberHarmonicsCosine,
+                                           trainingStart=trainingStart,
+                                           testingEnd=testingEnd,
+                                           trainingPeriod=trainingPeriod,
+                                           trainingEnd=trainingEnd,
+                                           minTrainingLength=minTrainingLength,
+                                           maxTrainingLength=maxTrainingLength,
+                                           trainingFitMinimumQuality=trainingFitMinimumQuality,
+                                           xBarLimit1=xBarLimit1,
+                                           xBarLimit2=xBarLimit2,
+                                           lowthresh=lowthresh,
+                                           lambdaSigs=lambdaSigs,
+                                           rounding=rounding,
+                                           persistence_per_year=persistence_per_year,
+                                           reverseOrder=reverseOrder,
+                                           simple_output=simple_output)
+
+        # get change per date from above
+        change = change.get('dateByDate')
+
+        # calculate summary method (todo set up for others than just date to date
+        final_out = annual_summaries(Values=change,
+                                     yearIndex=Years,
+                                     summaryMethod=summaryMethod)
+
+    except Exception as e:
+        print('Could not train model adequately, please add more years.')
+        print(e)
+        final_out = NAvector
+    
+    # rename veg_idx to change and convert to float32
+    #arr = arr.astype('float32')
+    
+    #return dataset
+    #return arr
+    return final_out
+
+
+# deprecated! meta
+def reproject_ogr_geom(geom, from_epsg=3577, to_epsg=4326):
+    """
+    """
+    
+    # check if ogr layer type
+    if not isinstance(geom, ogr.Geometry):
+        raise TypeError('Layer is not of ogr Geometry type.')
+        
+    # check if epsg codes are ints
+    if not isinstance(from_epsg, int):
+        raise TypeError('From epsg must be integer.')
+    elif not isinstance(to_epsg, int):
+        raise TypeError('To epsg must be integer.')
+        
+    # notify
+    print('Reprojecting layer from EPSG {} to EPSG {}.'.format(from_epsg, to_epsg))
+            
+    try:
+        # init spatial references
+        from_srs = osr.SpatialReference()
+        to_srs = osr.SpatialReference()
+    
+        # set spatial references based on epsgs (inplace)
+        from_srs.ImportFromEPSG(from_epsg)
+        to_srs.ImportFromEPSG(to_epsg)
+        
+        # transform
+        trans = osr.CoordinateTransformation(from_srs, to_srs)
+        
+        # reproject
+        geom.Transform(trans)
+        
+    except: 
+        raise ValueError('Could not transform ogr geometry.')
+        
+    # notify and return
+    print('Successfully reprojected layer.')
+    return geom
+
+
+# deprecated! 
+def remove_spikes_np(arr, user_factor=2, win_size=3):
+    """
+    Takes an numpy array containing vegetation index variable and removes outliers within 
+    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
+    with outliers set to nan.
+    
+    Parameters
+    ----------
+    arr: numpy ndarray
+        A one-dimensional array containing a vegetation index values.
+    user_factor: float
+        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
+        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
+    win_size: int
+        Number of samples to include in rolling median window.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with all detected outliers in the
+        veg_index variable set to nan.
+    """
+    
+    # notify user
+    print('Removing spike outliers.')
+            
+    # check inputs
+    if arr is None:
+        raise ValueError('Array is empty.')
+
+    # get nan mask (where nan is True)
+    cutoffs = np.std(arr) * user_factor
+
+    # do moving win median, back to numpy, fill edge nans 
+    roll = pd.Series(arr).rolling(window=win_size, center=True)
+    arr_win = roll.median().to_numpy()
+    arr_med = np.where(np.isnan(arr_win), arr, arr_win)
+
+    # calc abs diff between orig arr and med arr
+    arr_dif = np.abs(arr - arr_med)
+
+    # make mask where absolute diffs exceed cutoff
+    mask = np.where(arr_dif > cutoffs, True, False)
+
+    # get value left, right of each outlier and get mean
+    l = np.where(mask, np.roll(arr, shift=1), np.nan)  # ->
+    r = np.where(mask, np.roll(arr, shift=-1), np.nan) # <-
+    arr_mean = (l + r) / 2
+    arr_fmax = np.fmax(l, r)
+
+    # mask if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs 
+    arr_outliers = ((np.where(mask, arr, np.nan) < (arr_mean - cutoffs)) | 
+                    (np.where(mask, arr, np.nan) > (arr_fmax + cutoffs)))
+
+    # apply the mask
+    arr = np.where(arr_outliers, np.nan, arr)
+    
+    return arr
+
+
+# deprecated!
+def interp_nan_np(arr):
+    """equal to interpolate_na in xr"""
+
+    # notify user
+    print('Interpolating nan values.')
+            
+    # check inputs
+    if arr is None:
+        raise ValueError('Array is empty.')
+        
+    # get range of indexes
+    idxs = np.arange(len(arr))
+    
+    # interpolate linearly 
+    arr = np.interp(idxs, 
+                    idxs[~np.isnan(arr)], 
+                    arr[~np.isnan(arr)])
+                    
+    return arr
+
+
+# DEPRECATED meta - deprecated! no longer using
+def fill_zeros_with_last(arr):
+    """
+    forward fills differences of 0 after a 
+    decline or positive flag.
+    """
+    prev = np.arange(len(arr))
+    prev[arr == 0] = 0
+    prev = np.maximum.accumulate(prev)
+    
+    return arr[prev]
+
+
+# DEPRECATED checks, meta
+def sync_new_and_old_cubes(ds_exist, ds_new, out_nc):
+    """Takes two structurally idential xarray datasets and 
+    combines them into one, where only new data from the latest 
+    new dataset is combined with all of the old. Either way, a 
+    file of this process is written to output path. This drives 
+    the nrt on-going approach of the module."""
+    
+    # also set rasterio env variables
+    rasterio_env = {
+        'GDAL_DISABLE_READDIR_ON_OPEN': 'EMPTY_DIR',
+        'CPL_VSIL_CURL_ALLOWED_EXTENSIONS':'tif',
+        'VSI_CACHE': True,
+        'GDAL_HTTP_MULTIRANGE': 'YES',
+        'GDAL_HTTP_MERGE_CONSECUTIVE_RANGES': 'YES'
+    }
+    
+    # checks
+    # 
+    
+    # if a new dataset provided only, write and load new
+    if ds_exist is None and ds_new is not None:
+        print('Existing dataset not provided. Creating and loading for first time.')
+        
+        # write netcdf file
+        with rasterio.Env(**rasterio_env):
+            ds_new = ds_new.astype('float32')
+            tools.export_xr_as_nc(ds=ds_new, filename=out_nc)
+            
+        # safeload new dataset and return
+        ds_new = safe_load_nc(out_nc)
+        return ds_new
+            
+    elif ds_exist is not None and ds_new is not None:
+        print('Existing and New dataset provided. Combining, writing and loading.')  
+        
+        # ensure existing is not locked via safe load (new always in mem)
+        ds_exist = safe_load_nc(out_nc)
+                
+        # extract only new datetimes from new dataset
+        dts = ds_exist['time']
+        ds_new = ds_new.where(~ds_new['time'].isin(dts), drop=True)
+        
+        # check if any new images
+        if len(ds_new['time']) > 0:
+            print('New images detected ({}), adding and overwriting existing cube.'.format(len(ds_new['time'])))
+                        
+            # combine new with old (concat converts to float)
+            ds_combined = xr.concat([ds_exist, ds_new], dim='time').copy(deep=True) 
+
+            # write netcdf file
+            with rasterio.Env(**rasterio_env):
+                ds_combined = ds_combined.astype('float32')
+                tools.export_xr_as_nc(ds=ds_combined, filename=out_nc)            
+             
+            # safeload new dataset and return
+            ds_combined = safe_load_nc(out_nc)
+            return ds_combined
+        
+        else:
+            print('No new images detected, returning existing cube.')
+            
+            # safeload new dataset and return
+            ds_exist = safe_load_nc(out_nc)
+            return ds_exist
+
+    else:
+        raise ValueError('At a minimum, a new dataset must be provided.')
+        return
+
+ 

@@ -1523,3 +1523,95 @@ def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=35
         #ds_existing.close()
 
         #return ds_new
+        
+def remove_spikes_xr(ds, user_factor=2, win_size=3):
+    """
+    Takes an xarray dataset containing vegetation index variable and removes outliers within 
+    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
+    with outliers set to nan. Can work on datasets with or without existing nan values. Note:
+    Zscore method will compute memory.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional array containing a vegetation 
+        index variable (i.e. 'veg_index').
+    user_factor: float
+        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
+        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with all detected outliers in the
+        veg_index variable set to nan.
+    """
+    
+    # notify user
+    print('Removing spike outliers.')
+            
+    # check xr type, dims
+    if ds is None:
+        raise ValueError('Dataset is empty.')
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in ds:
+        raise ValueError('No time dimension in dataset.')
+
+    # check if user factor provided
+    if user_factor <= 0:
+        print('User factor is less than 0, setting to 1.')
+        user_factor = 1
+                
+    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
+    cutoffs = ds.std('time') * user_factor
+
+    # calc mask of existing nan values (nan = True) in orig ds
+    ds_mask = xr.where(ds.isnull(), True, False)
+
+    # calc win size via num of dates in dataset
+    #win_size = int(len(ds['time']) / 7)
+    #win_size = int(win_size / int(len(ds.resample(time='1Y'))))
+    
+    
+
+    if win_size < 3:
+        win_size = 3
+        print('Generated roll window size less than 3, setting to default (3).')
+    elif win_size % 2 == 0:
+        win_size = win_size + 1
+        print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
+    else:
+        print('Generated roll window size is: {0}'.format(win_size))
+
+    # calc rolling median for whole dataset
+    ds_med = ds.rolling(time=win_size, center=True).median()
+
+    # calc nan mask of start/end nans from roll, replace them with orig vals
+    med_mask = xr.where(ds_med.isnull(), True, False)
+    med_mask = xr.where(ds_mask != med_mask, True, False)
+    ds_med = xr.where(med_mask, ds, ds_med)
+
+    # calc abs diff between orig ds and med ds vals at each pixel
+    ds_diffs = abs(ds - ds_med)
+
+    # calc mask of outliers (outlier = True) where absolute diffs exceed cutoff
+    outlier_mask = xr.where(ds_diffs > cutoffs, True, False)
+
+    # shift values left and right one time index and combine, get mean and max for each window
+    lefts = ds.shift(time=1).where(outlier_mask)
+    rights = ds.shift(time=-1).where(outlier_mask)
+    nbr_means = (lefts + rights) / 2
+    nbr_maxs = xr.ufuncs.fmax(lefts, rights)
+
+    # keep nan only if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs
+    outlier_mask = xr.where((ds.where(outlier_mask) < (nbr_means - cutoffs)) | 
+                            (ds.where(outlier_mask) > (nbr_maxs + cutoffs)), True, False)
+
+    # flag outliers as nan in original da
+    ds = ds.where(~outlier_mask)
+
+
+    # notify user and return
+    print('Outlier removal successful.')
+    return ds
