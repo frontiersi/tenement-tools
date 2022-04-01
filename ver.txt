@@ -1,5 +1,2 @@
-ver 1
-nov 2021
-
-ver 2 
-dec 2022
+ver 0.93
+apr 2022

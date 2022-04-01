@@ -15,6 +15,10 @@ https://conda.anaconda.org
 https://repo.anaconda.com
 
 
+
+
+
+
 dev stuff
 remove the dev-tools-extra env if exists
 
