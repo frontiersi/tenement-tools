@@ -935,8 +935,15 @@ def fetch_raster_window(asset_entry, slices):
 
         # if window being fetched overlaps with the asset, read!
         if windows.intersect(current_window, asset_window):
-            data = reader.read(current_window)
-            return data[None, None]
+            
+            try:
+                data = reader.read(current_window)
+                data[None, None]  # test if subsriptable, if not its a dea error
+                
+                return data[None, None]
+            
+            except:
+                pass
 
     # if no dataset or no intersection with window, return empty array
     return np.broadcast_to(np.nan, (1, 1) + windows.shape(current_window))
