@@ -16,8 +16,8 @@ If you would like to test the pre-release alpha version, please follow the below
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
 
 ### 1. Download Tenement Tools plug-in and tutorial material
-Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files here: 
-- https://github.com/frontiersi/tenement-tools/releases/tag/v0.9.2-prerelease-alpha.
+Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files from the latest release located here: 
+- https://github.com/frontiersi/tenement-tools/releases.
 
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
