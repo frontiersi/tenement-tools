@@ -74,7 +74,7 @@ namespace TenementToolsApp
 
             // add gallery item for nrt graph
             Add(new GalleryItem(text: "Graph Monitoring Area",
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Monitor_32.png",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Graph_32.png",
                                 tooltip: "Graph the vegetation and change history for a selected monitoring area.",
                                 group: "Graph monitoring area"));
 
@@ -165,7 +165,7 @@ namespace TenementToolsApp
             else if (gallery_item == "Monitor Areas")
             {
                 // set toolname and create empty input array
-                string toolname = "Nicher_Masker";
+                string toolname = "NRT_Monitor_Areas";
                 var inputs = Geoprocessing.MakeValueArray();
                 inputs = null;
 
@@ -176,11 +176,9 @@ namespace TenementToolsApp
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find Nicher Masker tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Monitor Areas tool. Did you add the Tenement Tools toolbox?");
+                    //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Could not find NRT Monitor Areas tool. Did you add the Tenement Tools toolbox?");
                 };
-
-                // temp: warn not yet implemented
-                //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("The NRT Graph tool has not yet been implemented.");
             }
             else if (gallery_item == "Graph Monitoring Area")
             {

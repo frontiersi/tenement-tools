@@ -261,6 +261,9 @@
   <ItemGroup>
     <AddInContent Include="Images\NRT_Wizard_32.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Graph_32.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
   PackageAction can be:

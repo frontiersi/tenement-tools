@@ -11,4 +11,3 @@ C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.csproj.CoreCompileInputs.cache
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.dll
 C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.pdb
-C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\net\TenementToolsApp\obj\x64\Debug\TenementToolsApp.csproj.AssemblyReference.cache
