@@ -14,6 +14,7 @@
         "type" : "TimeInstant",
         "start" : 978307200000
       },
+      "metadataURI" : "CIMPATH=Metadata/9d718818095b5f0aa6bdd1da197a7d00.xml",
       "useSourceMetadata" : true,
       "description" : "testing",
       "layerElevation" : {
@@ -88,9 +89,22 @@
             },
             "visible" : true,
             "searchMode" : "Exact"
+          },
+          {
+            "type" : "CIMFieldDescription",
+            "alias" : "color",
+            "fieldName" : "color",
+            "numberFormat" : {
+              "type" : "CIMNumericFormat",
+              "alignmentOption" : "esriAlignRight",
+              "alignmentWidth" : 0,
+              "roundingOption" : "esriRoundNumberOfDecimals",
+              "roundingValue" : 0
+            },
+            "visible" : true,
+            "searchMode" : "Exact"
           }
         ],
-        "selectionSetURI" : "CIMPATH=SelectionSet/d32a9bca9a08f5e76a066a4fd6d62154.dat",
         "dataConnection" : {
           "type" : "CIMStandardDataConnection",
           "workspaceConnectionString" : "DATABASE=..\\..\\..\\..\\..\\Desktop\\crf",
@@ -926,7 +940,7 @@
         },
         "defaultSymbolPatch" : "Default",
         "fields" : [
-          "Zone"
+          "color"
         ],
         "groups" : [
           {
@@ -2152,7 +2166,7 @@
                 "visible" : true
               }
             ],
-            "heading" : "Zone"
+            "heading" : "color"
           }
         ],
         "useDefaultSymbol" : true,
@@ -2168,8 +2182,8 @@
   "binaryReferences" : [
     {
       "type" : "CIMBinaryReference",
-      "uRI" : "CIMPATH=SelectionSet/d32a9bca9a08f5e76a066a4fd6d62154.dat",
-      "data" : "CgMxLjAQARoECgIzMg=="
+      "uRI" : "CIMPATH=Metadata/9d718818095b5f0aa6bdd1da197a7d00.xml",
+      "data" : "<?xml version=\"1.0\"?>\r\n<metadata xml:lang=\"en\"><Esri><CreaDate>20220404</CreaDate><CreaTime>22284200</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce></Esri><dataIdInfo><idCitation><resTitle>testing</resTitle></idCitation><idAbs>testing</idAbs><idCredit></idCredit><idPurp></idPurp><resConst><Consts><useLimit></useLimit></Consts></resConst></dataIdInfo></metadata>\r\n"
     }
   ],
   "elevationSurfaces" : [

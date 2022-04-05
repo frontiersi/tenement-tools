@@ -72,23 +72,21 @@ def interp_nans(ds, drop_edge_nans=False):
 def add_required_vars(ds):
     """"""
 
+    # set required variable names
     new_vars = [
         'veg_clean', 
         'static_raw', 
         'static_clean',    
-        'static_can_inc',
-        'static_can_dec',
-        'static_con_inc',
-        'static_con_dec',
+        'static_cands',
+        'static_conseqs',
         'static_zones',
+        'static_alerts',
         'dynamic_raw', 
         'dynamic_clean',    
-        'dynamic_can_inc',
-        'dynamic_can_dec',
-        'dynamic_con_inc',
-        'dynamic_con_dec',
-        'dynamic_zones'
-    ]
+        'dynamic_cands',
+        'dynamic_conseqs',
+        'dynamic_zones',
+        'dynamic_alerts']
 
     # iter each var and add as nans to xr, if not exist
     for new_var in new_vars:
@@ -166,6 +164,34 @@ def safe_load_nc(in_path):
     else:
         print('File does not exist: {}, returning None.'.format(in_path))
         return
+
+
+# meta
+def check_xr_start_year(ds, s_year):
+    """"""
+    
+    # check if dataset exists
+    if ds is None:
+        print('Old dataset is none. Returning none.')
+        return
+    elif not hasattr(ds, 's_year'):
+        print('Dataset must have a start year attribute.')
+        return
+    
+    # check start year
+    if s_year is None:
+        print('Start year must be provided.')
+        return ds
+    elif not isinstance(s_year, int):
+        print('Start year must be an integer.')
+        return ds
+    
+    # check if dataset year is same as start year value
+    if ds.attrs.get('s_year') != s_year:
+        print('Years dont match, returning none.')
+        return
+    
+    return ds
 
 
 # checks, metadata
@@ -905,7 +931,6 @@ def transfer_xr_values(ds_to, ds_from, data_vars):
                 ds_to[var].loc[{'time': dt}] = da[var]
             
     return ds_to
-
 
 
 # meta, checks

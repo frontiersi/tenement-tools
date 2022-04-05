@@ -196,9 +196,14 @@ namespace TenementToolsApp
                         return;
                     }
 
-                    // get the currently selected features on map, abort if multi-select
+                    // get the currently selected features on map, abort if multi-select or no select
                     var selectedFeatures = mapView.Map.GetSelection();
-                    if (selectedFeatures.Count() != 1)
+                    if (selectedFeatures.Count() == 0)
+                    {
+                        ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select a monitoring area.");
+                        return;
+                    }
+                    else if (selectedFeatures.Count() > 1)
                     {
                         ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select only one area at a time.");
                         return;
@@ -223,14 +228,16 @@ namespace TenementToolsApp
                     var featurePath = firstFeature.Key.GetPath().AbsolutePath;
                     var gdbPath = Path.GetDirectoryName(featurePath);
                     var folderPath = System.IO.Path.ChangeExtension(gdbPath, null);
-                    folderPath = folderPath + "_" + "cubes";
+                    folderPath = System.IO.Directory.GetParent(folderPath).ToString();
+
+                    //folderPath = folderPath + "_" + "cubes";
 
                     // get attributes from current feature selection
                     var ins = new ArcGIS.Desktop.Editing.Attributes.Inspector();
                     ins.Load(firstFeature.Key, firstFeature.Value);
 
                     // construct expected cube filepath and filename
-                    string cubeFilePath = "cube" + "_" + ins["area_id"] + "_" + "change.nc";
+                    string cubeFilePath = ins["global_id"] + ".nc";
                     string cubePath = Path.Combine(folderPath, cubeFilePath);
 
                     // check if file exists, abort if missing

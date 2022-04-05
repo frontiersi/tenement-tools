@@ -634,5 +634,80 @@ def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
     
     # return coloursed layer
     return lyr
+
+
+# meta
+def apply_monitoring_area_symbology(layer):
+    """takes a arcgis map layer type"""
+
+    # check layer
+    if not isinstance(layer, arcpy._mp.Layer):
+        raise TypeError('Layer must be an arcpy map layer type.')
+    elif not layer.isFeatureLayer:
+        raise TypeError('Layer must be feature layer type')
+
+    # check if color field in layer
+    desc = arcpy.Describe(layer)
+    if 'color' not in [field.name for field in desc.fields]:
+        raise ValueError('Field called color not in layer.')
+        
+    # set transparency
+    alpha = 80
+        
+    # get symbology, update renderer, target color field
+    sym = layer.symbology
+    sym.updateRenderer('UniqueValueRenderer')
+    sym.renderer.fields = ['color']
     
- 
+    # iter group items and colorize
+    for grp in sym.renderer.groups:
+        for itm in grp.items:
+            try:
+                # get class value and convert to int
+                val = int(itm.values[0][0])
+
+                # apply fill color
+                if val == 0:
+                    itm.symbol.color = {'RGB': [255, 255, 255, alpha]}
+                elif abs(val) == 1:
+                    itm.symbol.color = {'RGB': [255, 115, 223, alpha]} 
+                elif abs(val) == 2:
+                    itm.symbol.color = {'RGB': [115, 178, 255, alpha]}
+                elif abs(val) == 3:
+                    itm.symbol.color = {'RGB': [115, 178, 255, alpha]}
+                elif abs(val) == 4:
+                    itm.symbol.color = {'RGB': [115, 223, 255, alpha]}
+                elif abs(val) == 5:
+                    itm.symbol.color = {'RGB': [115, 255, 223, alpha]}
+                elif abs(val) == 6:
+                    itm.symbol.color = {'RGB': [163, 255, 115, alpha]}
+                elif abs(val) == 7:
+                    itm.symbol.color = {'RGB': [209, 255, 115, alpha]}
+                elif abs(val) == 8:
+                    itm.symbol.color = {'RGB': [255, 255, 115, alpha]}
+                elif abs(val) == 9:
+                    itm.symbol.color = {'RGB': [255, 211, 127, alpha]}
+                elif abs(val) == 10:
+                    itm.symbol.color = {'RGB': [255, 167, 127, alpha]}
+                elif abs(val) == 11:
+                    itm.symbol.color = {'RGB': [255, 127, 127, alpha]}
+
+                # apply border style now for stable, incline, decline
+                if val == 0:
+                    itm.symbol.size = 2
+                    itm.symbol.outlineColor = {'RGB': [0, 0, 0, alpha]} 
+                elif val > 0:
+                    itm.symbol.size = 2
+                    itm.symbol.outlineColor = {'RGB': [0, 112, 255, alpha]}
+                elif val < 0:
+                    itm.symbol.size = 2
+                    itm.symbol.outlineColor = {'RGB': [255, 0, 0, alpha]}         
+
+            except:
+                print('Symbology class value not supported, skipping.')
+                continue
+                
+    # finally, apply the symbology
+    layer.symbology = sym
+    
+    
