@@ -371,15 +371,15 @@ def load_local_rasters(rast_path_list=None, use_dask=True, conform_nodata_to=-99
                 da = xr.open_rasterio(rast_path, chunks=-1)
             else:
                 da = xr.open_rasterio(rast_path)
+                
+            # check if composite and fail if so
+            if da.shape[0] != 1:
+                raise ValueError('Only single band rasters supported.')
 
             # rename band to var, add var name 
             da = da.rename({'band': 'variable'})
             da['variable'] = np.array([rast_filename])
-            
-            # check if compoite and fail if so
-            if da.shape[0] != 1:
-                raise ValueError('Raster composite provided, split into seperate tifs.')
-            
+
             # check if no data val attributes exist, replace with nan
             if hasattr(da, 'nodatavals') and da.nodatavals is not None:
 

@@ -118,7 +118,6 @@ def inc_sigmoid(ds, a=None, b=None, inplace=True):
     Returns
     ----------
     ds : xarray dataset or array.
-    
     """
     
     # check inputs

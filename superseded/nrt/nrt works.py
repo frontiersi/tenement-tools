@@ -1615,3 +1615,199 @@ def remove_spikes_xr(ds, user_factor=2, win_size=3):
     # notify user and return
     print('Outlier removal successful.')
     return ds
+    
+# DEPRECATED
+# meta, checks
+def count_runs(arr, class_value=None, keep_sign=True):
+    """counts runs. resets runs when non-class value hit.
+    use keep_sign to set the output run value signs (+,-)
+    to the same as the class_value. this is useful when 
+    wanting to keep declines negative for later combine 
+    of arrays."""
+    
+    # checks
+    if class_value is None:
+        raise ValueError('Class value must be provided.')
+
+    # create mask arrays of class value presence
+    arr_mask = np.where(arr == class_value, 1, 0)
+
+    # prepend and append some empty padding elements
+    arr_pad = np.concatenate(([0], arr_mask, [0]))
+
+    # get start and end indices of array padding
+    run_idxs = np.flatnonzero(arr_pad[1:] != arr_pad[:-1])
+
+    # build run breaks, minus prev from current, trim padding
+    arr_pad[1:][run_idxs[1::2]] = run_idxs[::2] - run_idxs[1::2]
+
+    # apply cumsum to count runs
+    arr_runs = arr_pad.cumsum()[1:-1]
+
+    # set sign
+    if keep_sign == True:
+        arr_runs = arr_runs * np.sign(class_value)
+
+    return arr_runs
+
+# DEPRECATED
+# meta, checks
+def get_rule_one_candidates(arr, min_consequtives=None, inc_plateaus=False, keep_sign=True, final_reset=False):
+    """final_reset will reset run at end of funct, after min conseqs 
+    and plateaus have been removed. basically, if false, our runs will
+    keep numbering after min cut off (e.g. 3 is first value in a single run.
+    if true, the run will reset to start at 1 after min conseqs have been 
+    triggered (was 3, now 1). may be useful if num dates after decline started 
+    is needed. keep_sign ensures the class"""
+
+    # checks
+    #
+
+    # calc diffs for vector, prepend first element
+    arr_diff = np.diff(arr, prepend=arr[0])
+
+    # classify into incline (1), decline (-1), leave 0s (stable)
+    arr_diff = np.where(arr_diff > 0, 1, arr_diff)
+    arr_diff = np.where(arr_diff < 0, -1, arr_diff)
+
+    # classify post-incline and -decline stability (2, -2, resp.), skip first date
+    for idx in range(1, len(arr_diff)):
+
+        # where current is stable but prev was incline...
+        if arr_diff[idx] == 0 and arr_diff[idx - 1] > 0:
+            arr_diff[idx] = 2
+
+        # where current is stable but prev was decline...
+        elif arr_diff[idx] == 0 and arr_diff[idx - 1] < 0:
+            arr_diff[idx] = -2
+
+    # count incline, decline runs, combine (signs prevent conflicts)
+    arr_inc_runs = count_runs(arr_diff, class_value=1, keep_sign=True)
+    arr_dec_runs = count_runs(arr_diff, class_value=-1, keep_sign=True)
+    arr_runs = arr_inc_runs + arr_dec_runs
+
+
+    # include plateaus as candidates where flagged earlier (2, -2), skip first date
+    if inc_plateaus.lower() == 'yes':
+        for idx in range(1, len(arr_runs)):
+            if arr_runs[idx] == 0 and arr_runs[idx - 1] != 0:
+
+                # if a positive plateau, increase by one...
+                if arr_diff[idx] == 2:
+                    arr_runs[idx] = arr_runs[idx - 1] + 1
+
+                # if a negative plateau, decrease by one...
+                elif arr_diff[idx] == -2:
+                    arr_runs[idx] = arr_runs[idx - 1] - 1
+
+    # threshold out less than specific number consequtives
+    if min_consequtives is not None:
+        arr_runs = np.where(np.abs(arr_runs) >= min_consequtives, arr_runs, 0)
+
+    # threshold out more than specific number consequtives - no longer needed
+    #if max_consequtives is not None:
+        #arr_temp = np.where(arr_runs > 0, 1, 0)
+        #arr_temp = count_runs(arr=arr_temp, vector_value=1)
+        #arr_runs = np.where(arr_temp > max_consequtives, 0, arr_runs)
+
+    # reset runs to start at 1 after min_conseqs masked out
+    if final_reset == True:
+    
+        # reset runs to masks
+        arr_inc_runs = np.where(arr_runs > 0, 1, 0)
+        arr_dec_runs = np.where(arr_runs < 0, -1, 0)
+
+        # re-calc runs, combine (signs prevent conflicts)
+        arr_inc_runs = count_runs(arr_inc_runs, class_value=1, keep_sign=True)
+        arr_dec_runs = count_runs(arr_dec_runs, class_value=-1, keep_sign=True)
+        arr_runs = arr_inc_runs + arr_dec_runs
+
+    return arr_runs
+
+
+ 
+
+ # DEPRECATED meta, check
+def classify_signal(arr):
+    """
+    takes array, calcs differences between on-going values and classifies 
+    in 0 (no change), 1 (incline), -1 (decline), 2 (plateau after incline), 
+    -2 (plateau after decline).
+    """
+    
+    # classify stable (0), incline (1), decline (-1)
+    diffs = np.diff(arr, prepend=arr[0])
+    diffs = np.where(diffs == 0, 0, diffs)  # inc. for clarity)
+    diffs = np.where(diffs > 0, 1, diffs)
+    diffs = np.where(diffs < 0, -1, diffs)
+    
+    # classify plateau post-incline (2) and post-decline (-2)
+    for i in np.arange(1, len(diffs)):
+        if diffs[i] == 0 and diffs[i - 1] > 0:
+            diffs[i] = 2
+        elif diffs[i] == 0 and diffs[i - 1] < 0:
+            diffs[i] = -2
+            
+    return diffs
+
+# DEPRECATED meta checks
+def apply_rule_one(arr, direction='decline', min_consequtives=3, max_consequtives=None, inc_plateaus=False):
+    """
+    takes array of smoothed change output, classifies
+    array into binary 1s 0s depending on vector value,
+    calculates consequtive runs, then thresholds out 
+    minimum consequtive values and maximum consequtives. note min_consequitive
+    is inclusive of the value added. if plateaus are
+    included in runs, plateaus following declines/incline 
+    flags will also be considered in runs.
+    """
+    
+    # check direction
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
+        
+    # check min and max consequtives 
+    if min_consequtives is not None and min_consequtives < 0:
+        print('Minimum consequtives must be either None or >= 0. Setting to None.')
+        min_consequtives = None
+
+    # check min and max consequtives 
+    if max_consequtives is not None and max_consequtives <= 0:
+        print('Maximum consequtives must be either None or > 0. Setting to 1.')
+        max_consequtives = 1
+        
+    # get required directional values
+    dir_values = [1, 2] if direction == 'incline' else [-1, -2]
+        
+    # classify signal into -2, -1, 0, 1, 2
+    diffs = classify_signal(arr=arr)
+    
+    # generate runs
+    arr_runs = count_runs(arr=diffs, 
+                          vector_value=dir_values[0])
+    
+    # flag plateaus if they are after a decline
+    if inc_plateaus:
+        for i in np.arange(1, len(arr_runs)):
+            if arr_runs[i] == 0 and arr_runs[i - 1] != 0:
+                if diffs[i] == dir_values[1]:
+                    arr_runs[i] = arr_runs[i - 1] + 1
+                    
+    # threshold out less than specific number consequtives
+    if min_consequtives is not None:
+        arr_runs = np.where(arr_runs >= min_consequtives, arr_runs, 0)
+
+    # threshold out more than specific number consequtives
+    if max_consequtives is not None:
+        arr_temp = np.where(arr_runs > 0, 1, 0)
+        arr_temp = count_runs(arr=arr_temp, vector_value=1)
+        arr_runs = np.where(arr_temp > max_consequtives, 0, arr_runs)
+        
+    # replace 0s with nans and re-count to merge runs and plateaus
+    arr_counted = np.where(arr_runs != 0, 1, 0)
+    arr_counted = count_runs(arr=arr_counted, vector_value=1)
+    
+    # finally, replace 0s with nans
+    arr_counted = np.where(arr_runs == 0, np.nan, arr_runs)
+    
+    return arr_counted
