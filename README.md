@@ -74,7 +74,7 @@ Download the <i>tenement-tools.zip</i> files from the latest release located her
 Find the existing tenement-tools plugin-folder created from the first time install and delete it (or back it up). Note: the recommended folder during first time install was: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
 
 ### 4. Replace with new tenement-tools folder
-Move the latest release's tenement-tools folder into the same place as the folder deleted above in step 3, ensuring that the new folder has the same folder structure as the previous did.
+Move the latest release's tenement-tools folder into the same place as the folder deleted above in step 3. Note: ensure the folder structure is indentical to the previous version that was installed.
 
 ### 5. Start ArcGIS Pro
 If done correctly, the plug-in will continue working as before, now with fewer bugs and new features.
