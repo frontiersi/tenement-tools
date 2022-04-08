@@ -12,7 +12,7 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://conda-forge.org/
   * https://data.dea.ga.gov.au
 
-## Setup
+## Setup (first time)
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
 
 ### 1. Download Tenement Tools plug-in and tutorial material
@@ -60,6 +60,29 @@ Finally, add the Tenement Tools toolbox to the project:
 ### 8. Walkthrough the tutorial pdf
 A good place to start is with the Tutorial.pdf document downloaded in step 1.
 
+## Updating to new version
+If you are updating to a newer release, please follow the below steps.
+
+### 1.Shut down ArcGIS Pro
+Updates must be done when Pro is not running.
+
+### 2. Download latest Tenement Tools plug-in release and extract contents
+Download the <i>tenement-tools.zip</i> files from the latest release located here: 
+- https://github.com/frontiersi/tenement-tools/releases. Extract the tenement-tools folder somewhere temporarily.
+
+### 3. Delete the existing Tenement Tools plugin folder
+Find the existing tenement-tools plugin-folder created from the first time install and delete it (or back it up). Note: the recommended folder during first time install was: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
+
+### 4. Replace with new tenement-tools folder
+Move the latest release's tenement-tools folder into the same place as the folder deleted above in step 3, ensuring that the new folder has the same folder structure as the previous did.
+
+### 5. Start ArcGIS Pro
+If done correctly, the plug-in will continue working as before, now with fewer bugs and new features.
+
+
+
+
+
 
 ## Install Issues
 There are a known issues when cloning the arcgispro-py3 environment in step 3. You maye see the following when activating:
@@ -78,11 +101,11 @@ If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au and pl
 - Any other useful information
 
 ## Known bugs
-### Map outputs from tools do not look correct/match tutorial
-A bug has been found where the output from a tool (e.g., metric layers from Phenolopy) do not visualise properly (even though the model was successful). These layers can look all red or blue, have very subdued colours, not match tutorial data. As we explore this issue, you can get around it by going to Add Data > Add Multimdemnsional Data > select the raw output NetCDF (.nc) from the tool you just ran.
+### Map outputs from tools do not look correct/match tutorial with Pro 2.9
+A bug has been found where the output from a tool (e.g., metric layers from Phenolopy) do not visualise properly (even though the model was successful). These layers can look all red or blue, have very subdued colours, not match tutorial data. For now, you can get around it by going to Add Data > Add Multimdemnsional Data > select the raw output NetCDF (.nc) from the tool you just ran.
 
 ### Phenolopy LIOS and SIOS output layers look 'noisey' when using Landsat
 Currently investigating.
 
 ### COG Fetch tool missing NIR band when using Sentinel 2
-Currently investigating.
+Currently investigating - fixed.
