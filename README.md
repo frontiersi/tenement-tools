@@ -63,7 +63,7 @@ A good place to start is with the Tutorial.pdf document downloaded in step 1.
 ## Updating to new version
 If you are updating to a newer release, please follow the below steps.
 
-### 1.Shut down ArcGIS Pro
+### 1. Shut down ArcGIS Pro
 Updates must be done when Pro is not running.
 
 ### 2. Download latest Tenement Tools plug-in release and extract contents
@@ -78,11 +78,6 @@ Move the latest release's tenement-tools folder into the same place as the folde
 
 ### 5. Start ArcGIS Pro
 If done correctly, the plug-in will continue working as before, now with fewer bugs and new features.
-
-
-
-
-
 
 ## Install Issues
 There are a known issues when cloning the arcgispro-py3 environment in step 3. You maye see the following when activating:
