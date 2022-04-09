@@ -30,6 +30,7 @@ import canopy
 sys.path.append('../../shared')
 import satfetcher, tools
 
+# deprecated!
 def check_belief_disbelief_exist(in_lyrs):
     """
     Given a list of lists of dempster-shafer parameter
@@ -50,7 +51,7 @@ def check_belief_disbelief_exist(in_lyrs):
         
     return invalid
 
-
+# deprecated!
 def prepare_data(file_list, var=None, nodataval=-999):
     """
     Takes a list of filepath strings in which to open into xarray
@@ -129,6 +130,7 @@ def prepare_data(file_list, var=None, nodataval=-999):
     # return
     return da_list
 
+# deprecated
 def __get_min_max__(ds, x):
     """
     Worker function for apply_auto_sigmoids()
@@ -139,7 +141,7 @@ def __get_min_max__(ds, x):
         x = float(np.max(ds.to_array()))
     return x
 
-# checks, meta
+# deprecated! checks, meta
 def apply_auto_sigmoids(items):
     """
     Takes a list of arrays with elements as [path, a, bc, d, ds] 
@@ -208,7 +210,7 @@ def apply_auto_sigmoids(items):
     #return
     return items
 
-
+# deprecated
 def seperate_ds_belief_disbelief(in_lyrs):
     """
     Takes a list of prepared dempster shafer list
@@ -229,7 +231,7 @@ def seperate_ds_belief_disbelief(in_lyrs):
     # gimme
     return belief_list, disbelief_list
 
-
+# deprecated
 def export_sigmoids(items, out_path):
     """
     Simple netcdf exporter. Exports fuzzy sigmoidal 
@@ -267,7 +269,7 @@ def export_sigmoids(items, out_path):
         print('Exporting sigmoidal {}'.format(fn))
         tools.export_xr_as_nc(ds, fn)
     
-
+# deprecated
 def append_dempster_attr(ds_list, dempster_label='belief'):
     """
     Helper functiont to append the dempster output type label
@@ -295,6 +297,177 @@ def append_dempster_attr(ds_list, dempster_label='belief'):
         
     # return
     return out_list
+
+# DEPRECATED
+def perform_dempster(ds_list):
+    """
+    Performs Dempster-Schafer ensemble modelling. Creates site vs non-site 
+    evidence layers and combines in to belief, disbelief and plausability 
+    maps. Two or more layers in ds_list inout required.
+
+    Parameters
+    ----------
+    ds_list: list
+        A list of xarray datasets.
+        
+    resample_to : str
+        Either lowest or highest allowed. If highest, the dataset 
+        with the highest resolution (smallest pixels) is used as the 
+        resample template. If lowest, the opposite occurs.
+    
+    resampling: str
+        Type of resampling method. Nearest neighjbour is default. See
+        xarray resample method for more options.
+
+    Returns
+    ----------
+    ds : xarray dataset
+        An xarray dataset containing belief, disbelief and plausability 
+        variables.
+    """
+
+    # set up bpa's
+    m_s, m_ns = None, None
+    
+    # split ds list into belief and disbelief
+    da_s = [ds.to_array().squeeze(drop=True) for ds in ds_list if ds.dempster_type == 'belief']
+    da_ns = [ds.to_array().squeeze(drop=True) for ds in ds_list if ds.dempster_type == 'disbelief']
+    
+    # generate site layer
+    for idx, da in enumerate(da_s):
+        if idx == 0:
+            m_s = da
+        else:
+            m_s = (m_s * da) + ((1 - da) * m_s) + ((1 - m_s) * da)
+            
+    # generate non-site layer
+    for idx, da in enumerate(da_ns):
+        if idx == 0:
+            m_ns = da
+        else:
+            m_ns = (m_ns * da) + ((1 - da) * m_ns) + ((1 - m_ns) * da)
+
+    # generate final belief (site) layer
+    da_belief = (m_s * (1 - m_ns)) / (1 - (m_ns * m_s))
+
+    # generate final disbelief (non-site) layer
+    da_disbelief = (m_ns * (1 - m_s)) / (1 - (m_ns * m_s))
+
+    # generate plausability layer
+    da_plauability = (1 - da_disbelief)
+    
+    # generate belief interval
+    da_interval = (da_plauability - da_belief)
+    
+    # combine into dataset
+    ds = xr.merge([
+        da_belief.to_dataset(name='belief'), 
+        da_disbelief.to_dataset(name='disbelief'), 
+        da_plauability.to_dataset(name='plausability'),
+        da_interval.to_dataset(name='interval')
+    ])
+
+    return ds
+
+
+def all_xr_intersect(ds_list):
+    """Iterates a list of xr datasets and
+    checks if every bounding box intersects.
+    if even one bbox does not intersect, False 
+    is returned, else True"""
+    
+    # check all datasets have x and y coords
+    for ds in ds_list:
+        if 'x' not in ds or 'y' not in ds:
+            print('No x and y coordinates in dataset. Returning False.')
+            return False
+    
+    try:
+        # extract all bboxes from item list
+        bboxes = []
+        for ds in ds_list:
+
+            # create bbox
+            w, e = float(ds['x'].min()), float(ds['x'].max())
+            b, t = float(ds['y'].min()), float(ds['y'].max())
+            bboxes.append([w, e, t, b])
+    except:
+        print('Something went wrong during bbox parse. Returning False.')
+        return False
+    
+    try:
+        # check each bbox against every other, return false if issue
+        for bbox_a in bboxes:
+            for bbox_b in bboxes:
+                is_intersected = tools.bboxes_intersect(bbox_a, bbox_b)
+                if not is_intersected:
+                    return False
+    except:
+        print('Something went wrong during intersection process. Returning False.')
+        return False
+    
+    # we made it, return true
+    return True
+
+# meta
+def get_target_res_xr(ds_list, target='Lowest Resolution'):
+    """takes a list of xarray datasets, finds lowest/highest 
+    res dataset based on pixel size, if multiple finds best with
+    largest extent, then extracts and returns this optimal 
+    dataset from list"""
+
+    # set up raster sizes, shape arrays
+    sizes, shape = np.array([]), np.array([])
+
+    # iter xr datasets
+    for idx, ds in enumerate(ds_list):
+
+        # check if dataset isnt none
+        if ds is None:
+            print('No dataset. Returning None.')
+            return
+
+        # check if x and y coords exist
+        if not isinstance(ds, xr.Dataset):
+            print('Dataset is not an xarray dataset. Returning None.')
+            return
+        elif 'x' not in ds or 'y' not in ds:
+            print('No x and y coordinates in dataset. Returning None.')
+            return
+
+        try:
+            # find avg difference between coords, area, shape
+            x_res = float(ds['x'].diff('x').mean())
+            y_res = float(ds['y'].diff('y').mean())
+            xy_area = abs(x_res) * abs(y_res)
+            xy_shape = len(ds['x']) * len(ds['y'])
+        except:
+            print('No x and y coordinates in dataset. Returning None.')
+            return
+
+        # add to numpys
+        sizes = np.append(sizes, xy_area)
+        shape = np.append(shape, xy_shape)
+
+    # check if arrays are adequate returned
+    if len(sizes) == 0 or len(shape) == 0:
+        print('Could not extract pixel resolution from datasets. Returning None.')
+        return
+    elif len(sizes) != len(shape):
+        print('Sizes, shape counts dont match. Returning None.')
+        return
+
+    # extract ids, shapes of all minima or maxima idxs, depending on user 
+    if target == 'Lowest Resolution':
+        optimal_idx = np.nanargmax(np.where(sizes == sizes.max(), shape, np.nan))
+    elif target == 'Highest Resolution':
+        optimal_idx = np.nanargmax(np.where(sizes == sizes.min(), shape, np.nan))
+    else:
+        print('Resampling type not supported. Returning None.')
+        return
+
+    # return target xr
+    return ds_list[optimal_idx]
 
 
 def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
@@ -368,73 +541,143 @@ def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     # return
     return out_list 
 
+# meta
+def smooth_xr_dataset(ds, win_size=3):
+    """basic moving window mean smooth for 2d
+    datasets. retains pixels on edges of images."""
 
-def perform_dempster(ds_list):
-    """
-    Performs Dempster-Schafer ensemble modelling. Creates site vs non-site 
-    evidence layers and combines in to belief, disbelief and plausability 
-    maps. Two or more layers in ds_list inout required.
+    # check xr
+    if not isinstance(ds, xr.Dataset):
+        print('Dataset must have x and y dimensions.')
+        return
+    if 'x' not in ds or 'y' not in ds:
+        print('Dataset must have x and y dimensions.')
+        return
+    elif 'time' in ds:
+        print('Dataset must not have time dimension.')
+        return
 
-    Parameters
-    ----------
-    ds_list: list
-        A list of xarray datasets.
+    # check window size
+    if win_size is None:
+        print('Window size not provided.')
+        return
+    if not isinstance(win_size, int):
+        print('Window size must be integer.')
+        return
+    elif win_size % 2 == 0:
+        print('Window size must be odd, setting to default.')
+        win_size = 3
         
-    resample_to : str
-        Either lowest or highest allowed. If highest, the dataset 
-        with the highest resolution (smallest pixels) is used as the 
-        resample template. If lowest, the opposite occurs.
-    
-    resampling: str
-        Type of resampling method. Nearest neighjbour is default. See
-        xarray resample method for more options.
+    try:
+        # smoothing can extrapolate, so create flattened mask of nans
+        ds_mask = xr.where(~ds.isnull(), 1, 0)
+        ds_mask = ds_mask.to_array().sum('variable')
+    except:
+        print('Could not create mask, returning original dataset.')
+        return ds
 
-    Returns
-    ----------
-    ds : xarray dataset
-        An xarray dataset containing belief, disbelief and plausability 
-        variables.
-    """
-
-    # set up bpa's
-    m_s, m_ns = None, None
-    
-    # split ds list into belief and disbelief
-    da_s = [ds.to_array().squeeze(drop=True) for ds in ds_list if ds.dempster_type == 'belief']
-    da_ns = [ds.to_array().squeeze(drop=True) for ds in ds_list if ds.dempster_type == 'disbelief']
-    
-    # generate site layer
-    for idx, da in enumerate(da_s):
-        if idx == 0:
-            m_s = da
-        else:
-            m_s = (m_s * da) + ((1 - da) * m_s) + ((1 - m_s) * da)
-            
-    # generate non-site layer
-    for idx, da in enumerate(da_ns):
-        if idx == 0:
-            m_ns = da
-        else:
-            m_ns = (m_ns * da) + ((1 - da) * m_ns) + ((1 - m_ns) * da)
-
-    # generate final belief (site) layer
-    da_belief = (m_s * (1 - m_ns)) / (1 - (m_ns * m_s))
-
-    # generate final disbelief (non-site) layer
-    da_disbelief = (m_ns * (1 - m_s)) / (1 - (m_ns * m_s))
-
-    # generate plausability layer
-    da_plauability = (1 - da_disbelief)
-    
-    # generate belief interval
-    da_interval = (da_plauability - da_belief)
-    
-    # combine into dataset
-    ds = xr.merge([
-        da_belief.to_dataset(name='belief'), 
-        da_disbelief.to_dataset(name='disbelief'), 
-        da_plauability.to_dataset(name='plausability'),
-        da_interval.to_dataset(name='interval')
-    ])
+    try:
+        # apply rolling window of user size
+        ds = ds.rolling(x=win_size, 
+                        y=win_size, 
+                        center=True,
+                        min_periods=1).mean()
+                        
+        # mask nan values back in 
+        ds = ds.where(ds_mask != 0)
+    except:
+        print('Could not smooth dataset. Returning original dataset.')
+        return ds
+        
+    # do one final check to see if any non-nans exist
+    if ds.to_array().isnull().all() == True:
+        print('No non-nan values exist after modelling, returning None.')
+        return
 
     return ds
+
+# meta
+def perform_modelling(belief, disbelief):
+    """Perform Dempster Shafer belief modelling using at least one 
+    belief layer and at least one disbelief layer. Can have as many 
+    belief and disbelief layers. Layers are expected to be either xarray 
+    datasets or data arrays"""
+    
+    # check data type and size is right
+    if belief is None or not isinstance(belief, list):
+        print('Belief must be a list of one or more datasets.')
+        return
+    elif disbelief is None or not isinstance(disbelief, list):
+        print('Disbelief must be a list of one or more datasets.')
+        return
+    
+    # check belief, disbelief datasets are adequate
+    for ds in belief + disbelief:
+        if not isinstance(ds, (xr.DataArray, xr.Dataset)):
+            print('Belief/disbelief must be a xarray dataset or array.')
+            return
+        elif 'x' not in ds or 'y' not in ds:
+            print('Belief/disbelief must have x and y dimensions.')
+            return
+        elif 'time' in ds or 'time' in ds:
+            print('Belief/disbelief must not have time dimension.')
+            return
+
+    # generate site layers (one or multi), force arrays
+    m_site = None
+    for idx, ds in enumerate(belief):
+        ds = ds.to_array() if isinstance(ds, xr.Dataset) else ds
+        if idx == 0:
+            m_site = ds
+        else:
+            m_site = (m_site * ds) + ((1 - ds) * m_site) + ((1 - m_site) * ds)
+    
+    # now generate non-site layers (one or multi), force arrays
+    m_nonsite = None
+    for idx, ds in enumerate(disbelief):
+        ds = ds.to_array() if isinstance(ds, xr.Dataset) else ds
+        if idx == 0:
+            m_nonsite = ds
+        else:
+            m_nonsite = (m_nonsite * ds) + ((1 - ds) * m_nonsite) + ((1 - m_nonsite) * ds)
+            
+    # generate final belief (site) and disbelief (nonsite) layers
+    da_belief = (m_site * (1 - m_nonsite)) / (1 - (m_nonsite * m_site))
+    da_disbelief = (m_nonsite * (1 - m_site)) / (1 - (m_nonsite * m_site))
+
+    # generate plausability, belief interval layers
+    da_plauability = (1 - da_disbelief)
+    da_interval = (da_plauability - da_belief)
+    
+    try:
+        # combine into a single dataset with four vars
+        ds = xr.merge([
+            da_belief.to_dataset(name='belief'), 
+            da_disbelief.to_dataset(name='disbelief'), 
+            da_plauability.to_dataset(name='plausability'),
+            da_interval.to_dataset(name='interval')])
+            
+        # remove residual variables if exist
+        ds = ds.squeeze(drop=True)
+            
+    except:
+        print('Could not combine ensemble layers into dataset.')
+        return
+    
+    try:
+        # create nan mask across all variables and apply
+        ds_mask = xr.where(~ds.isnull(), 1, 0)
+        ds_mask = ds_mask.to_array().sum('variable')
+        ds = ds.where(ds_mask != 0, drop=True)
+    except:
+        print('Could not mask out edge nans from combined dataset.')
+        return
+    
+    # do one final check to see if any non-nans exist
+    if ds.to_array().isnull().all() == True:
+        print('No non-nan values exist after modelling, returning None.')
+        return
+    
+    return ds
+
+

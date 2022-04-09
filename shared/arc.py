@@ -504,69 +504,6 @@ def prepare_vegfrax_classes(classes):
     # return classes
     return _
 
-
-def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
-    """
-    For current ArcGIS Project which runs this function,
-    finds particular layer in table of contents (lyr_name),
-    applies specific color map to it (cmap_name) with a
-    percentage cutoff (cutoff_pct). Set cutoff_pct to 0
-    for no thresholding (i.e., min-max colouring).
-    
-    Parameters
-    -------------
-    aprx : arcpy aprx object
-        The currently selected ArcGIS Pro project.
-    lyr_name : str
-        Name of layer in current map to colourise.
-    cmap_name : str
-        Name of official ESRI colormaps to visualise 
-        layer to.
-    cutoff_pct : float
-        Value to threshold layer colours to, 0 - 1.
-        
-    Returns
-    ----------
-    Original input layer file with new colourmap.
-    """
-    
-    # get cmap if exists, precipitation if not
-    try:
-        cmap = aprx.listColorRamps(cmap_name)[0]
-    except:
-        print('Requested cmap does not exist. Using default.')
-        cmap = aprx.listColorRamps('Precipitation')[0]
-        
-    # get active map and ensure it isnt empty
-    m = aprx.activeMap
-    if m is None:
-        raise ValueError('No active map found. Please open a map first.')
-    
-    # get requested lyr
-    lyr = m.listLayers(lyr_name)
-    if len(lyr) != 1:
-        raise ValueError('Requested layer not found.')
-    elif not lyr[0].isRasterLayer:
-        raise TypeError('Requested layer is not a raster type.')
-        
-    # prepare lyr and symbology objects
-    lyr = lyr[0]
-    sym = lyr.symbology
-    
-    # set symbology parameters
-    sym.colorizer.stretchType = 'PercentClip'
-    sym.colorizer.colorRamp = cmap
-    sym.colorizer.minPercent = cutoff_pct
-    sym.colorizer.maxPercent = cutoff_pct   
-    sym.colorizer.invertColorRamp = False
-    
-    # set symbology of requested layer
-    lyr.symbology = sym
-    
-    # return coloursed layer
-    return lyr
-
-
 # meta
 def apply_monitoring_area_symbology(layer):
     """takes a arcgis map layer type"""
@@ -640,5 +577,67 @@ def apply_monitoring_area_symbology(layer):
                 
     # finally, apply the symbology
     layer.symbology = sym
+   
+   
+# deprecated
+def apply_cmap(aprx, lyr_name, cmap_name='Precipitation', cutoff_pct=0.5):
+    """
+    For current ArcGIS Project which runs this function,
+    finds particular layer in table of contents (lyr_name),
+    applies specific color map to it (cmap_name) with a
+    percentage cutoff (cutoff_pct). Set cutoff_pct to 0
+    for no thresholding (i.e., min-max colouring).
     
+    Parameters
+    -------------
+    aprx : arcpy aprx object
+        The currently selected ArcGIS Pro project.
+    lyr_name : str
+        Name of layer in current map to colourise.
+    cmap_name : str
+        Name of official ESRI colormaps to visualise 
+        layer to.
+    cutoff_pct : float
+        Value to threshold layer colours to, 0 - 1.
+        
+    Returns
+    ----------
+    Original input layer file with new colourmap.
+    """
     
+    # get cmap if exists, precipitation if not
+    try:
+        cmap = aprx.listColorRamps(cmap_name)[0]
+    except:
+        print('Requested cmap does not exist. Using default.')
+        cmap = aprx.listColorRamps('Precipitation')[0]
+        
+    # get active map and ensure it isnt empty
+    m = aprx.activeMap
+    if m is None:
+        raise ValueError('No active map found. Please open a map first.')
+    
+    # get requested lyr
+    lyr = m.listLayers(lyr_name)
+    if len(lyr) != 1:
+        raise ValueError('Requested layer not found.')
+    elif not lyr[0].isRasterLayer:
+        raise TypeError('Requested layer is not a raster type.')
+        
+    # prepare lyr and symbology objects
+    lyr = lyr[0]
+    sym = lyr.symbology
+    
+    # set symbology parameters
+    sym.colorizer.stretchType = 'PercentClip'
+    sym.colorizer.colorRamp = cmap
+    sym.colorizer.minPercent = cutoff_pct
+    sym.colorizer.maxPercent = cutoff_pct   
+    sym.colorizer.invertColorRamp = False
+    
+    # set symbology of requested layer
+    lyr.symbology = sym
+    
+    # return coloursed layer
+    return lyr
+

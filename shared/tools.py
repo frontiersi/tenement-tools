@@ -10,8 +10,11 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 # handle gdal for arcgis pro 2.8 and 2.9 differences
 try:
     import gdal  # 2.8
+    import osr   # 2.8
+    
 except:
     from osgeo import gdal
+    from osgeo import osr
 
 # import required libraries
 import os, sys
@@ -627,6 +630,32 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     return df_records
 
 
+def bboxes_intersect(bbox_a, bbox_b):
+    """
+    Takes two bounding box arrays (w, e, t, b) and
+    and returns whether or not the two boxes intersect.
+    Performed via Seperating Axis Theorom.
+
+    Parameters
+    ----------
+    bbox_a: array of bounding box one with coords w, e, t, b.
+    bbox_b: array of bounding box two with coords w, e, t, b.
+        
+    Returns
+    ----------
+    df_records : pandas dataframe
+    """
+    
+    # determine if two boxes dont intersect
+    is_not_intersecting = (bbox_a[1] < bbox_b[0] or 
+                           bbox_a[0] > bbox_b[1] or
+                           bbox_a[2] < bbox_b[3] or
+                           bbox_a[3] > bbox_b[2])
+
+    # invert it so intersections are true, return
+    return not is_not_intersecting
+
+
 def get_xr_resolution(ds):
     """
     Read dataset and get pixel resolution from attributes. If 
@@ -1044,7 +1073,75 @@ def resample_xr(ds_from, ds_to, resampling='nearest'):
     # resample from one res to another
     return ds_from.interp(x=ds_to['x'], y=ds_to['y'], method=resampling)
     
+
+# update sdm code with this instead of build_xr_attributes
+def manual_create_xr_attrs(ds):
+    """
+    Sometimes we have no choice but build our own
+    xr dataset attirbutes from scratch, assuming the input
+    data was in albers (would have recieved an error if it 
+    was not before this function). This function constructs
+    such metadata from scratch as a last resort. We avoid
+    this as much as possible.
+    """
+
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        print('Only support xarray dataset type, returning original array.')
+        return ds
     
+    # check x and y
+    if 'x' not in ds or 'y' not in ds:
+        print('Dataset must have an x and y dimension, returning original array.')
+        return ds
+    
+    # generate albers wkt info
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3577)
+    wkt = srs.ExportToWkt()
+        
+    # add sref coord if missing
+    if 'spatial_ref' not in ds.coords:
+        ds = ds.assign_coords({'spatial_ref': 3577})
+        
+    # create and add spatial ref band attributes
+    ds['spatial_ref'].attrs.update({
+        'spatial_ref': wkt,
+        'grid_mapping_name': 'albers_conical_equal_area'
+    })
+
+    # create and add dataset-level attributes
+    ds.attrs.update({
+        'crs': 'EPSG:3577',
+        'grid_mapping': 'spatial_ref'
+    })    
+    
+    # create and add var-level attributes
+    for var in ds:
+        ds[var].attrs.update({
+            'units': '1',
+            'crs': 'EPSG:3577',
+            'grid_mapping': 'spatial_ref'
+        })
+    
+    # create and add x dim attributes
+    ds['x'].attrs.update({
+        'units': 'metre',
+        'resolution': str(float(ds['x'].diff('x').mean())),
+        'crs': 'EPSG:3577'
+    })
+    
+    # create and add y dim attributes
+    ds['y'].attrs.update({
+        'units': 'metre',
+        'resolution': str(float(ds['y'].diff('y').mean())),
+        'crs': 'EPSG:3577'
+    })
+    
+    return ds
+    
+
+# Deprecated
 def build_xr_attributes(ds):
     """
     Sometimes we have no choice but build our own
