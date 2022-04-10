@@ -369,6 +369,78 @@ def perform_dempster(ds_list):
 
     return ds
 
+# deprecated
+def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
+    """
+    Dumb but effective way of resampling one dataset to others. Takes
+    a list of xarray datasets, finds lowest/highest resolution dataset
+    within list, then resamples all other datasets to that resolution.
+    Required for Dempster-Schafer ensemble modelling.
+
+    Parameters
+    ----------
+    ds_list: list
+        A list of xarray datasets.
+        
+    resample_to : str
+        Either lowest or highest allowed. If highest, the dataset 
+        with the highest resolution (smallest pixels) is used as the 
+        resample template. If lowest, the opposite occurs.
+    
+    resampling: str
+        Type of resampling method. Nearest neighjbour is default. See
+        xarray resample method for more options.
+
+    Returns
+    ----------
+    out_list : list of datasets outputs.
+    """
+    
+    # notify
+    print('Resampling datasets to {} resolution.'.format(resample_to))
+    
+    # get list of var/res/size dicts
+    res_list = []
+    for ds in ds_list:
+        var_name = list(ds.data_vars)[0]
+        res = tools.get_xr_resolution(ds)
+        res_list.append({
+            'name': var_name, 
+            'res': res,
+        })
+        
+    # get min/max res value
+    if resample_to == 'lowest':
+        val = max([r.get('res') for r in res_list])
+    elif resample_to == 'highest':
+        val = min([r.get('res') for r in res_list])
+    else:
+        raise ValueError('No resolution attribute available.')
+
+    # get layer(s) where matches target res, pick first if many
+    lyr_name_list = [r['name'] for r in res_list if r['res'] == val]
+    if len(lyr_name_list) >= 1:
+        resample_to_lyr = lyr_name_list[0]
+    else:
+        raise ValueError('No layers returned.')
+        
+    # get resample target xr dataset
+    target_ds = [ds for ds in ds_list if list(ds.data_vars)[0] == resample_to_lyr]
+    target_ds = target_ds[0] if isinstance(target_ds, list) else target_ds
+        
+    # iterate each layer and resample to target layer
+    out_list = []
+    for ds in ds_list:
+        if list(ds.data_vars)[0] == resample_to_lyr:
+            out_list.append(ds)
+        else:
+            out_list.append(tools.resample_xr(ds_from=ds, 
+                                              ds_to=target_ds, 
+                                              resampling=resampling))
+
+    # return
+    return out_list 
+
 
 def all_xr_intersect(ds_list):
     """Iterates a list of xr datasets and
@@ -469,77 +541,6 @@ def get_target_res_xr(ds_list, target='Lowest Resolution'):
     # return target xr
     return ds_list[optimal_idx]
 
-
-def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
-    """
-    Dumb but effective way of resampling one dataset to others. Takes
-    a list of xarray datasets, finds lowest/highest resolution dataset
-    within list, then resamples all other datasets to that resolution.
-    Required for Dempster-Schafer ensemble modelling.
-
-    Parameters
-    ----------
-    ds_list: list
-        A list of xarray datasets.
-        
-    resample_to : str
-        Either lowest or highest allowed. If highest, the dataset 
-        with the highest resolution (smallest pixels) is used as the 
-        resample template. If lowest, the opposite occurs.
-    
-    resampling: str
-        Type of resampling method. Nearest neighjbour is default. See
-        xarray resample method for more options.
-
-    Returns
-    ----------
-    out_list : list of datasets outputs.
-    """
-    
-    # notify
-    print('Resampling datasets to {} resolution.'.format(resample_to))
-    
-    # get list of var/res/size dicts
-    res_list = []
-    for ds in ds_list:
-        var_name = list(ds.data_vars)[0]
-        res = tools.get_xr_resolution(ds)
-        res_list.append({
-            'name': var_name, 
-            'res': res,
-        })
-        
-    # get min/max res value
-    if resample_to == 'lowest':
-        val = max([r.get('res') for r in res_list])
-    elif resample_to == 'highest':
-        val = min([r.get('res') for r in res_list])
-    else:
-        raise ValueError('No resolution attribute available.')
-
-    # get layer(s) where matches target res, pick first if many
-    lyr_name_list = [r['name'] for r in res_list if r['res'] == val]
-    if len(lyr_name_list) >= 1:
-        resample_to_lyr = lyr_name_list[0]
-    else:
-        raise ValueError('No layers returned.')
-        
-    # get resample target xr dataset
-    target_ds = [ds for ds in ds_list if list(ds.data_vars)[0] == resample_to_lyr]
-    target_ds = target_ds[0] if isinstance(target_ds, list) else target_ds
-        
-    # iterate each layer and resample to target layer
-    out_list = []
-    for ds in ds_list:
-        if list(ds.data_vars)[0] == resample_to_lyr:
-            out_list.append(ds)
-        else:
-            out_list.append(tools.resample_xr(ds_from=ds, 
-                                              ds_to=target_ds, 
-                                              resampling=resampling))
-
-    # return
-    return out_list 
 
 # meta
 def smooth_xr_dataset(ds, win_size=3):

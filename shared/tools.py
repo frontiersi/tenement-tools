@@ -843,58 +843,6 @@ def remove_nodata_records(df_records, nodata_value=-999):
     return df_records
 
 
-def clip_xr_to_xr(ds_a, ds_b, inplace=True):
-    """
-    Takes an xarray dataset (ds_a) and clips it to match
-    the extent of ds_b.
-
-    Parameters
-    ----------
-    ds_a: xarray dataset/array
-        A dataset which will be clipped to match ds_b.
-    ds_b: xarray dataset/array
-        A dataset to which the extents of ds_a will be
-        clipped to.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
-
-    Returns
-    ----------
-    ds_a : xarray dataset/array to match original ds_a.
-    """
-    
-    # notify
-    print('Clipping dataset to another.')
-
-    # check xr type, dims in ds a
-    if not isinstance(ds_a, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset a not an xarray type.')
-    elif 'x' not in list(ds_a.dims) and 'y' not in list(ds_a.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset a.')
-        
-    # check xr type, dims in ds b
-    if not isinstance(ds_b, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset b not an xarray type.')
-    elif 'x' not in list(ds_b.dims) and 'y' not in list(ds_b.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset b.')   
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds_a = ds.copy(deep=True)
-        
-    # get extent of ds b
-    extent = get_xr_extent(ds_b)
-    
-    # subset ds high to ds low
-    ds_a = ds_a.sel(x=slice(extent.get('l'), extent.get('r')), 
-                    y=slice(extent.get('t'), extent.get('v')))
-    
-    # notify
-    print('Clipped dataset successfully.')
-    return ds_a
-
-
 def export_xr_as_nc(ds, filename):
     """
     Takes a xarray dataset or array and exports as a
@@ -1140,6 +1088,59 @@ def manual_create_xr_attrs(ds):
     
     return ds
     
+
+# deprecated
+def clip_xr_to_xr(ds_a, ds_b, inplace=True):
+    """
+    Takes an xarray dataset (ds_a) and clips it to match
+    the extent of ds_b.
+
+    Parameters
+    ----------
+    ds_a: xarray dataset/array
+        A dataset which will be clipped to match ds_b.
+    ds_b: xarray dataset/array
+        A dataset to which the extents of ds_a will be
+        clipped to.
+    inplace : bool
+        Create a copy of the dataset in memory to preserve original
+        outside of function. Default is True.
+
+    Returns
+    ----------
+    ds_a : xarray dataset/array to match original ds_a.
+    """
+    
+    # notify
+    print('Clipping dataset to another.')
+
+    # check xr type, dims in ds a
+    if not isinstance(ds_a, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset a not an xarray type.')
+    elif 'x' not in list(ds_a.dims) and 'y' not in list(ds_a.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset a.')
+        
+    # check xr type, dims in ds b
+    if not isinstance(ds_b, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset b not an xarray type.')
+    elif 'x' not in list(ds_b.dims) and 'y' not in list(ds_b.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset b.')   
+    
+    # create copy ds if not inplace
+    if not inplace:
+        ds_a = ds.copy(deep=True)
+        
+    # get extent of ds b
+    extent = get_xr_extent(ds_b)
+    
+    # subset ds high to ds low
+    ds_a = ds_a.sel(x=slice(extent.get('l'), extent.get('r')), 
+                    y=slice(extent.get('t'), extent.get('v')))
+    
+    # notify
+    print('Clipped dataset successfully.')
+    return ds_a
+
 
 # Deprecated
 def build_xr_attributes(ds):

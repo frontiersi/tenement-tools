@@ -31,7 +31,7 @@
         </group>
       </groups>
       <controls>
-		  <button id="TenementToolsApp_phenolopyButton" caption="Phenelopy" className="phenolopyButton" loadOnClick="true" largeImage="Images\Phenolopy_Wizard_32.png">
+		  <button id="TenementToolsApp_phenolopyButton" caption="Phenolopy" className="phenolopyButton" loadOnClick="true" largeImage="Images\Phenolopy_Wizard_32.png">
 			  <tooltip heading="Phenolopy Module">
 				  Generate metrics representing various aspects of vegetation phenology (phenometrics).<disabledText />
 			  </tooltip>

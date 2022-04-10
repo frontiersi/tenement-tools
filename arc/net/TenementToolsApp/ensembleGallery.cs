@@ -39,15 +39,21 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Ensemble Model",
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_32.png",
-                                tooltip: "Combine outputs into a Dempster-Shafer model.",
+            Add(new GalleryItem(text: "Prepare Evidence Layers",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_Sigmoid_32.png",
+                                tooltip: "Rescale raw layers using fuzzy membership functions.",
                                 group: "Run individual functions"));
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Ensemble Masker",
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/CanoPy_Wizard_32.png",
-                                tooltip: "Mask out Ensemble areas using an elevation-based mask (e.g., Canopy Height).",
+            Add(new GalleryItem(text: "Perform Ensemble Modelling",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_32.png",
+                                tooltip: "Combine fuzzy evidence layers via Dempster-Shafer modelling.",
+                                group: "Run individual functions"));
+
+            // add gallery item for wizard
+            Add(new GalleryItem(text: "Mask Ensemble Output",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_Masker_32.png",
+                                tooltip: "Mask ensemble output via a mask layer (e.g., canopy height layer).",
                                 group: "Run individual functions"));
 
             // initialise
@@ -66,7 +72,26 @@ namespace TenementToolsApp
             var gallery_item = base.SelectedItem.ToString();
 
             // open tool pane
-            if (gallery_item == "Ensemble Model")
+            if (gallery_item == "Prepare Evidence Layers")
+            {
+                // set toolname and create empty input array
+                string toolname = "Ensemble_Sigmoider";
+                var inputs = Geoprocessing.MakeValueArray();
+                inputs = null;
+
+                // open toolpane
+                try
+                {
+                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find Ensemble Sigmoider tool. Did you add the Tenement Tools toolbox?");
+                };
+            }
+
+            // open tool pane
+            else if (gallery_item == "Perform Ensemble Modelling")
             {
                 // set toolname and create empty input array
                 string toolname = "Ensemble_Model";
@@ -84,7 +109,7 @@ namespace TenementToolsApp
                 };
             }
             // open tool pane
-            if (gallery_item == "Ensemble Masker")
+            if (gallery_item == "Mask Ensemble Output")
             {
                 // set toolname and create empty input array
                 string toolname = "Ensemble_Masker";
