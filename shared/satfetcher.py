@@ -552,7 +552,7 @@ def group_dupe_times(ds):
         
     # get attributes from dataset
     ds_attrs = ds.attrs
-    ds_band_attrs = ds[list(ds.data_vars)[0]].attrs
+    ds_band_attrs = ds[list(ds)[0]].attrs
     ds_spatial_ref_attrs = ds['spatial_ref'].attrs
     
     # get datetimes in array, count unique counts
@@ -569,8 +569,7 @@ def group_dupe_times(ds):
         # append attrbutes on to dataset and bands
         ds.attrs = ds_attrs
         ds['spatial_ref'].attrs = ds_spatial_ref_attrs
-        for var in list(ds.data_vars):
+        for var in list(ds):
             ds[var].attrs = ds_band_attrs
 
-        
     return ds

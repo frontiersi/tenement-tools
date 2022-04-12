@@ -935,7 +935,7 @@ def transfer_xr_values(ds_to, ds_from, data_vars):
     return ds_to
 
 
-# meta
+# meta, checks
 def build_rule_one_runs(arr, inc_plateaus=False):
     """calculates all runs, + and -, with optional
     plateau inclusion in run counts."""
@@ -994,6 +994,66 @@ def build_rule_one_runs(arr, inc_plateaus=False):
     return arr_runs
 
 
+# meta, checks
+def build_rule_two_mask(arr, min_stdv=0):
+    """calculates all valid candidates outside a specified 
+    mask range in both + and - directions. Example, with
+    a min_stdv of 3, all incline stdvs < 3 and declines > -3 will
+    be masked out. if set to 0, all will be flagged except 0 
+    itself (i.e. ignore stable regions)."""
+    
+    # check if arr is all nan
+    if np.isnan(arr).all():
+        print('All values are nan, returning all nan array.')
+        return arr
+        
+    # check min stdvs
+    if min_stdv is None:
+        print('No minimum std. dev.provided, setting to default (0).')
+        min_stdv = 0
+    elif not isinstance(min_stdv, (int, float)):
+        print('Minimum std. dev., returning original array.')
+        return arr
+    elif min_stdv < 0:
+        print('Minimum std. dev. only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+        
+    # threshold out all values within threshold area
+    arr_thresh = np.where(np.abs(arr) > min_stdv, arr, 0)
+
+    return arr_thresh
+
+
+# meta, checks
+def build_rule_three_spikes(arr, min_stdv=3):
+    """calculates all spikes, defined as where one sample has
+    'jumped' a specified number of stdvs in one increment. The
+    default value is 3, which is one whole zone."""
+    
+    # check if arr is all nan
+    if np.isnan(arr).all():
+        print('All values are nan, returning all nan array.')
+        return arr
+        
+    # check min stdvs
+    if min_stdv is None:
+        print('No minimum std. dev.provided, setting to default (0).')
+        min_stdv = 3
+    elif not isinstance(min_stdv, (int, float)):
+        print('Minimum std. dev., returning original array.')
+        return arr
+    elif min_stdv < 0:
+        print('Minimum std. dev. only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+        
+    # detect spikes
+    arr_diffs = np.diff(arr, prepend=arr[0])
+    arr_spikes = np.where(np.abs(arr_diffs) > min_stdv, arr, 0)
+    
+    return arr_spikes
+
+
+
 
 
 
@@ -1021,7 +1081,7 @@ def get_stdv_from_zone(num_zones=1):
 
 
 
-# meta checks 
+# deprecated, meta checks 
 def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<=', bidirectional=False):
     """
     takes array of smoothed change output and thresholds out
@@ -1070,7 +1130,7 @@ def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<=', bidirect
     return arr_thresholded
 
   
-# meta checks
+# deprecated meta checks
 def apply_rule_three(arr, direction='decline', num_stdv_jumped=3, min_consequtives=3, max_consequtives=3):
     """
     takes array of smoothed (or raw) change output and detects large, multi zone

@@ -477,67 +477,6 @@ def drop_incomplete_wet_dry_years(ds, inplace=True):
 
     return ds
 
-# deprecated: helper func to fill edges via bfill, ffill
-def __fill_edge__(ds, edge=None):
-    """
-    Helper function for fill_empty_wet_dry_edges()
-
-    Parameters
-    ----------
-    ds: xarray dataset
-        A dataset with x, y and time dims. NOTE: ONLY accepts dataset as it's a helper function.
-    edge: string
-        Variable to pass in edge value, accepts either 'first' or 'last'
-
-    Returns
-    ----------
-    ds : xarray dataset
-
-    """
-    if not isinstance(ds, (xr.Dataset)):
-        raise TypeError('__fill_edge__() can ONLY accept a Dataset.')
-
-    # check edge
-    if edge not in ['first', 'last']:
-        raise ValueError('Edge must be first or last.')
-
-    # create sort order
-    asc = True
-    if edge == 'last':
-        asc = False
-
-    # loop each da in ds
-    for i, dt in enumerate(ds['time'].sortby('time', asc)):
-        
-        # get current datetime
-        da = ds.sel(time=dt)
-        
-        # check if vars are all nan depending on xr type
-        if isinstance(da, xr.Dataset):
-            da_has_nans = da.to_array().isnull().all()
-        elif isinstance(da, xr.DataArray):
-            da_has_nans = da.isnull().all()
-            
-        # if edge empty, get next time with vals, fill
-        if i == 0 and da_has_nans:
-            print('{0} time is empty. Processing to fill.'.format(edge.title()))
-
-        elif i == 0 and not da_has_nans:
-            print('{0} time has values. No need to fill.'.format(edge.title()))
-            break
-
-        elif i > 0 and not da_has_nans:
-            print('Performing backfill.')
-            if edge == 'first':
-                ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), 
-                                ds.bfill('time'), ds)
-            elif edge == 'last':
-                ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), 
-                                ds.ffill('time'), ds)
-            break
-
-    return ds
-
 
 def __manual_bfill__(ds, gap_size=25):
     """
@@ -560,7 +499,7 @@ def __manual_bfill__(ds, gap_size=25):
         first_full_idx = np.where(ds_all_nans == False)[0][0]
         first_full_data = ds.isel(time=first_full_idx).to_array()
 
-        # if first non nan index is <= 3 times away, fill, else dont
+        # if first non nan index is <= gap_size times away, fill, else dont
         if first_full_idx <= gap_size:
             print('Full index exists close to missing. Backfilling.')
 
@@ -607,7 +546,7 @@ def __manual_ffill__(ds, gap_size=25):
         first_full_idx = np.where(ds_all_nans == False)[0][0]
         first_full_data = ds.isel(time=first_full_idx).to_array()
 
-        # if first non nan index is <= 3 times away, fill, else dont
+        # if first non nan index is <= gap_size times away, fill, else dont
         if first_full_idx <= gap_size:
             print('Full index exists close to missing. Backfilling.')
 
@@ -1890,6 +1829,67 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
     return ds_thresh
 
 
+
+def remove_salt_pepper(ds, iterations=1):
+    """
+    Takes a xarray dataset of thresholded values and removes salt 
+    and pepper pixel effect. Limited to only a 3x3 window and
+    only considers nan, so only use when relevent. Increase iterations
+    to increase number of pixels cleaned.
+    
+    Parameters
+    ----------
+    ds : xarray dataset
+        A dataset with x, y dims with likelihood values.
+    iterations : int 
+        Number of times the filter is passed over dataset.
+        
+    Returns
+    ----------
+    ds : xarray dataset
+    """
+    
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset.')
+        raise
+    elif 'x' not in ds or 'y' not in ds:
+        raise TypeError('Dataset does not contain an x or y dimension.')
+        raise
+        
+    # check iterations
+    if iterations <= 0:
+        print('Iterations must be >= 1. Using default.')
+        iterations = 1
+    
+    # check if any nan values, useless without
+    if not ds.to_array().isnull().any():
+        print('No nan values in dataset, returning original dataset')
+        return ds
+    
+    while iterations > 0:        
+    
+        # create mask of all pixels not nan (1) vs nan (0)
+        ds_mask = xr.where(~ds.isnull(), 1, 0)
+
+        # create moving 3 x 3 window, windows with >= 4 1s are stored
+        ds_filtered = ds_mask.rolling(x=3, y=3, center=True).sum()
+        ds_filtered = xr.where(ds_filtered >= 4, 1, 0)
+
+        # extrapolation can occur, so limit filter to original pixels
+        ds_mask = ds_filtered.where(ds_mask == 1, 0)
+
+        # mask real dataset
+        ds = ds.where(ds_mask == 1, np.nan)
+        
+        # reduce iteration
+        iterations -= 1
+    
+    return ds
+
+
+
+
 def __mk__(x, y, p, d, nd):
     """
     Helper function, should only be called by perform_mk_original()
@@ -2449,3 +2449,111 @@ def detect_breaks(values, times, pen=3, fill_nan=True, quick_plot=False):
 
     # return
     return brk_dates
+   
+   
+# deprecated: helper func to fill edges via bfill, ffill
+def __fill_edge__(ds, edge=None):
+    """
+    Helper function for fill_empty_wet_dry_edges()
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A dataset with x, y and time dims. NOTE: ONLY accepts dataset as it's a helper function.
+    edge: string
+        Variable to pass in edge value, accepts either 'first' or 'last'
+
+    Returns
+    ----------
+    ds : xarray dataset
+
+    """
+    if not isinstance(ds, (xr.Dataset)):
+        raise TypeError('__fill_edge__() can ONLY accept a Dataset.')
+
+    # check edge
+    if edge not in ['first', 'last']:
+        raise ValueError('Edge must be first or last.')
+
+    # create sort order
+    asc = True
+    if edge == 'last':
+        asc = False
+
+    # loop each da in ds
+    for i, dt in enumerate(ds['time'].sortby('time', asc)):
+        
+        # get current datetime
+        da = ds.sel(time=dt)
+        
+        # check if vars are all nan depending on xr type
+        if isinstance(da, xr.Dataset):
+            da_has_nans = da.to_array().isnull().all()
+        elif isinstance(da, xr.DataArray):
+            da_has_nans = da.isnull().all()
+            
+        # if edge empty, get next time with vals, fill
+        if i == 0 and da_has_nans:
+            print('{0} time is empty. Processing to fill.'.format(edge.title()))
+
+        elif i == 0 and not da_has_nans:
+            print('{0} time has values. No need to fill.'.format(edge.title()))
+            break
+
+        elif i > 0 and not da_has_nans:
+            print('Performing backfill.')
+            if edge == 'first':
+                ds = xr.where(ds['time'] <= ds['time'].sel(time=dt), 
+                                ds.bfill('time'), ds)
+            elif edge == 'last':
+                ds = xr.where(ds['time'] >= ds['time'].sel(time=dt), 
+                                ds.ffill('time'), ds)
+            break
+
+    return ds
+
+
+# deprecated
+def get_likelihood_median(ds):
+    """
+    Takes a xarray dataset of likelihood output and get the 
+    median across time. A time dimension is put back on using 
+    the last datetime in the original dataset. This time 
+    dimension ensures all other functions that work on likelihood
+    data is compatible.
+
+    Parameters
+    ----------
+    ds : xarray dataset
+        A dataset with x, y and time dims with veg and moisture vars.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # notify
+    print('Reducing dataset down to one date via median.')
+    
+    # check type
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Expecting an xarray Dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No time, x, y dimension in dataset.')
+
+    # get latest datetime
+    latest_dt = ds['time'].isel(time=-1)
+
+    # reduce to one likelihood slice via median
+    ds = ds.median('time')
+
+    # assign datetime back on via coord and dimension
+    ds = ds.assign_coords({'time': latest_dt})
+    ds = ds.expand_dims('time')
+
+    # ensure dim order matches odc dea standard
+    ds = ds.transpose('time', 'y', 'x')
+
+    # notify and return
+    print('Reduced dataset down to one median of all time successfully.')
+    return ds
