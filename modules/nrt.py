@@ -936,15 +936,28 @@ def transfer_xr_values(ds_to, ds_from, data_vars):
 
 
 # meta, checks
-def build_rule_one_runs(arr, inc_plateaus=False):
+def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
     """calculates all runs, + and -, with optional
-    plateau inclusion in run counts."""
+    plateau inclusion in run counts. then uses min conseqs
+    to threshold out any parts of a run <= given value (set to 0).
+    """
     
     # check if arr is all nan
     if np.isnan(arr).all():
         print('All values are nan, returning all nan array.')
         return arr
         
+    # check min stdvs
+    if min_conseqs is None:
+        print('No minimum consequtives provided, setting to default (3).')
+        min_stdv = 0
+    elif not isinstance(min_conseqs, (int, float)):
+        print('Minimum consequtives not numeric, returning original array.')
+        return arr
+    elif min_conseqs < 0:
+        print('Minimum consequtives only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+    
     # check plateaus
     if not isinstance(inc_plateaus, bool):
         print('Include plateaus must be boolean. Setting to False.')
@@ -990,6 +1003,10 @@ def build_rule_one_runs(arr, inc_plateaus=False):
     
     # combine both into one
     arr_runs = arr_incs + arr_decs
+    
+    # remove any run values under min consequtives 
+    if min_conseqs > 0:
+        arr_runs = np.where(np.abs(arr_runs) >= min_conseqs, arr_runs, 0)
     
     return arr_runs
 
@@ -1053,7 +1070,118 @@ def build_rule_three_spikes(arr, min_stdv=3):
     return arr_spikes
 
 
+# meta
+def build_alerts(ds, ruleset=None, direction=None):
+    """
+    Builds alert mask (1s and 0s) based on combined rule
+    values and assigned ruleset.
+    """
 
+    # set up valid rulesets
+    valid_rules = [
+        '1', 
+        '2', 
+        '3', 
+        '1&2', 
+        '1&3', 
+        '2&3', 
+        '1|2', 
+        '1|3', 
+        '2|3', 
+        '1&2&3', 
+        '1|2&3',
+        '1&2|3', 
+        '1|2|3']
+
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise ValueError('Input dataset must be a xarray dataset.')
+
+    # check required static rule vars in dataset
+    static_vars = ['static_rule_one', 'static_rule_two', 'static_rule_three', 'static_alerts']
+    dynamic_vars = ['dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three', 'dynamic_alerts']
+    for var in static_vars + dynamic_vars:
+        if var not in ds:
+            raise ValueError('Could not find variable: {} in dataset.'.format(var))
+
+    # check if ruleset in allowed rules, direction is valid
+    if ruleset not in valid_rules:
+        raise ValueError('Ruleset is not supported.')
+    elif direction not in ['Incline', 'Decline']:
+        raise ValueError('Direction is not supported.')
+
+    # build copy of input dataset for temp working
+    ds_alr = ds.copy(deep=True)
+
+    # correct raw rule vals for direction and set 1 if alert, 0 if not
+    for var in static_vars + dynamic_vars: 
+        if direction == 'Incline':
+            ds_alr[var] = xr.where(ds_alr[var] > 0, 1, 0)
+        elif direction == 'Decline':
+            ds_alr[var] = xr.where(ds_alr[var] < 0, 1, 0)
+
+    # set up short var names for presentation
+    sr1, sr2, sr3 = 'static_rule_one', 'static_rule_two', 'static_rule_three'
+    dr1, dr2, dr3 = 'dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three'
+
+    # create alert arrays based on singular rule
+    if ruleset == '1':
+        ds_alr['static_alerts']  = ds_alr[sr1]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1]
+    elif ruleset == '2':
+        ds_alr['static_alerts']  = ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2]
+    elif ruleset == '3':
+        ds_alr['static_alerts']  = ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr3]
+
+    # create alert arrays based on dual "and" rule
+    if ruleset == '1&2':
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2]
+    elif ruleset == '1&3':
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr3]
+    elif ruleset == '2&3':
+        ds_alr['static_alerts']  = ds_alr[sr2] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2] & ds_alr[dr3]    
+
+    # create alert arrays based on dual "or" rule
+    if ruleset == '1|2':
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2]
+    elif ruleset == '1|3':
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr3]
+    elif ruleset == '2|3':
+        ds_alr['static_alerts']  = ds_alr[sr2] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2] | ds_alr[dr3]    
+
+    # create alert arrays based on complex rule
+    if ruleset == '1&2&3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2] & ds_alr[dr3]
+    elif ruleset == '1|2&3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] | (ds_alr[sr2] & ds_alr[sr3])
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | (ds_alr[dr2] & ds_alr[dr3])
+    elif ruleset == '1&2|3':  
+        ds_alr['static_alerts']  = (ds_alr[sr1] & ds_alr[sr2]) | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = (ds_alr[dr1] & ds_alr[dr2]) | ds_alr[dr3]
+    elif ruleset == '1|2|3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2] | ds_alr[dr3]
+
+    # check if array sizes match
+    if len(ds['static_alerts']) != len(ds_alr['static_alerts']):
+        raise ValueError('Static alert array incorrect size.')
+    elif len(ds['dynamic_alerts']) != len(ds_alr['dynamic_alerts']):
+        raise ValueError('Dynamic alert array incorrect size.')
+
+    # transfer alert arrays over to original dataset
+    ds['static_alerts'] = ds_alr['static_alerts']
+    ds['dynamic_alerts'] = ds_alr['dynamic_alerts']
+    
+    return ds
 
 
 

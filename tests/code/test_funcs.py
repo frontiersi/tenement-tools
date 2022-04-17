@@ -260,8 +260,9 @@ def set_specific_years_season_nan(in_nc, years=[], months=[]):
         
         ds = ds.astype('float32')
         
-        ds = ds.where((~ds['time.year'].isin(years)) & 
-                      (~ds['time.month'].isin(months)))
+        ds = ds.where(~((ds['time.year'].isin(years)) & 
+                        (ds['time.month'].isin(months))))
+
         ds.close()
         
         ds.to_netcdf(in_nc)
@@ -269,7 +270,7 @@ def set_specific_years_season_nan(in_nc, years=[], months=[]):
  
 def remove_all_specific_season_nan(in_nc, months=[]):
     """for every year, drop whole season of data to nan"""
-    print('Remove all season to nan with months: {}'.format(months))
+    print('Remove all season with months: {}'.format(months))
     
     if not isinstance(months, list):
         months = [months]
@@ -288,7 +289,7 @@ def remove_all_specific_season_nan(in_nc, months=[]):
         
 def remove_specific_years_season_nan(in_nc, years=[], months=[]):
     """for specific years, remove season of data to nan"""
-    print('Removing season in years: {} to nan with months: {}'.format(years, months))
+    print('Removing season in years: {} with months: {}'.format(years, months))
     
     if not isinstance(years, list):
         years = [years]
@@ -302,9 +303,9 @@ def remove_specific_years_season_nan(in_nc, years=[], months=[]):
         
         ds = ds.astype('float32')
         
-        ds = ds.where((~ds['time.year'].isin(years)) & 
-                      (~ds['time.month'].isin(months)), 
-                       drop=True)
+        ds = ds.where(~((ds['time.year'].isin(years)) & 
+                        (ds['time.month'].isin(months))), drop=True)
+
         ds.close()
         
         ds.to_netcdf(in_nc)

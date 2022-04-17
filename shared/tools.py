@@ -656,6 +656,46 @@ def bboxes_intersect(bbox_a, bbox_b):
     return not is_not_intersecting
 
 
+def all_xr_intersect(ds_list):
+    """Iterates a list of xr datasets and
+    checks if every bounding box intersects.
+    if even one bbox does not intersect, False 
+    is returned, else True"""
+    
+    # check all datasets have x and y coords
+    for ds in ds_list:
+        if 'x' not in ds or 'y' not in ds:
+            print('No x and y coordinates in dataset. Returning False.')
+            return False
+    
+    try:
+        # extract all bboxes from item list
+        bboxes = []
+        for ds in ds_list:
+
+            # create bbox
+            w, e = float(ds['x'].min()), float(ds['x'].max())
+            b, t = float(ds['y'].min()), float(ds['y'].max())
+            bboxes.append([w, e, t, b])
+    except:
+        print('Something went wrong during bbox parse. Returning False.')
+        return False
+    
+    try:
+        # check each bbox against every other, return false if issue
+        for bbox_a in bboxes:
+            for bbox_b in bboxes:
+                is_intersected = bboxes_intersect(bbox_a, bbox_b)
+                if not is_intersected:
+                    return False
+    except:
+        print('Something went wrong during intersection process. Returning False.')
+        return False
+    
+    # we made it, return true
+    return True
+
+
 def get_xr_resolution(ds):
     """
     Read dataset and get pixel resolution from attributes. If 
@@ -944,7 +984,7 @@ def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
         raise ValueError('No resolution extracted from dataset.')
 
     # multiply res by res factor
-    res = res * res_factor
+    #res = res * res_factor
 
     # loop through data var and extract values at coords
     values = []

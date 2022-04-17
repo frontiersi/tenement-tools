@@ -1551,7 +1551,7 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
     
     Parameters
     ----------
-    ds : xarray dataset/array
+    ds : xarray dataset
         A dataset with x, y and time dims with likelihood values.
     df : pandas dataframe
         A dataframe of field occurrences with x, y values and 
@@ -1566,7 +1566,7 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         
     Returns
     ----------
-    ds_thresh : xarray dataset or array.
+    ds : xarray dataset.
     """
     
     # imports check
@@ -1574,109 +1574,56 @@ def threshold_xr_via_auc(ds, df, res_factor=3, if_nodata='any'):
         from sklearn.metrics import roc_curve, roc_auc_score
     except:
         raise ImportError('Could not import sklearn.')
-
-    # notify
-    print('Thresholding dataset via occurrence records and AUC.')
     
-    # check xr type, dims, num time
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    # check xr type, dims, num time, nodata
+    if not isinstance(ds, xr.Dataset, ):
         raise TypeError('Dataset not an xarray type.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
+    elif 'x' not in ds or 'y' not in ds:
         raise ValueError('No x or y dimensions in dataset.')
+    elif 'time' in ds:
+        raise ValueError('Time dimension should not be in dataset.')
+    elif not hasattr(ds, 'nodatavals') or ds.nodatavals == 'unknown':
+        raise AttributeError('Dataset does not have a nodatavalue attribute.')
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # check if pandas type, columns, actual field
     if not isinstance(df, pd.DataFrame):
         raise TypeError('Occurrence records is not a pandas type.')
     elif 'x' not in df or 'y' not in df:
         raise ValueError('No x, y fields in occurrence records.')
-    elif 'actual' not in df:
-        raise ValueError('No actual field in occurrence records.')     
+    elif 'actual' not in df or 'predicted' not in df:
+        raise ValueError('No actual and/or predicted fields in occurrence records.')     
             
-    # check if nodatavals is in dataset
-    if not hasattr(ds, 'nodatavals') or ds.nodatavals == 'unknown':
-        raise AttributeError('Dataset does not have a nodatavalue attribute.')
-        
     # check if res factor and if_nodata valid
     if not isinstance(res_factor, int) and res_factor < 1:
         raise TypeError('Resolution factor must be an integer of 1 or greater.')
     elif if_nodata not in ['any', 'all']:
         raise TypeError('If nodata policy must be either any or all.')
         
-    # split ds into arrays depending on dims
-    da_list = [ds]
-    if 'time' in ds.dims:
-        da_list = [ds.sel(time=dt) for dt in ds['time']]
+    # check if dataframe has 1s and 0s only
+    unq = df['actual'].unique()
+    if not np.any(unq == 1) or not np.any(unq == 0):
+        raise ValueError('Occurrence records do not contain 1s and/or 0s.')
+    elif len(unq) != 2:
+        raise ValueError('Occurrence records contain more than just 1s and/or 0s.')  
 
-    # loop each slice, threshold to auc
-    thresh_list = []
-    for da in da_list:
+    # get fpr, tpr, thresh, auc and optimal threshold
+    fpr, tpr, thresholds = roc_curve(df['actual'], df['predicted'])
+    auc = roc_auc_score(df['actual'], df['predicted'])
+    cut_off = thresholds[np.argmax(tpr - fpr)]
 
-        # take a copy
-        da = da.copy(deep=True)
+    # threshold da to cutoff and append
+    ds = ds.where(ds > cut_off)
 
-        # intersect points with current da
-        df_data = df[['x', 'y', 'actual']].copy()
-        df_data = tools.intersect_records_with_xr(ds=da, 
-                                                  df_records=df_data, 
-                                                  extract=True,
-                                                  res_factor=res_factor,
-                                                  if_nodata=if_nodata)
-        
-        # remove no data
-        df_data = tools.remove_nodata_records(df_data, nodata_value=ds.nodatavals)
-        
-        # check if dataframe has 1s and 0s only
-        unq = df_data['actual'].unique()
-        if not np.any(unq == 1) or not np.any(unq == 0):
-            raise ValueError('Occurrence records do not contain 1s and/or 0s.')
-        elif len(unq) != 2:
-            raise ValueError('Occurrence records contain more than just 1s and/or 0s.')  
+    # notify auc result
+    print('AUC: {0} for dataset.'.format(round(auc, 3)))
 
-        # rename column, add column of actuals (1s)
-        df_data = df_data.rename(columns={'like': 'predicted'})
+    # show (non-arcgis only, disabled)
+    #print('- ' * 30)
+    #plt.show()
+    #print('- ' * 30)
+    #print('')
 
-        # get fpr, tpr, thresh, auc and optimal threshold
-        fpr, tpr, thresholds = roc_curve(df_data['actual'], df_data['predicted'])
-        auc = roc_auc_score(df_data['actual'], df_data['predicted'])
-        cut_off = thresholds[np.argmax(tpr - fpr)]
-
-        # threshold da to cutoff and append
-        da = da.where(da > cut_off)
-        thresh_list.append(da)
-
-        # notify 
-        if 'time' in ds.dims:
-            print('AUC: {0} for time: {1}.'.format(round(auc, 3), da['time'].values))
-        else:
-            print('AUC: {0} for whole dataset.'.format(round(auc, 3)))
-           
-        # show (non-arcgis only, disabled)
-        #print('- ' * 30)
-        #plt.show()
-        #print('- ' * 30)
-        #print('')
-
-    # concat array back together
-    if len(thresh_list) > 1:
-        ds_thresh = xr.concat(thresh_list, dim='time').sortby('time')
-    else:
-        ds_thresh = thresh_list[0]
-    
-    if was_da:
-        ds_thresh = ds_thresh.to_array()
-
-    # notify and return
-    print('Thresholded dataset successfully.')
-    return ds_thresh
+    return ds
 
 
 def threshold_xr_via_std(ds, num_stdevs=3, inplace=True):
@@ -1829,7 +1776,6 @@ def threshold_likelihood(ds, df=None, num_stdevs=3, res_factor=3, if_nodata='any
     return ds_thresh
 
 
-
 def remove_salt_pepper(ds, iterations=1):
     """
     Takes a xarray dataset of thresholded values and removes salt 
@@ -1886,8 +1832,6 @@ def remove_salt_pepper(ds, iterations=1):
         iterations -= 1
     
     return ds
-
-
 
 
 def __mk__(x, y, p, d, nd):
@@ -2174,6 +2118,7 @@ def __cva__(ds_base, ds_comp, vege_var='tcg', soil_var='tcb', tmf=2):
     # return
     return ds_cva
 
+
 def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False, 
                 vege_var='tcg', soil_var='tcb', tmf=2):
     """
@@ -2304,76 +2249,67 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
     return ds_cva
 
 
-def isolate_cva_change(ds, angle_min=90, angle_max=180, inplace=True):
+def isolate_cva_quarters(ds, drop_orig_vars=True):
     """
-    Takes a xarray dataset/array of cva angle/magnitude vars and 
-    isolates specific angles. Different angle ranges represent different
-    change types: 90 to 180 degrees represents soil increase, or veg
-    decline. On the other hand, 270 to 360 degrees represents veg increase.
+    Takes a xarray dataset of cva angle/magnitude vars and 
+    isolates specific quarters. Different angle ranges represent 
+    different change types: 90 to 180 degrees represents soil or moisture 
+    increase, or veg decline. On the other hand, 270 to 360 degrees 
+    represents veg increase.
     
     Parameters
     ----------
     ds : xarray dataset/array
         A dataset with x, y and time dims with likelihood values.
-    angle_min : float
-        A value representing lowest angle, or start of angle range.
-    angle_max : float
-        A value representing highest angle, or end of angle range.
-    
+    drop_orig_vars : bool
+        Whether to drop original vars (i.e. angle and magnitude) in 
+        dataset.
+
     Returns
     ----------
-    ds : xarray dataset or array.
+    ds : xarray dataset
     """
     
     # notify
-    print('Isolating CVA angles from {0}-{1} degrees.'.format(angle_min, angle_max))
-    
-    # check if xr types
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
+    print('Isolating CVA angle quartiles.')
 
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+    # check dataset, dimensions, variables
+    if ds is None:
+        raise ValueError('Input dataset not provided.')
+    if not isinstance(ds, xr.Dataset):
+        raise ValueError('Input dataset is not xarray Dataset type.')
+    elif 'x' not in ds or 'y' not in ds or 'time' not in ds:
+        raise ValueError('Input needs x, y and time dimensions.')
+    elif 'angle' not in ds or 'magnitude' not in ds:
+        raise ValueError('Missing angle and/or mangitude variables.')
 
-    # get vars
-    if isinstance(ds, xr.Dataset):
-        data_vars = list(ds.data_vars)
-    elif isinstance(ds, xr.DataArray):
-        data_vars = list(ds['variable'].values)
-        
-    # check if angle is a var
-    if 'angle' not in data_vars:
-        raise ValueError('No variable called angle provided.')
-            
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-    
-    # check if angles are supported
-    if angle_min < 0 or angle_max < 0:
-        raise ValueError('Angles cannot be less than 0.')
-    elif angle_min > 360 or angle_max > 360:
-        raise ValueError('Angles cannot be greater than 360.')
-    elif angle_min >= angle_max:
-        raise ValueError('Max angle cannot be greater than min angle.')
-        
-    # restrict ds to requested angles
-    ds = ds.where((ds['angle'] > angle_min) & (ds['angle'] < angle_max))
-    
-    if was_da:
-        ds = ds.to_array()
+    # extract original var names
+    data_vars = [var for var in ds]
 
-    # notify and return
-    print('Isolated CVA angles successfully.')
+    # build vegetation incline quartile (270-360 degrees)
+    ds['vege_increase'] = ds['magnitude'].where((ds['angle'] > 270) & 
+                                                (ds['angle'] <= 360))
+
+    # build vegetation decline quartile (90-180 degrees)
+    ds['vege_decrease'] = ds['magnitude'].where((ds['angle'] > 90) & 
+                                                (ds['angle'] <= 180))
+
+    # build moisture incline quartile (180-270 degrees)
+    ds['moist_increase'] = ds['magnitude'].where((ds['angle'] > 180) & 
+                                                 (ds['angle'] <= 270))
+
+    # build moisture decline quartile (1-90 degrees)
+    ds['moist_decrease'] = ds['magnitude'].where((ds['angle'] > 0) & 
+                                                 (ds['angle'] <= 90))
+
+    # drop original vars if requested
+    if drop_orig_vars is True:
+        ds = ds.drop(data_vars)
+
     return ds
 
 
+# deprecated, no longer used
 def detect_breaks(values, times, pen=3, fill_nan=True, quick_plot=False):
     """
     Takes a numpy of values and times and performs change point
@@ -2510,6 +2446,77 @@ def __fill_edge__(ds, edge=None):
                                 ds.ffill('time'), ds)
             break
 
+    return ds
+
+
+# deprecated
+def isolate_cva_change(ds, angle_min=90, angle_max=180, inplace=True):
+    """
+    Takes a xarray dataset/array of cva angle/magnitude vars and 
+    isolates specific angles. Different angle ranges represent different
+    change types: 90 to 180 degrees represents soil increase, or veg
+    decline. On the other hand, 270 to 360 degrees represents veg increase.
+    
+    Parameters
+    ----------
+    ds : xarray dataset/array
+        A dataset with x, y and time dims with likelihood values.
+    angle_min : float
+        A value representing lowest angle, or start of angle range.
+    angle_max : float
+        A value representing highest angle, or end of angle range.
+    
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # notify
+    print('Isolating CVA angles from {0}-{1} degrees.'.format(angle_min, angle_max))
+    
+    # check if xr types
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
+    # get vars
+    if isinstance(ds, xr.Dataset):
+        data_vars = list(ds.data_vars)
+    elif isinstance(ds, xr.DataArray):
+        data_vars = list(ds['variable'].values)
+        
+    # check if angle is a var
+    if 'angle' not in data_vars:
+        raise ValueError('No variable called angle provided.')
+            
+    # create copy ds if not inplace
+    if not inplace:
+        ds = ds.copy(deep=True)
+    
+    # check if angles are supported
+    if angle_min < 0 or angle_max < 0:
+        raise ValueError('Angles cannot be less than 0.')
+    elif angle_min > 360 or angle_max > 360:
+        raise ValueError('Angles cannot be greater than 360.')
+    elif angle_min >= angle_max:
+        raise ValueError('Max angle cannot be greater than min angle.')
+        
+    # restrict ds to requested angles
+    ds = ds.where((ds['angle'] > angle_min) & (ds['angle'] < angle_max))
+    
+    if was_da:
+        ds = ds.to_array()
+
+    # notify and return
+    print('Isolated CVA angles successfully.')
     return ds
 
 

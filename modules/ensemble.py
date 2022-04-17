@@ -442,45 +442,6 @@ def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     return out_list 
 
 
-def all_xr_intersect(ds_list):
-    """Iterates a list of xr datasets and
-    checks if every bounding box intersects.
-    if even one bbox does not intersect, False 
-    is returned, else True"""
-    
-    # check all datasets have x and y coords
-    for ds in ds_list:
-        if 'x' not in ds or 'y' not in ds:
-            print('No x and y coordinates in dataset. Returning False.')
-            return False
-    
-    try:
-        # extract all bboxes from item list
-        bboxes = []
-        for ds in ds_list:
-
-            # create bbox
-            w, e = float(ds['x'].min()), float(ds['x'].max())
-            b, t = float(ds['y'].min()), float(ds['y'].max())
-            bboxes.append([w, e, t, b])
-    except:
-        print('Something went wrong during bbox parse. Returning False.')
-        return False
-    
-    try:
-        # check each bbox against every other, return false if issue
-        for bbox_a in bboxes:
-            for bbox_b in bboxes:
-                is_intersected = tools.bboxes_intersect(bbox_a, bbox_b)
-                if not is_intersected:
-                    return False
-    except:
-        print('Something went wrong during intersection process. Returning False.')
-        return False
-    
-    # we made it, return true
-    return True
-
 # meta
 def get_target_res_xr(ds_list, target='Lowest Resolution'):
     """takes a list of xarray datasets, finds lowest/highest 

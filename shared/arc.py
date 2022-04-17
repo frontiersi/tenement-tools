@@ -14,6 +14,7 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 import arcpy
 import tempfile
 import numpy as np
+import pandas as pd
 from datetime import datetime
 
 
@@ -53,6 +54,7 @@ def prepare_collections_list(in_platform):
         return ['s2b_ard_granule']
 
 
+# deprecated
 def datetime_to_string(dt):
     """
     Basic function that takes a python datetime
@@ -352,6 +354,71 @@ def get_bbox_from_geom(in_geom):
 
     return bbox
     
+   
+def read_shp_for_threshold(in_occurrence_feat=None, in_pa_column=None):
+    """
+    Alternative fucntion to read_shapefile which
+    uses arcpy instead of gdal. This function is 
+    only suitable for GDVSpectra Threshold. Quicker 
+    and safer, but only useful for UI toolbox work. 
+    Use read_shapefile for non-arcgis work. Input
+    occurrence file and presence absence column are
+    strings.
+    """
+    
+    # check inputs
+    if in_occurrence_feat is None or in_pa_column is None:
+        raise ValueError('Did not provide a shapefile and field.')
+    elif not isinstance(in_occurrence_feat, str):
+        raise ValueError('Input shapefile must be a string path.')
+    elif not isinstance(in_pa_column, str):
+        raise ValueError('Input column must be a string.')
+
+    try:
+        # get description of file
+        shp_desc = arcpy.Describe(in_occurrence_feat)
+    except:
+        raise ValueError('Could not describe input shapefile.')
+
+    # check if empty shapefile, crs, field exists
+    if int(arcpy.GetCount_management(in_occurrence_feat)[0]) == 0:
+        raise ValueError('Shapefile is empty.')
+    elif shp_desc.spatialReference.factoryCode != 3577:
+        raise ValueError('Shapefile is not projected in GDA94 Albers (EPSG:3566).')
+    elif in_pa_column not in [field.name for field in shp_desc.fields]:
+        raise ValueError('Requested field is not in shapefile.')
+
+    # check if presence/absence column is integer
+    for field in shp_desc.fields:
+        if field.name == in_pa_column and field.type != 'Integer':
+            raise TypeError('Presence/absence column must be integer type.')
+
+    # check if any non 1s and 0s in pres/abse column
+    with arcpy.da.SearchCursor(in_occurrence_feat, [in_pa_column]) as cursor:
+        vals = np.unique([row[0] for row in cursor])
+        if len(vals) != 2 or (0 not in vals or 1 not in vals):
+            raise ValueError('Presence/absence column does not contain just 1s and 0s.')
+
+    # check if any non 1s and 0s in pres/abse column
+    fields = ['SHAPE@X', 'SHAPE@Y', in_pa_column]
+    with arcpy.da.SearchCursor(in_occurrence_feat, fields) as cursor:
+        rows = [{'x': r[0], 'y': r[1], 'actual': r[2]} for r in cursor]
+        df_records = pd.DataFrame.from_records(rows)
+
+    # secondary check of various dataframe requirements
+    if df_records.shape[0] == 0:
+        raise ValueError('No records in pandas dataframe.')
+    elif 'x' not in df_records or 'y' not in df_records:
+        raise ValueError('No x, y columns in dataframe.')
+    elif len(df_records.columns) != 3:
+        raise ValueError('Number of columns in dataframe is incorrect.')
+    elif 'actual' not in df_records:
+        raise ValueError('Presence column not in dataframe.')
+    elif len(np.unique(df_records['actual'])) != 2:
+        raise ValueError('More than 1s and 0s in presence/absence in dataframe.')
+
+    return df_records
+   
    
 # checks, meta
 def convert_arcpy_geom_to_gjson(arcpy_geom):
