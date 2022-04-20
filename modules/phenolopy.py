@@ -710,6 +710,7 @@ def __calc_peaks__(x, t):
     # return
     return num_peaks
 
+
 def calc_num_seasons(ds):
     """
     Takes an xarray Dataset containing vege values and calculates the number of

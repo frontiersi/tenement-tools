@@ -565,7 +565,7 @@ def multiply_values(in_nc, factor=30):
         ds = xr.open_dataset(in_nc)
         ds = ds.load()
         
-        ds['like'] = ds['like'] * factor
+        ds['thresh'] = ds['thresh'] * factor
         
         ds.close()
         

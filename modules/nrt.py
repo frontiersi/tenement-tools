@@ -168,34 +168,6 @@ def safe_load_nc(in_path):
         return
 
 
-# meta
-def check_xr_start_year(ds, s_year):
-    """"""
-    
-    # check if dataset exists
-    if ds is None:
-        print('Old dataset is none. Returning none.')
-        return
-    elif not hasattr(ds, 's_year'):
-        print('Dataset must have a start year attribute.')
-        return
-    
-    # check start year
-    if s_year is None:
-        print('Start year must be provided.')
-        return ds
-    elif not isinstance(s_year, int):
-        print('Start year must be an integer.')
-        return ds
-    
-    # check if dataset year is same as start year value
-    if ds.attrs.get('s_year') != s_year:
-        print('Years dont match, returning none.')
-        return
-    
-    return ds
-
-
 # checks, metadata
 def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
     """
@@ -391,7 +363,7 @@ def validate_monitoring_areas(in_feat):
         print('Feature class is not in a geodatabase, flagging as invalid.')
         is_valid = False
 
-    # if we've made it, check featureclass
+    # if valid...
     if is_valid:
         try:
             # get feature
@@ -415,19 +387,32 @@ def validate_monitoring_areas(in_feat):
                 print('Duplicate area ids detected, flagging as invalid.')
                 is_valid = False
                 
-                
             # check if feature has required fields
             fields = [field.name for field in lyr.schema]
-            required_fields = ['area_id', 'platform', 's_year', 'e_year', 
-                               'index', 'persistence', 'rule_1_min_conseqs', 
-                               'rule_1_inc_plateaus', 'rule_2_min_stdv', 
-                               'rule_2_bidirectional', 'rule_3_num_zones',
-                               'ruleset', 'alert', 'alert_direction', 'email', 
-                               'ignore', 'color', 'global_id']
+            required_fields = [
+                'area_id', 
+                'platform', 
+                's_year', 
+                'e_year', 
+                'index',
+                'persistence',
+                'rule_1_min_conseqs',
+                'rule_1_inc_plateaus',
+                'rule_2_min_zone', 
+                'rule_3_num_zones',
+                'ruleset',
+                'alert',
+                'method',
+                'alert_direction',
+                'email',
+                'ignore',
+                'color',
+                'global_id'
+                ] 
             
             # check if all fields in feat
             if not all(f in fields for f in required_fields):
-                raise ValueError('Not all required fields in monitoring shapefile.')
+                print('Not all required fields in monitoring shapefile.')
                 is_valid = False
                 
             # close data source
@@ -452,6 +437,7 @@ def validate_monitoring_area(row):
     # check if row is tuple
     if not isinstance(row, tuple):
         raise ValueError('Row must be of type tuple.')
+        return False
             
     # parse row info
     area_id = row[0]
@@ -462,134 +448,148 @@ def validate_monitoring_area(row):
     persistence = row[5]
     rule_1_min_conseqs = row[6]
     rule_1_inc_plateaus = row[7]
-    rule_2_min_stdv = row[8]
-    rule_2_bidirectional = row[9]
-    rule_3_num_zones = row[10]
-    ruleset = row[11]
-    alert = row[12]
+    rule_2_min_zone = row[8]
+    rule_3_num_zones = row[9]
+    ruleset = row[10]
+    alert = row[11]
+    method = row[12]
     alert_direction = row[13]
     email = row[14]
     ignore = row[15]
     
     # check area id exists
     if area_id is None:
-        print('No area id exists, flagging as invalid.')
+        raise ValueError('No area id exists, flagging as invalid.')
         return False
 
     # check platform is Landsat or Sentinel
     if platform is None:
-        print('No platform exists, flagging as invalid.')
+        raise ValueError('No platform exists, flagging as invalid.')
         return False
     elif platform.lower() not in ['landsat', 'sentinel']:
-        print('Platform must be Landsat or Sentinel, flagging as invalid.')
+        raise ValueError('Platform must be Landsat or Sentinel, flagging as invalid.')
         return False
 
     # check if start and end years are valid
     if not isinstance(s_year, int) or not isinstance(e_year, int):
-        print('Start and end year values must be integers, flagging as invalid.')
+        raise ValueError('Start and end year values must be integers, flagging as invalid.')
         return False
     elif s_year < 1980 or s_year > 2050:
-        print('Start year must be between 1980 and 2050, flagging as invalid.')
+        raise ValueError('Start year must be between 1980 and 2050, flagging as invalid.')
         return False
     elif e_year < 1980 or e_year > 2050:
-        print('End year must be between 1980 and 2050, flagging as invalid.')
+        raise ValueError('End year must be between 1980 and 2050, flagging as invalid.')
         return False
     elif e_year <= s_year:
-        print('Start year must be less than end year, flagging as invalid.')
+        raise ValueError('Start year must be less than end year, flagging as invalid.')
         return False
     elif abs(e_year - s_year) < 2:
-        print('Must be at least 2 years between start and end year, flagging as invalid.')
+        raise ValueError('Must be at least 2 years between start and end year, flagging as invalid.')
+        return False
+    elif platform.lower() == 'sentinel' and s_year < 2016:
+        raise ValueError('Start year must not be < 2016 when using Sentinel, flagging as invalid.')
         return False
 
     # check if index is acceptable
     if index is None:
-        print('No index exists, flagging as invalid.')
+        raise ValueError('No index exists, flagging as invalid.')
         return False
     elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
-        print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
+        raise ValueError('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
         return False
     
     # check if persistence is accepptable
     if persistence is None:
-        print('No persistence exists, flagging as invalid.')
+        raise ValueError('No persistence exists, flagging as invalid.')
         return False
     elif persistence < 0.001 or persistence > 9.999:
-        print('Persistence must be before 0.0001 and 9.999, flagging as invalid.')
+        raise ValueError('Persistence must be before 0.0001 and 9.999, flagging as invalid.')
         return False
 
     # check if rule_1_min_conseqs is accepptable
     if rule_1_min_conseqs is None:
-        print('No rule_1_min_conseqs exists, flagging as invalid.')
+        raise ValueError('No rule_1_min_conseqs exists, flagging as invalid.')
         return False
     elif rule_1_min_conseqs < 0 or rule_1_min_conseqs > 99:
-        print('Rule_1_min_conseqs must be between 0 and 99, flagging as invalid.')
+        raise ValueError('Rule_1_min_conseqs must be between 0 and 99, flagging as invalid.')
         return False
     
     # check if rule_1_min_conseqs is accepptable
     if rule_1_inc_plateaus is None:
-        print('No rule_1_inc_plateaus exists, flagging as invalid.')
+        raise ValueError('No rule_1_inc_plateaus exists, flagging as invalid.')
         return False
     elif rule_1_inc_plateaus not in ['Yes', 'No']:
-        print('Rule_1_inc_plateaus must be Yes or No, flagging as invalid.')
+        raise ValueError('Rule_1_inc_plateaus must be Yes or No, flagging as invalid.')
         return False    
     
     # check if rule_2_min_stdv is accepptable
-    if rule_2_min_stdv is None:
-        print('No rule_2_min_stdv exists, flagging as invalid.')
+    if rule_2_min_zone is None:
+        raise ValueError('No rule_2_min_zone exists, flagging as invalid.')
         return False
-    elif rule_2_min_stdv < 0 or rule_2_min_stdv > 99:
-        print('Rule_2_min_stdv must be between 0 and 99, flagging as invalid.')
-        return False    
-
-    # check if rule_2_bidirectional is accepptable
-    if rule_2_bidirectional is None:
-        print('No rule_2_bidirectional exists, flagging as invalid.')
-        return False
-    elif rule_2_bidirectional not in ['Yes', 'No']:
-        print('Rule_2_bidirectional must be Yes or No, flagging as invalid.')
-        return False     
+    elif rule_2_min_zone < 0 or rule_2_min_zone > 99:
+        raise ValueError('Rule_2_min_zone must be between 0 and 99, flagging as invalid.')
+        return False      
 
     # check if rule_2_bidirectional is accepptable
     if rule_3_num_zones is None:
-        print('No rule_3_num_zones exists, flagging as invalid.')
+        raise ValueError('No rule_3_num_zones exists, flagging as invalid.')
         return False
-    elif rule_3_num_zones < 0 or rule_2_min_stdv > 99:
-        print('Rule_3_num_zones must be between 0 and 99, flagging as invalid.')
+    elif rule_3_num_zones < 0 or rule_3_num_zones > 99:
+        raise ValueError('Rule_3_num_zones must be between 0 and 99, flagging as invalid.')
         return False       
 
     # check if ruleset is accepptable   
     if ruleset is None:
-        print('No ruleset exists, flagging as invalid.')
+        raise ValueError('No ruleset exists, flagging as invalid.')
         return False
     
     # check if alert is accepptable
     if alert is None:
-        print('No alert exists, flagging as invalid.')
+        raise ValueError('No alert exists, flagging as invalid.')
         return False
     elif alert not in ['Yes', 'No']:
-        print('Alert must be Yes or No, flagging as invalid.')
+        raise ValueError('Alert must be Yes or No, flagging as invalid.')
         return False
+    
+    # check method 
+    if method.lower() not in ['static', 'dynamic']:
+        raise ValueError('Method must be Static or Dynamic, flagging as invalid.')
+        return False
+    
+    
+    # set up alert directions 
+    alert_directions = [
+        'Incline only (any)', 
+        'Decline only (any)', 
+        'Incline only (+ zones only)', 
+        'Decline only (- zones only)', 
+        'Incline or Decline (any)',
+        'Incline or Decline (+/- zones only)'
+        ]
     
     # check if alert_direction is accepptable
     if alert_direction is None:
-        print('No alert_direction exists, flagging as invalid.')
+        raise ValueError('No alert_direction exists, flagging as invalid.')
         return False
-    elif alert_direction not in ['Incline Only', 'Decline Only', 'Both']:
-        print('Alert_direction must be Incline Only, Decline Only, Both, flagging as invalid.')
+    elif alert_direction not in alert_directions:
+        raise ValueError('Alert_direction is not supported.')
         return False  
 
-    # check if alert_direction is accepptable
-    if email is not None:
+    # check if email address is accepptable
+    if alert == 'Yes' and email is None:
+        raise ValueError('Must provide an email if alert is set to Yes.')
+        return False
+    elif email is not None:
         if '@' not in email or '.' not in email:
-            print('No @ or . character in email exists, flagging as invalid.')
+            raise ValueError('No @ or . character in email exists, flagging as invalid.')
             return False
 
     # check if ignore is accepptable
     if ignore is None:
-        print('No ignore exists, flagging as invalid.')
+        raise ValueError('No ignore exists, flagging as invalid.')
         return False
     elif ignore not in ['Yes', 'No']:
-        print('Ignore must be Yes or No, flagging as invalid.')
+        raise ValueError('Ignore must be Yes or No, flagging as invalid.')
         return False    
 
     # all good!
@@ -935,6 +935,62 @@ def transfer_xr_values(ds_to, ds_from, data_vars):
     return ds_to
 
 
+# meta, checks for nan
+def build_zones(arr):
+    """
+    takes a smoothed (or raw) ewmacd change detection
+    signal and classifies into 1 of 11 zones based on the
+    stdv values. this is used to help flag and colour
+    outputs for nrt monitoring. Outputs include 
+    zone direction information in way of sign (-/+).
+    """   
+
+    # set up zone ranges (stdvs)
+    zones = [
+        [0, 1],    # zone 1 - from 0 to 1 (+/-)
+        [1, 3],    # zone 2 - between 1 and 3 (+/-)
+        [3, 5],    # zone 3 - between 3 and 5 (+/-)
+        [5, 7],    # zone 4 - between 5 and 7 (+/-)
+        [7, 9],    # zone 5 - between 7 and 9 (+/-)
+        [9, 11],   # zone 6 - between 9 and 11 (+/-)
+        [11, 13],  # zone 7 - between 11 and 13 (+/-)
+        [13, 15],  # zone 8 - between 13 and 15 (+/-)
+        [15, 17],  # zone 9 - between 15 and 17 (+/-)
+        [17, 19],  # zone 10 - between 17 and 19 (+/-)
+        [19]       # zone 11- above 19 (+/-)
+    ]
+
+    # get sign mask
+    arr_neg_mask = np.where(arr < 0, True, False)
+    
+    # create template arr
+    arr_temp = np.full_like(arr, np.nan)
+    
+    # get abs of arr
+    arr = np.abs(arr)
+
+    # iter zones
+    for i, z in enumerate(zones, start=1):
+
+        if i == 1:
+            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
+            
+        elif i == 11:
+            arr_temp[np.where(arr >= z[0])] = i
+            
+        else:
+            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
+        
+    # check if arr sizes match
+    
+    # check if any nan within
+    
+    # mask signs
+    arr_temp = np.where(arr_neg_mask, arr_temp * -1, arr_temp)
+    
+    return arr_temp
+
+
 # meta, checks
 def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
     """calculates all runs, + and -, with optional
@@ -971,8 +1027,8 @@ def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
     direction = 0
     for i in range(1, len(arr)):
 
-        # if curr > prev, + 1
-        if arr[i] > arr[i - 1]:
+        # if curr not 0 and curr > prev, + 1
+        if arr[i] != 0 and arr[i] > arr[i - 1]:
             arr_incs[i] = arr_incs[i - 1] + 1  
             direction = 1  
 
@@ -988,8 +1044,8 @@ def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
     direction = 0
     for i in range(1, len(arr)):
 
-        # if curr < prev, - 1
-        if arr[i] < arr[i - 1]:
+        # if curr not 0 and curr < prev, - 1
+        if arr[i] != 0 and arr[i] < arr[i - 1]:
             arr_decs[i] = arr_decs[i - 1] - 1
             direction = -1  
 
@@ -1070,13 +1126,15 @@ def build_rule_three_spikes(arr, min_stdv=3):
     return arr_spikes
 
 
-# meta
-def build_alerts(ds, ruleset=None, direction=None):
+# meta, checks
+def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1&2|3', direction='Decline'):
     """
     Builds alert mask (1s and 0s) based on combined rule
-    values and assigned ruleset.
+    values and assigned ruleset. Takes several numpy arrays
+    as input, for rule 1, rule 2, rule 3 either static or 
+    dynamic.
     """
-
+    
     # set up valid rulesets
     valid_rules = [
         '1', 
@@ -1091,97 +1149,82 @@ def build_alerts(ds, ruleset=None, direction=None):
         '1&2&3', 
         '1|2&3',
         '1&2|3', 
-        '1|2|3']
-
-    # check dataset
-    if not isinstance(ds, xr.Dataset):
-        raise ValueError('Input dataset must be a xarray dataset.')
-
-    # check required static rule vars in dataset
-    static_vars = ['static_rule_one', 'static_rule_two', 'static_rule_three', 'static_alerts']
-    dynamic_vars = ['dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three', 'dynamic_alerts']
-    for var in static_vars + dynamic_vars:
-        if var not in ds:
-            raise ValueError('Could not find variable: {} in dataset.'.format(var))
-
+        '1|2|3'
+    ]
+    
     # check if ruleset in allowed rules, direction is valid
     if ruleset not in valid_rules:
         raise ValueError('Ruleset is not supported.')
     elif direction not in ['Incline', 'Decline']:
         raise ValueError('Direction is not supported.')
-
-    # build copy of input dataset for temp working
-    ds_alr = ds.copy(deep=True)
-
+        
+    # check nan
+    if np.isnan(arr_r1).all():
+        return np.zeros(len(arr_r1))
+    elif np.isnan(arr_r2).all():
+        return np.zeros(len(arr_r2))
+    elif np.isnan(arr_r3).all():
+        return np.zeros(len(arr_r3))
+    
+    # check if all arrays same size
+    #if len(arr_r1) != len(arr_r2) != len(arr_r3):
+        #return np.zeros(len(arr_r1))
+    
     # correct raw rule vals for direction and set 1 if alert, 0 if not
-    for var in static_vars + dynamic_vars: 
-        if direction == 'Incline':
-            ds_alr[var] = xr.where(ds_alr[var] > 0, 1, 0)
-        elif direction == 'Decline':
-            ds_alr[var] = xr.where(ds_alr[var] < 0, 1, 0)
-
-    # set up short var names for presentation
-    sr1, sr2, sr3 = 'static_rule_one', 'static_rule_two', 'static_rule_three'
-    dr1, dr2, dr3 = 'dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three'
-
+    if direction == 'Incline':
+        arr_r1 = np.where(arr_r1 > 0, 1, 0)
+        arr_r2 = np.where(arr_r2 > 0, 1, 0)
+        arr_r3 = np.where(arr_r3 > 0, 1, 0)
+        
+    elif direction == 'Decline':
+        arr_r1 = np.where(arr_r1 < 0, 1, 0)
+        arr_r2 = np.where(arr_r2 < 0, 1, 0)
+        arr_r3 = np.where(arr_r3 < 0, 1, 0)
+        
+    # elif both
+        
     # create alert arrays based on singular rule
     if ruleset == '1':
-        ds_alr['static_alerts']  = ds_alr[sr1]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1]
+        arr_alerts = arr_r1
     elif ruleset == '2':
-        ds_alr['static_alerts']  = ds_alr[sr2]
-        ds_alr['dynamic_alerts'] = ds_alr[dr2]
+        arr_alerts = arr_r2
     elif ruleset == '3':
-        ds_alr['static_alerts']  = ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr3]
-
+        arr_alerts = arr_r3    
+    
     # create alert arrays based on dual "and" rule
     if ruleset == '1&2':
-        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2]
+        arr_alerts  = arr_r1 & arr_r2
     elif ruleset == '1&3':
-        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr3]
+        arr_alerts  = arr_r1 & arr_r3
     elif ruleset == '2&3':
-        ds_alr['static_alerts']  = ds_alr[sr2] & ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr2] & ds_alr[dr3]    
-
+        arr_alerts  = arr_r2 & arr_r3  
+    
     # create alert arrays based on dual "or" rule
     if ruleset == '1|2':
-        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2]
+        arr_alerts  = arr_r1 | arr_r2
     elif ruleset == '1|3':
-        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr3]
+        arr_alerts  = arr_r1 | arr_r3
     elif ruleset == '2|3':
-        ds_alr['static_alerts']  = ds_alr[sr2] | ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr2] | ds_alr[dr3]    
-
+        arr_alerts  = arr_r2 | arr_r3    
+    
     # create alert arrays based on complex rule
     if ruleset == '1&2&3':  
-        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2] & ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2] & ds_alr[dr3]
+        arr_alerts  = arr_r1 & arr_r2 & arr_r3
     elif ruleset == '1|2&3':  
-        ds_alr['static_alerts']  = ds_alr[sr1] | (ds_alr[sr2] & ds_alr[sr3])
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] | (ds_alr[dr2] & ds_alr[dr3])
+        arr_alerts  = arr_r1 | arr_r2 & arr_r3
     elif ruleset == '1&2|3':  
-        ds_alr['static_alerts']  = (ds_alr[sr1] & ds_alr[sr2]) | ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = (ds_alr[dr1] & ds_alr[dr2]) | ds_alr[dr3]
+        arr_alerts  = arr_r1 & arr_r2 | arr_r3
     elif ruleset == '1|2|3':  
-        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2] | ds_alr[sr3]
-        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2] | ds_alr[dr3]
-
-    # check if array sizes match
-    if len(ds['static_alerts']) != len(ds_alr['static_alerts']):
-        raise ValueError('Static alert array incorrect size.')
-    elif len(ds['dynamic_alerts']) != len(ds_alr['dynamic_alerts']):
-        raise ValueError('Dynamic alert array incorrect size.')
-
-    # transfer alert arrays over to original dataset
-    ds['static_alerts'] = ds_alr['static_alerts']
-    ds['dynamic_alerts'] = ds_alr['dynamic_alerts']
+        arr_alerts  = arr_r1 | arr_r2 | arr_r3
     
-    return ds
+    # check nan
+    if np.isnan(arr_alerts).all():
+        return np.zeros(len(arr_alerts))
+    
+    return arr_alerts
+
+
+
 
 
 
@@ -1209,179 +1252,6 @@ def get_stdv_from_zone(num_zones=1):
 
 
 
-# deprecated, meta checks 
-def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<=', bidirectional=False):
-    """
-    takes array of smoothed change output and thresholds out
-    any values outside of a specified minimum zone e.g. 1.
-    """
-    
-    # check direction
-    if direction not in ['incline', 'decline']:
-        raise ValueError('Direction must be incline or decline.')
-        
-    # checks
-    if operator not in ['<', '<=', '>', '>=']:
-        raise ValueError('Operator must be <, <=, >, >=')
-        
-    # set stdv to negative if decline
-    if direction == 'decline':
-        min_stdv = min_stdv * -1
-        
-    # check operator matches direction 
-    if direction == 'incline' and operator not in ['>', '>=']:
-        print('Operator must be > or >= when using incline. Setting to >=.')
-        operator = '>='
-    elif direction == 'decline' and operator not in ['<', '<=']:
-        print('Operator must be < or <= when using decline. Setting to <=.')
-        operator = '<='
-
-    # operate based on 
-    if bidirectional:
-        print('Bidrectional enabled, ignoring direction.')
-        arr_abs = np.abs(arr)
-        
-        if '=' in operator:
-            arr_thresholded = np.where(arr_abs >= abs(min_stdv), arr, np.nan)
-        else:
-            arr_thresholded = np.where(arr_abs > abs(min_stdv), arr, np.nan)
-        
-    elif operator == '<':
-        arr_thresholded = np.where(arr < min_stdv, arr, np.nan)
-    elif operator == '<=':
-        arr_thresholded = np.where(arr <= min_stdv, arr, np.nan)
-    elif operator == '>':
-        arr_thresholded = np.where(arr > min_stdv, arr, np.nan)
-    elif operator == '>=':
-        arr_thresholded = np.where(arr >= min_stdv, arr, np.nan)
-        
-    return arr_thresholded
-
-  
-# deprecated meta checks
-def apply_rule_three(arr, direction='decline', num_stdv_jumped=3, min_consequtives=3, max_consequtives=3):
-    """
-    takes array of smoothed (or raw) change output and detects large, multi zone
-    jumps. candidates only registered if a specific number of post jump
-    runs detected (set min_consequtives to 0 for any spike regardless of runs).
-    jump_size is number of zones required to jump - default is 3 stdv (1 zone). max
-    consequtives will cut the run off after certain number of indices detected.
-    """
-    
-    # checks
-    if direction not in ['incline', 'decline']:
-        raise ValueError('Direction must be incline or decline.')
-        
-    # prepare max consequtives
-    if max_consequtives <= 0:
-        print('Warning, max consequtives must be > 0. Resetting to three.')
-        max_consequtives = 3
-            
-    # get diffs
-    diffs = np.diff(np.insert(arr, 0, arr[0]))
-    
-    # threshold by magnitude of jump
-    if direction == 'incline':
-        arr_jumps = diffs > num_stdv_jumped
-    elif direction == 'decline':
-        arr_jumps = diffs < (num_stdv_jumped * -1)
-        
-    # iter each spike index and detect post-spike runs (as 1s)
-    indices = []
-    for i in np.where(arr_jumps)[0]:
-
-        # loop each element in array from current index and calc diff
-        for e, v in enumerate(arr[i:]):
-            diff = np.abs(np.abs(arr[i]) - np.abs(v))
-
-            # if diff is less than certain jump size record it, else skip
-            # todo diff < 3 is check to see if stays within one zone of devs
-            if diff < 3 and e <= max_consequtives:
-                indices.append(i + e)
-            else:
-                break 
-                
-    # set 1 to every flagged index, 0 to all else
-    arr_masked = np.zeros_like(arr)
-    arr_masked[indices] = 1
-    
-    # count continuous runs for requested vector value
-    arr_extended = np.concatenate(([0], arr_masked, [0]))        # pad array with empty begin and end elements
-    idx = np.flatnonzero(arr_extended[1:] != arr_extended[:-1])  # get start and end indexes
-    arr_extended[1:][idx[1::2]] = idx[::2] - idx[1::2]           # grab breaks, prev - current, also trim extended elements
-    arr_counted = arr_extended.cumsum()[1:-1]                    # apply cumulative sum
-    
-    # threshold out specific run counts
-    if min_consequtives is not None:
-        arr_counted = np.where(arr_counted >= min_consequtives, arr_counted, 0)
-
-    # replace 0s with nans
-    arr_counted = np.where(arr_counted != 0, arr_counted, np.nan)
-    
-    return arr_counted
-
-
-# meta checks todo count runs???
-def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
-    """
-    take pre-generated rule arrays and combine where requested.
-    """
-    
-    allowed_rules = [
-        '1', '2', '3', '1&2', '1&3', '2&3', 
-        '1|2', '1|3', '2|3', '1&2&3', '1|2&3',
-        '1&2|3', '1|2|3']
-    
-    # checks
-    if ruleset not in allowed_rules:
-        raise ValueError('Ruleset set is not supported.')
-    
-    # convert rule arrays to binary masks
-    arr_r1_mask = ~np.isnan(arr_r1)
-    arr_r2_mask = ~np.isnan(arr_r2)
-    arr_r3_mask = ~np.isnan(arr_r3)
-        
-    # set signular rules
-    if ruleset == '1':
-        arr_comb = np.where(arr_r1_mask, 1, 0)
-    elif ruleset == '2':
-        arr_comb = np.where(arr_r2_mask, 1, 0)
-    elif ruleset == '3':
-        arr_comb = np.where(arr_r3_mask, 1, 0)
-    
-    # set combined dual ruleset
-    elif ruleset == '1&2':
-        arr_comb = np.where(arr_r1_mask & arr_r2_mask, 1, 0)
-    elif ruleset == '1&3':
-        arr_comb = np.where(arr_r1_mask & arr_r3_mask, 1, 0)        
-    elif ruleset == '2&3':
-        arr_comb = np.where(arr_r2_mask & arr_r3_mask, 1, 0)             
-        
-    # set either or dual ruleset
-    elif ruleset == '1|2':
-        arr_comb = np.where(arr_r1_mask | arr_r2_mask, 1, 0)  
-    elif ruleset == '1|3':
-        arr_comb = np.where(arr_r1_mask | arr_r3_mask, 1, 0) 
-    elif ruleset == '2|3':
-        arr_comb = np.where(arr_r2_mask | arr_r3_mask, 1, 0)     
-        
-    # set combined several ruleset
-    elif ruleset == '1&2&3':  
-        arr_comb = np.where(arr_r1_mask & arr_r2_mask & arr_r3_mask, 1, 0)
-    elif ruleset == '1|2&3':  
-        arr_comb = np.where(arr_r1_mask | (arr_r2_mask & arr_r3_mask), 1, 0)        
-    elif ruleset == '1&2|3':  
-        arr_comb = np.where((arr_r1_mask & arr_r2_mask) | arr_r3_mask, 1, 0)  
-    elif ruleset == '1|2|3':  
-        arr_comb = np.where(arr_r1_mask | arr_r2_mask | arr_r3_mask, 1, 0)
-        
-    # count runs todo
-    
-        
-    # replace 0s with nans
-    arr_comb = np.where(arr_comb != 0, arr_comb, np.nan)
-        
-    return arr_comb
 
 
 # meta, checks, check rule 2 operator is right
@@ -2773,3 +2643,292 @@ def sync_new_and_old_cubes(ds_exist, ds_new, out_nc):
         return
 
  
+
+
+# deprecated
+def build_alerts_xr(ds, ruleset=None, direction=None):
+    """
+    Builds alert mask (1s and 0s) based on combined rule
+    values and assigned ruleset.
+    """
+
+    # set up valid rulesets
+    valid_rules = [
+        '1', 
+        '2', 
+        '3', 
+        '1&2', 
+        '1&3', 
+        '2&3', 
+        '1|2', 
+        '1|3', 
+        '2|3', 
+        '1&2&3', 
+        '1|2&3',
+        '1&2|3', 
+        '1|2|3']
+
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise ValueError('Input dataset must be a xarray dataset.')
+
+    # check required static rule vars in dataset
+    static_vars = ['static_rule_one', 'static_rule_two', 'static_rule_three', 'static_alerts']
+    dynamic_vars = ['dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three', 'dynamic_alerts']
+    for var in static_vars + dynamic_vars:
+        if var not in ds:
+            raise ValueError('Could not find variable: {} in dataset.'.format(var))
+
+    # check if ruleset in allowed rules, direction is valid
+    if ruleset not in valid_rules:
+        raise ValueError('Ruleset is not supported.')
+    elif direction not in ['Incline', 'Decline']:
+        raise ValueError('Direction is not supported.')
+
+    # build copy of input dataset for temp working
+    ds_alr = ds.copy(deep=True)
+
+    # correct raw rule vals for direction and set 1 if alert, 0 if not
+    for var in static_vars + dynamic_vars: 
+        if direction == 'Incline':
+            ds_alr[var] = xr.where(ds_alr[var] > 0, 1, 0)
+        elif direction == 'Decline':
+            ds_alr[var] = xr.where(ds_alr[var] < 0, 1, 0)
+
+    # set up short var names for presentation
+    sr1, sr2, sr3 = 'static_rule_one', 'static_rule_two', 'static_rule_three'
+    dr1, dr2, dr3 = 'dynamic_rule_one', 'dynamic_rule_two', 'dynamic_rule_three'
+
+    # create alert arrays based on singular rule
+    if ruleset == '1':
+        ds_alr['static_alerts']  = ds_alr[sr1]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1]
+    elif ruleset == '2':
+        ds_alr['static_alerts']  = ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2]
+    elif ruleset == '3':
+        ds_alr['static_alerts']  = ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr3]
+
+    # create alert arrays based on dual "and" rule
+    if ruleset == '1&2':
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2]
+    elif ruleset == '1&3':
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr3]
+    elif ruleset == '2&3':
+        ds_alr['static_alerts']  = ds_alr[sr2] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2] & ds_alr[dr3]    
+
+    # create alert arrays based on dual "or" rule
+    if ruleset == '1|2':
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2]
+    elif ruleset == '1|3':
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr3]
+    elif ruleset == '2|3':
+        ds_alr['static_alerts']  = ds_alr[sr2] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr2] | ds_alr[dr3]    
+
+    # create alert arrays based on complex rule
+    if ruleset == '1&2&3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] & ds_alr[sr2] & ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] & ds_alr[dr2] & ds_alr[dr3]
+    elif ruleset == '1|2&3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] | (ds_alr[sr2] & ds_alr[sr3])
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | (ds_alr[dr2] & ds_alr[dr3])
+    elif ruleset == '1&2|3':  
+        ds_alr['static_alerts']  = (ds_alr[sr1] & ds_alr[sr2]) | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = (ds_alr[dr1] & ds_alr[dr2]) | ds_alr[dr3]
+    elif ruleset == '1|2|3':  
+        ds_alr['static_alerts']  = ds_alr[sr1] | ds_alr[sr2] | ds_alr[sr3]
+        ds_alr['dynamic_alerts'] = ds_alr[dr1] | ds_alr[dr2] | ds_alr[dr3]
+
+    # check if array sizes match
+    if len(ds['static_alerts']) != len(ds_alr['static_alerts']):
+        raise ValueError('Static alert array incorrect size.')
+    elif len(ds['dynamic_alerts']) != len(ds_alr['dynamic_alerts']):
+        raise ValueError('Dynamic alert array incorrect size.')
+
+    # transfer alert arrays over to original dataset
+    ds['static_alerts'] = ds_alr['static_alerts']
+    ds['dynamic_alerts'] = ds_alr['dynamic_alerts']
+    
+    return ds
+
+
+# deprecated, meta checks 
+def apply_rule_two(arr, direction='decline', min_stdv=1, operator='<=', bidirectional=False):
+    """
+    takes array of smoothed change output and thresholds out
+    any values outside of a specified minimum zone e.g. 1.
+    """
+    
+    # check direction
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
+        
+    # checks
+    if operator not in ['<', '<=', '>', '>=']:
+        raise ValueError('Operator must be <, <=, >, >=')
+        
+    # set stdv to negative if decline
+    if direction == 'decline':
+        min_stdv = min_stdv * -1
+        
+    # check operator matches direction 
+    if direction == 'incline' and operator not in ['>', '>=']:
+        print('Operator must be > or >= when using incline. Setting to >=.')
+        operator = '>='
+    elif direction == 'decline' and operator not in ['<', '<=']:
+        print('Operator must be < or <= when using decline. Setting to <=.')
+        operator = '<='
+
+    # operate based on 
+    if bidirectional:
+        print('Bidrectional enabled, ignoring direction.')
+        arr_abs = np.abs(arr)
+        
+        if '=' in operator:
+            arr_thresholded = np.where(arr_abs >= abs(min_stdv), arr, np.nan)
+        else:
+            arr_thresholded = np.where(arr_abs > abs(min_stdv), arr, np.nan)
+        
+    elif operator == '<':
+        arr_thresholded = np.where(arr < min_stdv, arr, np.nan)
+    elif operator == '<=':
+        arr_thresholded = np.where(arr <= min_stdv, arr, np.nan)
+    elif operator == '>':
+        arr_thresholded = np.where(arr > min_stdv, arr, np.nan)
+    elif operator == '>=':
+        arr_thresholded = np.where(arr >= min_stdv, arr, np.nan)
+        
+    return arr_thresholded
+
+  
+# deprecated meta checks
+def apply_rule_three(arr, direction='decline', num_stdv_jumped=3, min_consequtives=3, max_consequtives=3):
+    """
+    takes array of smoothed (or raw) change output and detects large, multi zone
+    jumps. candidates only registered if a specific number of post jump
+    runs detected (set min_consequtives to 0 for any spike regardless of runs).
+    jump_size is number of zones required to jump - default is 3 stdv (1 zone). max
+    consequtives will cut the run off after certain number of indices detected.
+    """
+    
+    # checks
+    if direction not in ['incline', 'decline']:
+        raise ValueError('Direction must be incline or decline.')
+        
+    # prepare max consequtives
+    if max_consequtives <= 0:
+        print('Warning, max consequtives must be > 0. Resetting to three.')
+        max_consequtives = 3
+            
+    # get diffs
+    diffs = np.diff(np.insert(arr, 0, arr[0]))
+    
+    # threshold by magnitude of jump
+    if direction == 'incline':
+        arr_jumps = diffs > num_stdv_jumped
+    elif direction == 'decline':
+        arr_jumps = diffs < (num_stdv_jumped * -1)
+        
+    # iter each spike index and detect post-spike runs (as 1s)
+    indices = []
+    for i in np.where(arr_jumps)[0]:
+
+        # loop each element in array from current index and calc diff
+        for e, v in enumerate(arr[i:]):
+            diff = np.abs(np.abs(arr[i]) - np.abs(v))
+
+            # if diff is less than certain jump size record it, else skip
+            # todo diff < 3 is check to see if stays within one zone of devs
+            if diff < 3 and e <= max_consequtives:
+                indices.append(i + e)
+            else:
+                break 
+                
+    # set 1 to every flagged index, 0 to all else
+    arr_masked = np.zeros_like(arr)
+    arr_masked[indices] = 1
+    
+    # count continuous runs for requested vector value
+    arr_extended = np.concatenate(([0], arr_masked, [0]))        # pad array with empty begin and end elements
+    idx = np.flatnonzero(arr_extended[1:] != arr_extended[:-1])  # get start and end indexes
+    arr_extended[1:][idx[1::2]] = idx[::2] - idx[1::2]           # grab breaks, prev - current, also trim extended elements
+    arr_counted = arr_extended.cumsum()[1:-1]                    # apply cumulative sum
+    
+    # threshold out specific run counts
+    if min_consequtives is not None:
+        arr_counted = np.where(arr_counted >= min_consequtives, arr_counted, 0)
+
+    # replace 0s with nans
+    arr_counted = np.where(arr_counted != 0, arr_counted, np.nan)
+    
+    return arr_counted
+
+
+# meta checks todo count runs???
+def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
+    """
+    take pre-generated rule arrays and combine where requested.
+    """
+    
+    allowed_rules = [
+        '1', '2', '3', '1&2', '1&3', '2&3', 
+        '1|2', '1|3', '2|3', '1&2&3', '1|2&3',
+        '1&2|3', '1|2|3']
+    
+    # checks
+    if ruleset not in allowed_rules:
+        raise ValueError('Ruleset set is not supported.')
+    
+    # convert rule arrays to binary masks
+    arr_r1_mask = ~np.isnan(arr_r1)
+    arr_r2_mask = ~np.isnan(arr_r2)
+    arr_r3_mask = ~np.isnan(arr_r3)
+        
+    # set signular rules
+    if ruleset == '1':
+        arr_comb = np.where(arr_r1_mask, 1, 0)
+    elif ruleset == '2':
+        arr_comb = np.where(arr_r2_mask, 1, 0)
+    elif ruleset == '3':
+        arr_comb = np.where(arr_r3_mask, 1, 0)
+    
+    # set combined dual ruleset
+    elif ruleset == '1&2':
+        arr_comb = np.where(arr_r1_mask & arr_r2_mask, 1, 0)
+    elif ruleset == '1&3':
+        arr_comb = np.where(arr_r1_mask & arr_r3_mask, 1, 0)        
+    elif ruleset == '2&3':
+        arr_comb = np.where(arr_r2_mask & arr_r3_mask, 1, 0)             
+        
+    # set either or dual ruleset
+    elif ruleset == '1|2':
+        arr_comb = np.where(arr_r1_mask | arr_r2_mask, 1, 0)  
+    elif ruleset == '1|3':
+        arr_comb = np.where(arr_r1_mask | arr_r3_mask, 1, 0) 
+    elif ruleset == '2|3':
+        arr_comb = np.where(arr_r2_mask | arr_r3_mask, 1, 0)     
+        
+    # set combined several ruleset
+    elif ruleset == '1&2&3':  
+        arr_comb = np.where(arr_r1_mask & arr_r2_mask & arr_r3_mask, 1, 0)
+    elif ruleset == '1|2&3':  
+        arr_comb = np.where(arr_r1_mask | (arr_r2_mask & arr_r3_mask), 1, 0)        
+    elif ruleset == '1&2|3':  
+        arr_comb = np.where((arr_r1_mask & arr_r2_mask) | arr_r3_mask, 1, 0)  
+    elif ruleset == '1|2|3':  
+        arr_comb = np.where(arr_r1_mask | arr_r2_mask | arr_r3_mask, 1, 0)
+        
+    # count runs todo
+    
+        
+    # replace 0s with nans
+    arr_comb = np.where(arr_comb != 0, arr_comb, np.nan)
+        
+    return arr_comb

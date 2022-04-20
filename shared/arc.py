@@ -307,6 +307,7 @@ def prepare_fill_value_type(in_fill_value):
         return np.nan
 
 
+# deprecated
 def convert_resample_interval_code(code):
     """Takes a resample interval code from ArcGIS UI and
     translates it to xarray friendly format"""
@@ -321,7 +322,7 @@ def convert_resample_interval_code(code):
         arcpy.AddError('Resample method not supported.')
         raise
 
-
+# deprecated
 def convert_smoother_code(code):
     """Takes a smoother code from ArcGIS UI and
     translates it to xarray friendly format"""

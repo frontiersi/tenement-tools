@@ -1935,6 +1935,9 @@ def perform_mk_original(ds, pvalue=None, direction='both'):
     # check distance value
     if direction not in ['inc', 'dec', 'both']:
         raise ValueError('Direction value must be inc, dec or both.')
+        
+    # set p-value to none if equals 1 (i.e. gimme all tau)
+    pvalue = None if pvalue == 1 else pvalue
 
     # generate mk
     ds_mk = xr.apply_ufunc(
@@ -2056,10 +2059,11 @@ def perform_theilsen_slope(ds, alpha):
 
     # rename like var if exists, else ignore
     try:
-        ds_ts = ds_ts.rename({'like': 'theilsen'})
+        ds_ts = ds_ts.rename({'like': 'theil'})
     except:
         pass
-    
+
+    # reset to array if input was
     if was_da:
         ds_ts = ds_ts.to_array()
 
@@ -2229,10 +2233,10 @@ def perform_cva(ds, base_times=None, comp_times=None, reduce_comp=False,
         
         # do cva!
         ds_cva = __cva__(ds_base=ds_base, 
-                     ds_comp=da_comp, 
-                     vege_var=vege_var, 
-                     soil_var=soil_var, 
-                     tmf=tmf)
+                         ds_comp=da_comp, 
+                         vege_var=vege_var, 
+                         soil_var=soil_var, 
+                         tmf=tmf)
         
         # add to list
         ds_cva_list.append(ds_cva)
