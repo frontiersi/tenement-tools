@@ -453,7 +453,8 @@ def convert_arcpy_geom_to_gjson(arcpy_geom):
         print('Could not convert geojson to OGR geometry.')
         return
 
-   
+
+# deprecated
 def check_savitsky_inputs(window_length, polyorder):
     """Based on scipy, savitsk golay window length 
     must be odd, positive number, and polyorder must

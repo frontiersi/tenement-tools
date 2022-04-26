@@ -5,16 +5,6 @@ on a timeseries of vegetation index values (e.g. NDVI) stored in a xarray DataAr
 methodology is based on the TIMESAT 3.3 software. Some elements of Phenolopy were also
 inspired by the great work of Chad Burton (chad.burton@ga.gov.au).
 
-The script contains the following primary functions:
-    1. calc_vege_index: calculate one of several vegetation indices;
-    2. resample: resamples data to a defined time interval (e.g. bi-monthly);
-    3. removal_outliers: detects and removes timeseries outliers;
-    4. interpolate: fill in missing nan values;
-    5. smooth: applies one of various smoothers to raw vegetation data;
-    6. correct_upper_envelope: shift timeseries upwards closer to upper envelope;
-    7. detect_seasons: count num of seasons (i.e. peaks) in timeseries;
-    8. calc_phenometrics: generate phenological metrics on timeseries.
-
 Links:
 TIMESAT 3.3: http://web.nateko.lu.se/timesat/timesat.asp
 GitHub: https://github.com/lewistrotter/phenolopy
@@ -33,45 +23,105 @@ from datetime import datetime
 sys.path.append('../../shared')
 import tools
 
-from scipy.stats import zscore
+#from scipy.stats import zscore
+from scipy import interpolate as sci_interp
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
-from scipy.ndimage import gaussian_filter
 
-
-from collections import Counter
-
-
-def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=True):
+def enforce_edge_dates(ds, years=None):
     """
-    Takes an xarray dataset containing vegetation index variable and removes outliers within 
-    the timeseries on a per-pixel basis. The resulting dataset contains the timeseries 
-    with outliers set to nan. Can work on datasets with or without existing nan values. Note:
-    Zscore method will compute memory.
+    We need very accurate date start and ends for
+    consistent interpolation and resampling, so
+    this function checks if the 1st of jan for
+    start year and 31st of dec for end year exist
+    in the input xarray dataset. If they do not,
+    the function will take the closest index to it
+    and copy it (essentially a ffill and bfill). 
+    If s_year or e_year is none, first and last
+    time index year will be used.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional xr data type.
+    years : int or list 
+        A int of a specific year or a list of years.
+
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with a 
+        dummy 1st jan and 31st dec times (if needed).
+    
+    """
+
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not xarray type.')
+    elif 'time' not in ds:
+        raise ValueError('No time dimension in dataset.')
+        
+    # prepare years
+    if years is None or years == []:
+        s_year = int(ds['time.year'].isel(time=0))
+        e_year = int(ds['time.year'].isel(time=-1))
+    elif years is int:
+        s_year, e_year = years, years
+    else: 
+        s_year, e_year = years[0], years[-1]
+        
+    # check if years in dataset
+    if s_year not in ds['time.year']:
+        raise ValueError('Start year not in dataset.')
+    elif e_year not in ds['time.year']:
+        raise ValueError('End year not in dataset.')
+        
+    # prepare start date
+    s_dates = ds['time'].where(ds['time.year'] == s_year, drop=True)
+    s_date = s_dates.isel(time=0).dt.strftime('%Y-%m-%d')
+
+    # if start year not 1st jan..
+    if s_date != '{}-01-01'.format(s_year):
+
+        # copy first start year date, replace date, concat, sort
+        tmp = ds.sel(time=s_dates.isel(time=0)).copy()
+        tmp['time'] = np.datetime64('{}-01-01'.format(s_year))
+        ds = xr.concat([ds, tmp], dim='time').sortby('time')
+        
+    # likewise, prepare end date
+    e_dates = ds['time'].where(ds['time.year'] == e_year, drop=True)
+    e_date = e_dates.isel(time=-1).dt.strftime('%Y-%m-%d')
+
+    # if end year not 31st dec..
+    if e_date != '{}-12-31'.format(e_year):
+
+        # copy last end year date, replace date, concat, sort
+        tmp = ds.sel(time=e_dates.isel(time=-1)).copy()
+        tmp['time'] = np.datetime64('{}-12-31'.format(e_year))
+        ds = xr.concat([ds, tmp], dim='time').sortby('time')
+    
+    return ds
+
+
+def remove_spikes(ds, user_factor=2, win_size=3):
+    """
+    Takes an xarray dataset containing vegetation index variable and removes 
+    outliers within the timeseries on a per-pixel basis. The resulting dataset 
+    contains the timeseries with outliers set to nan. Can work on datasets with
+    or without existing nan values.
     
     Parameters
     ----------
     ds: xarray Dataset
         A two-dimensional or multi-dimensional array containing a vegetation 
         index variable (i.e. 'veg_index').
-    method: str
-        The outlier detection method to apply to the dataset. The median method detects 
-        outliers by calculating if values in pixel timeseries deviate more than a maximum 
-        deviation (cutoff) from the median in a moving window (half window width = number 
-        of values per year / 7) and it is lower than the mean value of its immediate neighbors 
-        minus the cutoff or it is larger than the highest value of its immediate neighbor plus 
-        The cutoff is the standard deviation of the entire time-series times a factor given by 
-        the user. The second method, zscore, is similar but uses zscore to detect whether outlier
-        is signficicantly (i.e. p-value) outside the population.
     user_factor: float
-        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. A higher factor 
-        value results in few outliers (i.e. only the biggest outliers). Default factor is 2.
-    z_pval: float
-        The p-value for zscore method. A more significant p-value (i.e. 0.01) results in fewer
-        outliers, a less significant p-value (i.e 0.1) results in more. Default is 0.05.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
+        An value between 0 to 10 which is used to 'multiply' the threshold cutoff. 
+        A higher factor value results in few outliers (i.e. only the biggest outliers). 
+        Default factor is 2.
+    win_size : int
+        Controls the size of the rolling window. Increase to capture more times
+        in the outlier assessment.
         
     Returns
     -------
@@ -81,266 +131,61 @@ def remove_outliers(ds, method='median', user_factor=2, z_pval=0.05, inplace=Tru
     """
     
     # notify user
-    print('Removing outliers via method: {}'.format(method))
-            
+    print('Removing spike outliers.')
+                
     # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, xr.Dataset):
         raise TypeError('Dataset not an xarray type.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimension in dataset.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+    elif 'veg_idx' not in ds:
+        raise ValueError('No veg_idx variable in dataset.')
 
     # check if user factor provided
     if user_factor <= 0:
-        raise TypeError('User factor is less than 0, must be above 0.')
-            
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
+        user_factor = 1
+
+    # check win_size not less than 3 and odd num
+    if win_size < 3:
+        win_size == 3
+    elif win_size % 2 == 0:
+        win_size += 1
+
+    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
+    cutoff = ds.std('time') * user_factor
+
+    # calc rolling median for whole dataset
+    ds_med = ds.rolling(time=win_size, center=True).median()        
         
-    # remove outliers based on user selected method
-    if method in ['median', 'zscore']:
-        
-        # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
-        cutoffs = ds.std('time') * user_factor
-
-        # generate outlier mask via median or zscore method
-        if method == 'median':
-
-            # calc mask of existing nan values (nan = True) in orig ds
-            ds_mask = xr.where(ds.isnull(), True, False)
-
-            # calc win size via num of dates in dataset
-            win_size = int(len(ds['time']) / 7)
-            win_size = int(win_size / int(len(ds.resample(time='1Y'))))
-
-            if win_size < 3:
-                win_size = 3
-                print('Generated roll window size less than 3, setting to default (3).')
-            elif win_size % 2 == 0:
-                win_size = win_size + 1
-                print('Generated roll window size is an even number, added 1 to make it odd ({0}).'.format(win_size))
-            else:
-                print('Generated roll window size is: {0}'.format(win_size))
-                
-            # temp - bug in rolling, need to rechunk
-            ds = ds.chunk(-1)
-
-            # calc rolling median for whole dataset
-            ds_med = ds.rolling(time=win_size, center=True, keep_attrs=True).median()
-            
-            # calc nan mask of start/end nans from roll, replace them with orig vals
-            med_mask = xr.where(ds_med.isnull(), True, False)
-            med_mask = xr.where(ds_mask != med_mask, True, False)
-            ds_med = xr.where(med_mask, ds, ds_med)
-
-            # calc abs diff between orig ds and med ds vals at each pixel
-            ds_diffs = abs(ds - ds_med)
-
-            # calc mask of outliers (outlier = True) where absolute diffs exceed cutoff
-            outlier_mask = xr.where(ds_diffs > cutoffs, True, False)
-
-        elif method == 'zscore':
-
-            # generate critical val from user provided p-value
-            if z_pval == 0.01:
-                crit_val = 2.3263
-            elif z_pval == 0.05:
-                crit_val = 1.6449
-            elif z_pval == 0.1:
-                crit_val = 1.2816
-            else:
-                raise ValueError('Zscore p-value not supported. Please use 0.1, 0.05 or 0.01.')
-
-            # calc zscore, ignore nans in timeseries vectors
-            zscores = ds.apply(zscore, nan_policy='omit', axis=0)
-
-            # calc mask of outliers (outlier = True) where zscore exceeds critical value
-            outlier_mask = xr.where(abs(zscores) > crit_val, True, False)
-
-        # shift values left and right one time index and combine, get mean and max for each window
-        lefts = ds.shift(time=1).where(outlier_mask)
-        rights = ds.shift(time=-1).where(outlier_mask)
-        nbr_means = (lefts + rights) / 2
-        nbr_maxs = xr.ufuncs.fmax(lefts, rights)
-
-        # keep nan only if middle val < mean of neighbours - cutoff or middle val > max val + cutoffs
-        outlier_mask = xr.where((ds.where(outlier_mask) < (nbr_means - cutoffs)) | 
-                                (ds.where(outlier_mask) > (nbr_maxs + cutoffs)), True, False)
-
-        # flag outliers as nan in original da
-        #ds = xr.where(outlier_mask, np.nan, ds)
-        ds = ds.where(~outlier_mask)
-        
-    else:
-        raise ValueError('Provided method not supported. Please use median or zscore.')
+    # calc abs diff of orig and med vals
+    ds_dif = abs(ds - ds_med)
     
-    if was_da:
-        ds = ds.to_array()
+    # calc mask
+    ds_mask = ds_dif > cutoff
+    
+    # shift vals left, right one time index, get mean and fmax per center
+    l = ds.shift(time=1).where(ds_mask)
+    r = ds.shift(time=-1).where(ds_mask)
+    ds_mean = (l + r) / 2
+    ds_fmax = xr.ufuncs.fmax(l, r)
+    
+    # flag only if mid val < mean of l, r - cutoff or mid val > max val + cutoff
+    ds_spikes = xr.where((ds.where(ds_mask) < (ds_mean - cutoff)) | 
+                         (ds.where(ds_mask) > (ds_fmax + cutoff)), True, False)    
+    
+    # set spikes to nan
+    ds = ds.where(~ds_spikes)    
 
     # notify user and return
     print('Outlier removal successful.')
     return ds
 
 
-def remove_overshoot_times(ds, max_times=3):
-    """
-    Takes an xarray dataset containing datetime index (time) and removes any 
-    times that are the non-dominant year This function exists due to resampling 
-    often adding an datetime at the end of the dataset that often stretches into 
-    the next year.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array.
-    max_times : int
-        The maximum number of times in an overshoot before the
-        function will abort. For example, if 3 times are in the
-        non-dominant year and the max_times is set to 2, no times
-        will be removed.
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with any 
-        times removed that occured in non-dominant year (if exists).
-    """    
-    # notify user
-    print('Removing times that occur in overshoot years.')
-
-    # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # get unique years in dataset as dict pairs
-    counts = Counter(list(ds['time.year'].values))
-    unq_years = np.array(list(counts.keys()))
-    unq_counts = np.array(list(counts.values()))
-    
-    if len(unq_years) > 1:
-        print('Detected 2 or more years in dataset. Removing overshoot times.')
-        
-        # get indexes of counts sorted lowest to highest
-        sort_count_idxs = unq_counts.argsort()
-        
-        # loop each and see if under max num times allowed
-        for idx in sort_count_idxs:
-            if unq_counts[idx] <= 3:
-                year, num = unq_years[idx], unq_counts[idx]
-                 
-                # notify
-                print('Dropped {} times for year {}.'.format(num, year))
-                
-                # remove all times that are not dominant year
-                ds = ds.where(ds['time.year'] != year, drop=True)
-                ds = ds.sortby('time')
-                
-    else:
-        print('Only 1 year detected. No data removed.')
-
-    if was_da:
-        ds = ds.to_array()
-
-    # notify and return
-    print('Removed times that occur in overshoot years successfully.')
-    return ds
-
-
-def conform_edge_dates(ds):
-    """
-    Takes an xarray dataset or array and checks if first and last dates in
-    dataset are jan 1st and december 31st, respectively. If not, function 
-    will create dummy scenes with a correct dates. It is essentially a bfill 
-    and ffill with new dates.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional xr data type.
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        dummy 1st jan and 31st dec times if needed.
-    """
-    
-    # notify user
-    print('Conforming edge dates.')
-    
-    # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
-    # get first, last datetime object
-    f_dt, l_dt = ds['time'].isel(time=0), ds['time'].isel(time=-1)
-
-    # convert to pandas timestamp
-    f_dt = pd.Timestamp(f_dt.values).to_pydatetime()
-    l_dt = pd.Timestamp(l_dt.values).to_pydatetime()
-
-    # copy and update first time if not 1st day
-    if f_dt.day != 1:
-        print('First date was not Jan 1st. Prepending dummy.')
-        f_da = ds.isel(time=0).copy(deep=True)
-        f_dt = f_dt.replace(month=1, day=1)
-        f_da['time'] = np.datetime64(f_dt)
-        ds = xr.concat([f_da, ds], dim='time')
-
-    # do the same for last time
-    if l_dt.day != 31:
-        print('Last date was not Dec 31st. Appending dummy.')
-        l_da = ds.isel(time=-1).copy(deep=True)
-        l_dt = l_dt.replace(month=12, day=31)
-        l_da['time'] = np.datetime64(l_dt)
-        ds = xr.concat([ds, l_da], dim='time')
-        
-    if was_da:
-        ds = ds.to_array()
-
-    # notify and return
-    print('Conformed edge dates successfully.')
-    return ds
-
-
-def resample(ds, interval='1M', inplace=True):
+def resample(ds, interval='1M'):
     """
     Takes an xarray dataset containing vegetation index variable and resamples
-    to a new temporal resolution. The available time intervals are 1W (weekly),
-    SM (bi-monthly) and 1M (monthly) resample intervals. The resulting dataset
-    contains the new resampled veg_idx variable.
+    to a new temporal resolution. The resulting dataset contains the new resampled 
+    veg_idx variable.
     
     Parameters
     ----------
@@ -350,8 +195,6 @@ def resample(ds, interval='1M', inplace=True):
     interval: str
         The new temporal interval which to resample the dataset to. Available
         intervals include 1W (weekly), 1SM (bi-month) and 1M (monthly).
-    inplace : bool
-        Copy new xarray into memory or modify inplace.
 
     Returns
     -------
@@ -363,181 +206,36 @@ def resample(ds, interval='1M', inplace=True):
     # notify user
     print('Resampling dataset.')
     
-    # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
         raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x, y dimension in dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+    elif 'veg_idx' not in ds:
+        raise ValueError('No veg_idx variable in dataset.')
+        
+    # check if interval supported
+    if interval is None:
+        raise ValueError('Did not provide a interval.')
+    elif interval not in ['1W', '2W', 'SM', 'SMS', '1M', '1D']:
+        raise ValueError('Interval is not supported.')
+        
+    # resample using median
+    ds = ds.resample(time=interval).median('time')
     
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # check if at least one year of data
-    if len(ds.groupby('time.year').groups) < 1:
-        raise ValueError('Need at least one year in dataset.')
-        
-    # get vars in ds
-    temp_vars = []
-    if isinstance(ds, xr.Dataset):
-        temp_vars = list(ds.data_vars)
-    elif isinstance(ds, xr.DataArray):
-        temp_vars = list(ds['variable'])
-
-    # check if vege var and soil var given
-    if 'veg_idx' not in temp_vars:
-        raise ValueError('Vege var name not in dataset.')
-        
-    # resample based on user selected interval and reducer
-    if interval in ['1W', '1SM', '1M']:
-        ds = ds.resample(time=interval).median('time', keep_attrs=True)
-    else:
-        raise ValueError('Provided resample interval not supported.')
-
-    if was_da:
-        ds = ds.to_array()
-
-    # notify user and return
-    print('Resampled dataset successful.')
+    # notify and return
     return ds
 
 
-def group(ds, interval='month', inplace=True):
+def interpolate(ds):
     """
-    Takes an xarray dataset containing a vegetation index variable, groups and 
-    reduces values based on a specified temporal group. The available group 
-    options are by month or week only. The resulting dataset contains the new 
-    grouped veg_index variable as a single year of weeks or months.
-    
-    Parameters
-    ----------
-    ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing a vegetation 
-        index variable (i.e. 'veg_idx').
-    interval: str
-        The groups which to reduce the dataset to. Available intervals only
-        include month and week at this stage.
-    inplace : bool
-        Copy new xarray into memory or modify inplace.
-
-    Returns
-    -------
-    ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        newly resampled 'veg_index' variable.
-    """
-    
-    # notify user
-    print('Grouping dataset.')
-    
-    # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x, y dimension in dataset.')
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
-    # check if at least one year of data
-    if len(ds.groupby('time.year').groups) < 1:
-        raise ValueError('Need at least one year in dataset.')
-        
-    # get vars in ds
-    temp_vars = []
-    if isinstance(ds, xr.Dataset):
-        temp_vars = list(ds.data_vars)
-    elif isinstance(ds, xr.DataArray):
-        temp_vars = list(ds['variable'])
-
-    # check if vege var and soil var given
-    if 'veg_idx' not in temp_vars:
-        raise ValueError('Vege var name not in dataset.')
-            
-    # get all years in dataset, choose middle year in array for labels
-    years = np.array([year for year in ds.groupby('time.year').groups])
-    year = np.take(years, years.size // 2)
-    
-    # notify user
-    print('Selecting year: {0} to re-label times after grouping.'.format(year))
-          
-    # group based on user selected interval and reducer
-    if interval in ['week', 'month']:
-        ds = ds.groupby('time' + '.' + interval).median('time', keep_attrs=True)
-        ds = ds.rename({interval: 'time'})
-    else:
-        raise ValueError('Provided interval not supported.')
-        
-    # correct time index following group by
-    if interval == 'month':
-        times = [datetime(year, int(dt), 1) for dt in ds['time']]
-    elif interval == 'week':
-        times = []
-        for dt in ds['time']:
-            dt_string = '{} {} {}'.format(year, int(dt), 1)
-            times.append(datetime.strptime(dt_string, '%Y %W %w'))
-    else:
-        raise ValueError('Interval was not found in dataset dimension. Aborting.')
-        
-    # check if someting was returned
-    if not times:
-        raise ValueError('No times returned.')
-        
-    # append array of dts to dataset
-    ds['time'] = [np.datetime64(dt) for dt in times]
-            
-    if was_da:
-        ds = ds.to_array()
-
-    # notify user and return
-    print('Grouped dataset successful.')
-    return ds
-
-    
-def interpolate(ds, method='full', inplace=True):
-    """
-    Takes a xarray dataset/array and performs linear interpolation across
-    all times in dataset. This is a wrapper for perform_interp function. 
-    The method can be set to full or half. Full will use the built in xr 
-    interpolate_na method, which is robust and dask friendly but very slow. 
-    The quicker alternative is half, which only interpolates times that are 
-    all nan. Despite being slower, full method recommended.
+    Takes a xarray dataset and performs linear interpolation across
+    all times in dataset. This is just a helper function. 
 
     Parameters
     ----------
     ds: xarray dataset/array
         A dataset with x, y and time dims.
-    method : str
-        Set the interpolation method: full or half. Full will use 
-        the built in interpolate_na method, which is robust and dask 
-        friendly but very slow. The quicker alternative is half, which 
-        only interpolates times that are all nan.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
 
     Returns
     ----------
@@ -548,69 +246,101 @@ def interpolate(ds, method='full', inplace=True):
     print('Interpolating empty values in dataset.')
 
     # check xr type, dims, num time
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, xr.Dataset):
         raise TypeError('Dataset not an xarray type.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x or y dimensions in dataset.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimensions in dataset.')
+    elif 'veg_idx' not in ds:
+        raise ValueError('No veg_idx variable in dataset.')
         
-    # check if method is valid
-    if method not in ['full', 'half']:
-        raise ValueError('Method must be full or half.')
-        
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-            
-    # interpolate for ds
-    ds = tools.perform_interp(ds=ds, method=method)
+    # check chunks, ensure chunked -1 if so else error occurs
+    if bool(ds.chunks):
+        ds = ds.chunk({'time': -1})
 
-    if was_da:
-        ds = ds.to_array()
+    # interpolate all nan pixels linearly
+    ds = ds.interpolate_na(dim='time', method='linear')
 
     # notify and return
     print('Interpolated empty values successfully.')
-    return ds   
+    return ds  
 
-# create savitsky smoother func
-def __sav_smoother__(da, window_length, polyorder):
-    """
-    Helper method for smooth(), should only be called by smooth.
-    """
-    return da.apply(savgol_filter, window_length=window_length, polyorder=polyorder)
 
-# create gaussian smoother func
-def __gau_smoother__(da, sigma):
+def drop_overshoot_dates(ds, min_dates=3):
     """
-    Helper method for smooth(), should only be called by smooth.
-    """
-    return da.apply(gaussian_filter, sigma=sigma)
+    Takes an xarray dataset containing datetime index (time) 
+    and drops all data for any start and end year that has 
+    <= the max dates set. This is required due to resampling
+    frequencies often adding an extra date to the end of the
+    dataset (e.g., 2020-12-30 might become 2021-01-04). We
+    dont want these extra dates. Typically only run this
+    after resampling has been performed, don't use on raw
+    data.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional array.
+    min_dates : int
+        The minimum number of dates in a year allowed.
+        If there are <= to this number, the year will be
+        dropped (only start and end years).
 
-def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):  
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with any 
+        times removed that occured in non-dominant year (if exists).
+    """    
+    
+    # notify user
+    print('Removing overshoot date data.')
+    
+    # check xr type, dims
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in ds or 'y' not in ds or 'time' not in ds.dims:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+        
+    # check min dates is valid
+    if min_dates is None or min_dates <= 0:
+        raise ValueError('Minimum dates must be > 0.')
+    
+    # get the first and last years in dataset
+    start_year = int(ds['time.year'].isel(time=0))
+    end_year = int(ds['time.year'].isel(time=-1))
+    
+    # check start year <= min allowed dates, drop if violated
+    start_count = len(ds['time'].where(ds['time.year'] == start_year, drop=True))
+    if start_count <= min_dates:
+        ds = ds.where(ds['time.year'] != start_year, drop=True)
+        print('Removed overshoot start year: {}.'.format(start_year))
+    
+    # check end year <= min allowed dates, drop if violated
+    end_count = len(ds['time'].where(ds['time.year'] == end_year, drop=True))
+    if end_count <= min_dates:
+        ds = ds.where(ds['time.year'] != end_year, drop=True)
+        print('Removed overshoot end year: {}.'.format(end_year))
+        
+    # notify and return
+    print('Removed overshoot years successfully.')
+    return ds
+
+
+def smooth(ds, var='veg_idx', window_length=3, polyorder=1):  
     """
-    Takes an xarray dataset containing vegetation index variable and smoothes timeseries
-    timeseries on a per-pixel basis. The resulting dataset contains a smoother timeseries. 
-    Recommended that no nan values present in dataset.
+    Takes an xarray dataset containing vegetation index variable 
+    and smoothes timeseries on a per-pixel basis. The resulting 
+    dataset contains a smoother timeseries. Recommended that no nan 
+    values present in dataset. Uses savitsky-golay filtering method.
     
     Parameters
     ----------
     ds: xarray Dataset
         A two-dimensional or multi-dimensional array containing a vegetation 
         index variable (i.e. 'veg_index').
-    method: str
-        The smoothing algorithm to apply to the dataset. The savitsky method uses the robust
-        savitsky-golay smooting technique, as per TIMESAT. Symmetrical gaussian applies a simple 
-        symmetrical gaussian. Default is savitsky.
+    var : string
+        A variable name which will be smoothed. This var is replaced with smoothed
+        values of same array size within this 
     window_length: int
         The length of the filter window (i.e., the number of coefficients). Value must 
         be a positive odd integer. The larger the window length, the smoother the dataset.
@@ -618,9 +348,6 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
     polyorder: int
         The order of the polynomial used to fit the samples. Must be a odd number (int) and
         less than window_length.
-    sigma: int
-        Standard deviation for Gaussian kernel. The standard deviations of the Gaussian filter 
-        must be provided as a single number between 1-9.
         
     Returns
     -------
@@ -630,1744 +357,2268 @@ def smooth(ds, method='savitsky', window_length=3, polyorder=1, sigma=1):
     """
     
     # notify user
-    print('Smoothing data via method: {0}.'.format(method))
+    print('Smoothing data.')
     
     # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, xr.Dataset):
         raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x, y dimension in dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+        
+    # check if var is in dataset
+    if var is None:
+        raise ValueError('No variable provided.')
+    elif var not in ds:
+        raise ValueError('No {} variable in dataset.'.format(var))
     
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
     # check params
     if window_length <= 0 :
-        raise ValueError('Window_length is <= 0. Must be greater than 0.')
+        raise ValueError('Window_length must be greater than 0.')
     elif polyorder <= 0:
-        raise ValueError('Polyorder is <= 0. Must be greater than 0.')
+        raise ValueError('Polyorder must be greater than 0.')
     elif polyorder > window_length:
-        raise ValueError('Polyorder is > than window length. Must be smaller value.')
-    elif sigma < 1 or sigma > 9:
-        raise ValueError('Sigma is < 1 or > 9. Must be between 1 - 9.')
-        
-    # perform smoothing based on user selected method     
-    if method in ['savitsky', 'symm_gaussian']:
-        if method == 'savitsky':
-            
-            #Set the method we want to pass to xr.map_blocks
-            smoother = __sav_smoother__
-            
-            # create kwargs dict
-            kwargs = {'window_length': window_length, 
-                      'polyorder': polyorder}
-
-        elif method == 'symm_gaussian':
-            
-            #Set the method we want to pass to xr.map_blocks
-            smoother = __gau_smoother__
-            
-            # create kwargs dict
-            kwargs = {'sigma': sigma}
-               
-        # map func to dask chunks
-        #temp = xr.full_like(ds, fill_value=np.nan)
-        ds = xr.map_blocks(smoother, ds, template=ds, kwargs=kwargs)
-        
-    else:
-        raise ValueError('Provided method not supported. Please use savtisky or symm_gaussian.')
+        raise ValueError('Polyorder is > than window length, must be less than.')
     
-    if was_da:
-        ds = ds.to_array()
+    # get axis of time dimension
+    for idx, dim in enumerate(list(ds.dims)):
+        if dim == 'time':
+            axis = idx
+    
+    # set up kwargs
+    kwargs = {
+        'window_length': window_length, 
+        'polyorder':polyorder, 
+        'mode': 'nearest', 
+        'axis': axis}
+
+    # perform smoothing based on savitsky golay along time dim
+    ds[var] = xr.apply_ufunc(savgol_filter, 
+                             ds[var],
+                             dask='parallelized',
+                             kwargs=kwargs)
 
     # notify user and return
-    print('Smoothing successful.\n')
+    print('Smoothing successful.')
     return ds
 
-# set up calc peaks functions
-def __calc_peaks__(x, t):
-    """
-    Helper function for calc_num_seasons(), should not be called directly.
-    """
 
-    # calc num peaks
-    peaks, _ = find_peaks(x, prominence=t)
+def subset_via_years(ds, years):
+    """
+    Takes an xarray Dataset and a year or list of 
+    years and subsets the input dataset to these
+    years. All other years in the dataset will be
+    dropped.
     
-    # check and correct to 1 if nothing
-    if len(peaks) > 0:
-        num_peaks = len(peaks)
-    else:
-        num_peaks = 1
-
-    # return
-    return num_peaks
-
-
-def calc_num_seasons(ds):
-    """
-    Takes an xarray Dataset containing vege values and calculates the number of
-    seasons for each timeseries pixel. The number of seasons provides a count of 
-    number of significant peaks in each pixel timeseries. Note: this function will
-    rechunk the dataset.
-
     Parameters
     ----------
     ds: xarray Dataset
-        A two-dimensional or multi-dimensional array containing an Dataset of veg_index 
-        and time values. 
-
+        A two-dimensional or multi-dimensional array.
+    
+    years: int, list
+        A year (int) or a list of years (list of ints)
+        that represent the years user wants to subset
+        the dataset down to. All other years outside
+        of this list will be dropped.
+        
     Returns
     -------
-    da_num_seasons : xarray DataArray
-        An xarray DataSet type with an x and y dimension (no time). Each pixel is the 
-        number of seasons value detected across the timeseries at each pixel.
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with 
+        all years in the years input.
     """
     
     # notify user
-    print('Beginning calculation of number of seasons.')
+    print('Subsetting data.')
     
     # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if not isinstance(ds, xr.Dataset):
         raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x, y dimension in dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+        
+    # check if var is in dataset
+    if years is None or years == []:
+        return ds
+    elif not isinstance(years, (int, list)):
+        raise TypeError('Years must be integer or list of integers.')
+        
+    # prepare years
+    if isinstance(years, int):
+        years = [years]
 
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
+    # subset using years
+    ds = ds.where(ds['time.year'].isin(years), drop=True) 
+    
+    # check if dataset is empty
+    if len(ds['time']) == 0:
+        raise ValueError('No data left after subset.')
+        
+    # notify and return
+    print('Subset years successfully.')
+    return ds
+
+
+def subset_via_years_with_buffers(ds, years=None):
+    """
+    Takes an xarray Dataset and a year or list of 
+    years and subsets the input dataset to these
+    years. All other years in the dataset will be
+    dropped. This method takes a month of data
+    either side of the lowest and highest year in 
+    the input years array (if exists) for interp 
+    purposes.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional array.
+    
+    years: int, list
+        A year (int) or a list of years (list of ints)
+        that represent the years user wants to subset
+        the dataset down to. All other years outside
+        of this list will be dropped.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with 
+        all years in the years input.
+    """
+    
+    # notify user
+    print('Subsetting data with buffers.')
+    
+    # check xr type, dims
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')
+        
+    # check if var is in dataset
+    if years is None or years == []:
+        return ds
+    elif not isinstance(years, (int, list)):
+        raise TypeError('Years must be integer or list of integers.')
+        
+    # prepare years
+    if isinstance(years, int):
+        years = [years]
+        
+    # get range of dates with a month buffer either side   
+    s_date = '{}-12-01'.format(years[0] - 1)
+    e_date = '{}-01-31'.format(years[-1] + 1)
+
+    # subset to only dates between buffer
+    ds = ds.sel(time=slice(s_date, e_date))
+    
+    # check if dataset is empty
+    if len(ds['time']) == 0:
+        raise ValueError('No data left after subset with buffers.')
+        
+    # notify and return
+    print('Subset years with buffers successfully.')
+    return ds
+
+
+def group(ds):
+    """
+    Takes an xarray dataset and groups it by strings
+    of 'm-d'. This is best suited for when using resampled
+    data using fortnight (SMS) interval, which always produces
+    month-day 1-1, 1-15, 2-1, 2-15 etc. Don't use when
+    resample done via week. If only one year provided,
+    groupby will fail, so only groups if years > 1. 
+    Either way, new labels from 1970-01-01 to 1970-12-31
+    will be returned.
+    
+    Parameters
+    ----------
+    ds: xarray Dataset
+        A two-dimensional or multi-dimensional array containing 
+        a vegetation index variable (i.e. 'veg_idx').
+
+    Returns
+    -------
+    ds : xarray Dataset
+        The original xarray Dataset inputted into the function, with a 
+        newly resampled 'veg_index' variable.
+    """
+    
+    
+    # notify
+    print('Grouping dataset.')
+    
+    # check xr type, dims
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y and/or time dimension in dataset.')   
+    
+    # group only if > 1 year, else just re-label times
+    if len(ds.groupby('time.year')) > 1:
+    
+        # convert time to labels for consistent time grouping
+        ds['time'] = ds['time'].dt.strftime('%m-%d')
+        ds = ds.groupby('time').median('time')
+
+    # get the num of periods from grouping (will always be 24)
+    periods = len(ds['time'])
+
+    # check number of periods
+    if periods == 0:
+        raise ValueError('No date periods were generated.')
+
+    # generate new date range, use arbitrary year
+    dates = pd.date_range(start='1970-01-01', 
+                          end='1970-12-31', 
+                          periods=periods)
+
+    # check if num periods same as dataset times
+    if len(ds['time']) != periods:
+        raise ValueError('Length of times and periods do not match.')
+
+    # replace groupby values with times of same size
+    ds['time'] = dates
+    
+    return ds
+
+
+def interpolate_2d(arr, mask, method='nearest', fill_value=0):
+    """
+    Takes a 2d xarray data array and a mask of 
+    pixels to interpolate into (True values will
+    be interpolated). Method supports nearest,
+    linear, cubic. Fill value is used to fill up
+    data outside the convex hull of known pixel
+    values. Default is 0, and it has no effect
+    for the nearest method.
+    
+    Parameters
+    ----------
+    arr: numpy array 
+        A numpy array or xarray data array of 
+        values to be interpolated.
+    mask: numpy array
+        An array of booleans. True are pixels
+        that will be targeted for interpolate,
+        False will be ignored.
+    method : str 
+        Interpolation method. Nearest neighbour,
+        cubic.
+    fill_value: int 
+        Used only during cubic, value to use fill 
+        extrapolation areas.
+
+    Returns
+    -------
+    arr : numpy array
+        Interpolated version of input arr.
+    """
+
+    # get height and width of arr
+    h, w = arr.shape[:2]
+    
+    # convert to equal grid 
+    xx, yy = np.meshgrid(np.arange(w), np.arange(h))
+
+    # mask window
+    known_x = xx[~mask]
+    known_y = yy[~mask]
+    known_v = arr[~mask]
+    missing_x = xx[mask]
+    missing_y = yy[mask]
+
+    # perform the interp on grid data
+    interp_values = sci_interp.griddata(
+        (known_x, known_y), 
+         known_v, 
+        (missing_x, missing_y),
+         method=method, fill_value=fill_value
+    )
+
+    # generate copy and fill with interpolated values
+    interp_image = arr.copy()
+    interp_image[missing_y, missing_x] = interp_values
+
+    return interp_image
+
+
+def clean_edges(arr, doy, position):
+    """
+    Small helper to correct use alt peak/trough 
+    if first or last doy is peak/trough.
+    
+    Parameters
+    ----------
+    arr: numpy array 
+        A numpy array or xarray data array of 
+        values to be cleaned.
+    doy: numpy array
+        An associated array of doy values for
+        each arr value. Expected to have 365.
+    position : str 
+        Whether to remove peaks (max) or troughs
+        (min).
+
+    Returns
+    -------
+    arr : numpy array
+        Cleaned version of input arr.
+    """
+    
+    if position == 'max':
+        
+        # if first/last is peak, mask a month
+        if doy[np.nanargmax(arr)] == 1:
+            arr = np.where(doy <= 31, np.nan, arr)
+        elif doy[np.nanargmax(arr)] == 365:
+            arr = np.where(doy >= 334, np.nan, arr) 
+            
+    elif position == 'min':
+        
+        # if first/last is trough, mask a month
+        if doy[np.nanargmin(arr)] == 1:
+            arr = np.where(doy <= 31, np.nan, arr)
+        elif doy[np.nanargmin(arr)] == 365:
+            arr = np.where(doy >= 334, np.nan, arr)         
+        
+    return arr
+
+
+def get_pos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate peak of season (pos) values, times (doys).
+    Takes an xarray datatset with x, y, time and veg_idx
+    variable. Set fill_nan to True for nan filling. If no
+    nans present, will skip.
+    """   
+    
+    def _pos(arr, doy, fix_edges):
+
+        # mask extreme edges
+        if fix_edges:
+            arr = clean_edges(arr, doy, 'max')
+
+        # get max value index
+        idx = np.nanargmax(arr)
+
+        # set values
+        v, t = arr[idx], doy[idx]
+
+        return v, t
+    
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_pos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
         try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
         except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # get vars in ds
-    temp_vars = []
-    if isinstance(ds, xr.Dataset):
-        temp_vars = list(ds.data_vars)
-    elif isinstance(ds, xr.DataArray):
-        temp_vars = list(ds['variable'])
-
-    # check if vege var and soil var given
-    if 'veg_idx' not in temp_vars:
-        raise ValueError('Vege var name not in dataset.')
+            print('Could not interpolate pixels, skipping.')
         
-    # if dask, need to rechunk to -1
-    if bool(ds.chunks):
-        print('Warning: had to rechunk dataset.')
-        ds = ds.chunk({'time': -1})
+    return v, t
+
+
+def get_vos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate valley of season (vos) values, times (doys).
+    Takes an xarray datatset with x, y, time and veg_idx
+    variable. Set fill_nan to True for nan filling. If no
+    nans present, will skip.
+    """   
     
-    # prepare prominence threshold dataset
-    ds_thresh = (ds.max('time') - ds.min('time')) / 8
+    def _vos(arr, doy, fix_edges):
         
-    # calculate nos using calc_funcs func
-    print('Calculating number of seasons.')
-    ds_nos = xr.apply_ufunc(__calc_peaks__, 
-                            ds['veg_idx'], 
-                            ds_thresh['veg_idx'],
-                            input_core_dims=[['time'], []],
-                            vectorize=True, 
-                            dask='parallelized', 
-                            output_dtypes=[np.int8])
+        # mask extreme edges
+        if fix_edges:
+            arr = clean_edges(arr, doy, 'min')
+
+        # get min value index
+        idx = np.nanargmin(arr)
+
+        # set values
+        v, t = arr[idx], doy[idx]
+
+        return v, t   
     
-    # convert type
-    #da_nos = da_nos.astype('int16')
-    
-    # rename
-    ds_nos = ds_nos.rename('nos_values')
-      
-    #If the input was a ds, return a ds.
-    if not was_da:
-        # convert to dataset
-        ds_nos = ds_nos.to_dataset()
-
-    # notify user
-    print('Success!')
-        
-    return ds_nos
-     
-
-def get_pos(da):
-    """
-    Takes an xarray DataArray containing veg_index values and calculates the vegetation 
-    value and time (day of year) at peak of season (pos) for each timeseries per-pixel. 
-    The peak of season is the maximum value in the timeseries, per-pixel.
-    
-    Parameters
-    ----------
-    ds: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-
-    Returns
-    -------
-    da_pos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at the peak of season (pos).
-    da_pos_times : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at the peak of season (pos).
-    """
-    
-    # notify user
-    print('Beginning calculation of peak of season (pos) values and times.')   
-
-    # get pos values (max val in each pixel timeseries)
-    print('Calculating peak of season (pos) values.')
-    da_pos_values = da.max('time', keep_attrs=True)
-        
-    # get pos times (day of year) at max val in each pixel timeseries)
-    print('Calculating peak of season (pos) times.')
-    i = da.argmax('time', skipna=True)
-    da_pos_times = da['time.dayofyear'].isel(time=i, drop=True)
-    
-    # convert type
-    da_pos_values = da_pos_values.astype('float32')
-    da_pos_times = da_pos_times.astype('int16')
-    
-    # rename vars
-    da_pos_values = da_pos_values.rename('pos_values')
-    da_pos_times = da_pos_times.rename('pos_times')
-
-    # notify user
-    print('Success!')
-    return da_pos_values, da_pos_times
-
-
-def get_vos(da):
-    """
-    Takes an xarray DataArray containing veg_index values and calculates the vegetation 
-    value and time (day of year) at valley of season (vos) for each timeseries per-pixel. 
-    The valley of season is the minimum value in the timeseries, per-pixel.
-    
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-
-    Returns
-    -------
-    da_vos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at the valley of season (vos).
-    da_vos_times : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at the valley of season (vos).
-    """
-    
-    # notify user
-    print('Beginning calculation of valley of season (vos) values and times.')
-
-    # get vos values (min val in each pixel timeseries)
-    print('Calculating valley of season (vos) values.')
-    da_vos_values = da.min('time', keep_attrs=True)
-    
-    # get vos times (day of year) at min val in each pixel timeseries)
-    print('Calculating valley of season (vos) times.')
-    i = da.argmin('time', skipna=True)
-    da_vos_times = da['time.dayofyear'].isel(time=i, drop=True)
-    
-    # convert type
-    da_vos_values = da_vos_values.astype('float32')
-    da_vos_times = da_vos_times.astype('int16')
-    
-    # rename vars
-    da_vos_values = da_vos_values.rename('vos_values')
-    da_vos_times = da_vos_times.rename('vos_times')
-
-    # notify user
-    print('Success!')
-    return da_vos_values, da_vos_times
-
-
-def get_mos(da, da_peak_times):
-    """
-    Takes an xarray DataArray containing veg_index values and calculates the vegetation 
-    values (time not available) at middle of season (mos) for each timeseries per-pixel. 
-    The middle of season is the mean vege value and time (day of year) in the timeseries
-    at 80% to left and right of the peak of season (pos) per-pixel.
-    
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values.
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel must be
-        the time (day of year) value calculated at peak of season (pos) prior.
-
-    Returns
-    -------
-    da_mos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at the peak of season (pos).
-    """
-    
-    # notify user
-    print('Beginning calculation of middle of season (mos) values (times not possible).')  
-
-    # get left and right slopes values
-    print('Calculating middle of season (mos) values.')
-    slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-    slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        
-    # getupper 80% values in positive slope on left and right
-    slope_l_upper = slope_l.where(slope_l >= (slope_l.max('time', keep_attrs=True) * 0.8))
-    slope_r_upper = slope_r.where(slope_r >= (slope_r.max('time', keep_attrs=True) * 0.8))
-
-    # get means of slope left and right
-    slope_l_means = slope_l_upper.mean('time', keep_attrs=True)
-    slope_r_means = slope_r_upper.mean('time', keep_attrs=True)
-    
-    # get attrs
-    attrs = da.attrs
-
-    # combine left and right veg_index means
-    da_mos_values = (slope_l_means + slope_r_means) / 2
-    
-    # convert type, rename
-    da_mos_values = da_mos_values.astype('float32')
-    da_mos_values = da_mos_values.rename('mos_values')
-    
-    # add attrs back on
-    da_mos_values.attrs = attrs
-
-    # notify user
-    print('Success!')
-    return da_mos_values
-    
-
-def get_bse(da, da_peak_times):
-    """
-    Takes an xarray DataArray containing veg_index values and calculates the vegetation 
-    value base (bse) for each timeseries per-pixel. The base is calculated as the mean 
-    value of two minimum values; the min of the slope to the left of peak of season, and
-    the min of the slope to the right of the peak of season. Users must provide an existing
-    peak of season (pos) data array, which can either be the max of the timeseries, or the
-    middle of season (mos) values.
-    
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional DataArray containing an array of veg_index
-        values.
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel must be
-        the time (day of year) value calculated at either at peak of season (pos) or middle 
-        of season (mos) prior.
-
-    Returns
-    -------
-    da_bse_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        base (bse) veg_index value detected at across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of base (bse) values (times not possible).')
-
-    # get vos values (min val in each pixel timeseries)
-    print('Calculating base (bse) values.')
-    
-    # split timeseries into left and right slopes via provided peak/middle values
-    slope_l = da.where(da['time.dayofyear'] <= da_peak_times).min('time')
-    slope_r = da.where(da['time.dayofyear'] >= da_peak_times).min('time')
-    
-    # get attrs
-    attrs = da.attrs
-    
-    # get per pixel mean of both left and right slope min values 
-    da_bse_values = (slope_l + slope_r) / 2
-    
-    # convert type, rename
-    da_bse_values = da_bse_values.astype('float32')
-    da_bse_values = da_bse_values.rename('bse_values')
-    
-    # add attrs back on
-    da_bse_values.attrs = attrs
-
-    # notify user
-    print('Success!')
-    return da_bse_values
-
-
-def get_aos(da_peak_values, da_base_values):
-    """
-    Takes two xarray DataArrays containing the highest vege values (pos or mos) and the
-    lowest vege values (bse or vos) and calculates the amplitude of season (aos). 
-    The amplitude is calculated as the highest values minus the lowest values per pixel.
-
-    Parameters
-    ----------
-    da_peak_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the peak (pos) or middle (mos) of season.
-    da_base_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the base (bse) or valley (vos) of season.
-
-    Returns
-    -------
-    da_aos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        amplitude of season (aos) value detected between the peak and base vege values
-        across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of amplitude of season (aos) values (times not possible).')
-        
-    # get attrs
-    attrs = da_peak_values.attrs
-
-    # get aos values (peak - base in each pixel timeseries)
-    print('Calculating amplitude of season (aos) values.')
-    da_aos_values = da_peak_values - da_base_values
-    
-    # convert type, rename
-    da_aos_values = da_aos_values.astype('float32')
-    da_aos_values = da_aos_values.rename('aos_values')
-    
-    # add attrs back on
-    da_aos_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_aos_values
-
-# prepare stl func
-def __func_stl__(v, period, seasonal, trend, low_pass, robust):
-    """
-    Helper function for get_sos() and get_eos(), should not be called outside of those functions
-    """
-    model = stl(v, period=period, seasonal=seasonal, trend=trend, low_pass=low_pass, robust=robust)
-    return model.fit().trend
-
-def get_sos(da, da_peak_times, da_base_values, da_aos_values, method, factor, thresh_sides, abs_value):
-    """
-    Takes several xarray DataArrays containing the highest vege values and times (pos or mos), 
-    the lowest vege values (bse or vos), and the amplitude (aos) values and calculates the 
-    vegetation values and times at the start of season (sos). Several methods can be used to
-    detect the start of season; most are based on TIMESAT 3.3 methodology.
-
-    Parameters
-    ----------
-    da : xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at either the peak (pos) or middle (mos) of 
-        season.
-    da_base_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the base (bse) or valley (vos) of season.
-    da_aos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        amplitude of season (aos) value detected between the peak and base vege values
-        across the timeseries at each pixel.
-    method: str
-        A string indicating which start of season detection method to use. Default is
-        same as TIMESAT: seasonal_amplitude. The available options include:
-        1. first_of_slope: lowest vege value of slope is sos (i.e. first lowest value).
-        2. median_of_slope: middle vege value of slope is sos (i.e. median value).
-        3. seasonal_amplitude: uses a percentage of the amplitude from base to find sos.
-        4. absolute_value: users defined absolute value in vege index units is used to find sos.
-        5. relative_amplitude: robust mean peak and base, and a factor of that area, used to find sos.
-        6. stl_trend: robust but slow - uses seasonal decomp LOESS method to find trend line and sos.
-    factor: float
-        A float value between 0 and 1 which is used to increase or decrease the amplitude
-        threshold for the seasonal_amplitude method. A factor closer to 0 results in start 
-        of season nearer to min value, a factor closer to 1 results in start of season
-        closer to peak of season.
-    thresh_sides: str
-        A string indicating whether the sos value threshold calculation should be the min 
-        value of left slope (one_sided) only, or use the bse/vos value (two_sided) calculated
-        earlier. Default is two_sided, as per TIMESAT 3.3. That said, one_sided is potentially
-        more robust.
-    abs_value: float
-        For absolute_value method only. Defines the absolute value in units of the vege index to
-        which sos is defined. The part of the vege slope that the absolute value hits will be the
-        sos value and time.
-
-    Returns
-    -------
-    da_sos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at the start of season (sos).
-    da_sos_times : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at the start of season (sos).
-    """
-    
-    # imports
     try:
-        from statsmodels.tsa.seasonal import STL as stl
-    except:
-        print('Could not import statsmodel. Using seasonal amplitude method instead of stl.')
-        method = 'seasonal_amplitude'
-    
-    # notify user
-    print('Beginning calculation of start of season (sos) values and times.')
-    
-    # check factor
-    if factor < 0 or factor > 1:
-        raise ValueError('Provided factor value is not between 0 and 1.')
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_vos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
             
-    # check thresh_sides
-    if thresh_sides not in ['one_sided', 'two_sided']:
-        raise ValueError('Provided thresh_sides value is not one_sided or two_sided.')
-                    
-    if method == 'first_of_slope':
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
         
-        # notify user
-        print('Calculating start of season (sos) values via method: first_of_slope.')
-          
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-                
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
-        
-        # get median of vege on pos left slope, calc vege dists from median
-        slope_l_med = slope_l_pos.median('time', keep_attrs=True)
-        dists_from_median = slope_l_pos - slope_l_med 
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_median.isnull().all('time')
-        dists_from_median = xr.where(mask, 0.0, dists_from_median)
-        
-        # get time index where min dist from median (first on slope)
-        i = dists_from_median.argmin('time', skipna=True)
-        
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating start of season (sos) times via method: first_of_slope.')
-        
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
+    return v, t
 
-    elif method == 'median_of_slope':
+
+def get_mos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate middle of season (mos) values, (no times).
+    Takes an xarray datatset with x, y, time and veg_idx
+    variable. Set fill_nan to True for nan filling. If no
+    nans present, will skip.
+    """   
+    
+    def _mos(arr, doy, fix_edges):
+            
+        # mask extreme edges
+        if fix_edges:
+            arr = clean_edges(arr, doy, 'max')
         
-        # notify user
-        print('Calculating start of season (sos) values via method: median_of_slope.')
-          
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-                
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
+        # get pos time (doy)
+        pos_t = doy[np.nanargmax(arr)]
+
+        # get slope values left, right of pos time (doy)
+        s_l, s_r = arr[doy <= pos_t], arr[doy >= pos_t]
+
+        # get upper 80% values on left, right slopes
+        s_l = s_l[s_l >= np.nanpercentile(s_l, 80)]
+        s_r = s_r[s_r >= np.nanpercentile(s_r, 80)]
+
+        # get mean of left, right slope
+        s_l, s_r = np.nanmean(s_l), np.nanmean(s_r)
+
+        # get mean of both
+        v = np.nanmean([s_l, s_r])
+
+        return v
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_mos,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           input_core_dims=[['time'], ['time']],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'],
+                           kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
         
-        # get median of vege on pos left slope, calc absolute vege dists from median
-        slope_l_med = slope_l_pos.median('time')
-        dists_from_median = slope_l_pos - slope_l_med
-        dists_from_median = abs(dists_from_median)
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
         
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_median.isnull().all('time')
-        dists_from_median = xr.where(mask, 0.0, dists_from_median)
+    return v
+
+
+def get_bse(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate base (bse) values, (no times). Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip.
+    """   
+    
+    def _bse(arr, doy, fix_edges):
         
-        # get time index where min absolute dist from median (median on slope)
-        i = dists_from_median.argmin('time', skipna=True)
+        # mask extreme edges
+        if fix_edges:
+            arr = clean_edges(arr, doy, 'min')
         
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
+        # get pos time (doy)
+        pos_t = doy[np.nanargmax(arr)]
+
+        # get slope values left, right of pos time (doy)
+        s_l, s_r = arr[doy <= pos_t], arr[doy >= pos_t]
         
-        # notify user
-        print('> Calculating start of season (sos) times via method: median_of_slope.')
+        # get min value on left, right of slope
+        s_l, s_r = np.nanmin(s_l), np.nanmin(s_r)
+
+        # get mean of both
+        v = np.nanmean([s_l, s_r])
+
+        return v
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_bse,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           input_core_dims=[['time'], ['time']],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'],
+                           kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
         
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
         
-    elif method == 'seasonal_amplitude':
+    return v
+
+
+def get_aos(da_upper, da_lower, fill_nan=False):
+    """
+    Calculate amplitude of season (aos) values, (no times). 
+    Takes arrays of pos/mos and vos/bse values. Upper could
+    be either pos/vos or mos/bse, for example. Set fill_nan 
+    to True for nan filling. If no nans present, will skip.
+    """   
+    
+    def _aos(arr_upper, arr_lower):
         
-        # notify user
-        print('Calculating start of season (sos) values via method: seasonal_amplitude.')
+        # get aos values
+        v = np.abs(arr_upper - arr_lower)
+
+        return v
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_aos,
+                           da_upper,
+                           da_lower,
+                           dask='allowed',
+                           output_dtypes=['float32', 'float32'])
+    except Exception as e:
+        raise ValueError(e)
         
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-                
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v
+
+
+def get_sos_fos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate start of season (sos) values, times. Uses the 
+    'first of slope' (fos) technique. Takes an xarray datatset 
+    with x, y, time and veg_idx variable. Set fill_nan to True 
+    for nan filling. If no nans present, will skip.    
+    """
+    
+    def _sos_fos(arr, doy, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+            
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values left of pos and where slope +
+            diff = np.where(np.gradient(arr) > 0, True, False)
+            s_l = np.where((doy <= pos_t) & diff, arr, np.nan)
+
+            # build non-nan start and end index ranges for slope +
+            clusts = np.ma.clump_unmasked(np.ma.masked_invalid(s_l))
+
+            # if cluster(s) exist, get last element of slope, else last element
+            idx = 0
+            if len(clusts) != 0:
+                idx = clusts[0].start
+
+            # set values
+            v, t = arr[idx], doy[idx]
+        
+        except:
+            v, t = arr_tmp[0], doy[0]
+
+        return v, t  
+    
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_sos_fos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_sos_mos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate start of season (sos) values, times. Uses the 
+    'mean of slope' (mos) technique. Takes an xarray datatset 
+    with x, y, time and veg_idx variable. Set fill_nan to True 
+    for nan filling. If no nans present, will skip.    
+    """
+    
+    def _sos_mos(arr, doy, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+            
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values left of pos and where slope +
+            diff = np.where(np.gradient(arr) > 0, True, False)
+            
+            s_l = np.where((doy <= pos_t) & diff, arr, np.nan)
+            
+            # get mean of all values in slope + areas
+            mean = np.nanmean(s_l)
+            
+            # calc abs distances of each slope + val and mean
+            dists = np.abs(s_l - mean)
+            
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+            
+            # set values
+            v = arr[idx]
+            t = doy[idx]
+        
+        except:
+            v, t = arr_tmp[0], doy[0]
+
+        return v, t  
+    
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_sos_mos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_sos_seaamp(ds, da_aos_v, da_bse_v, factor=0.75, fix_edges=True, fill_nan=False):
+    """
+    Calculate start of season (sos) values, times. Uses the 
+    'seasonal amplitude' (seaamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires an xarray data array of aos and bse generated
+    prior. Also requires a factor value, else sets to 
+    default (0.75)
+    """
+    
+    def _sos_seaamp(arr, doy, arr_aos_v, arr_bse_v, factor, fix_edges):   
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values left of pos and where slope +
+            diff = np.where(np.gradient(arr) > 0, True, False)       
+            s_l = np.where((doy <= pos_t) & diff, arr, np.nan)
+
+            # add base to amplitude and threshold it via factor
+            samp = float((arr_aos_v * factor) + arr_bse_v)
+
+            # calc abs distances of each slope + val to seas amp
+            dists = np.abs(s_l - samp)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+            
+        except:
+            v, t = arr_tmp[0], doy[0]
+
+        return v, t 
+
+
+    # basic checks
+    if factor is None or factor < 0:
+        factor = 0.75
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_sos_seaamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              da_aos_v,
+                              da_bse_v,
+                              input_core_dims=[['time'], ['time'], [], []],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'factor': factor, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_sos_absamp(ds, abs_value=0.3, fix_edges=True, fill_nan=False):
+    """
+    Calculate start of season (sos) values, times. Uses the 
+    'absolute amplitude' (absamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires a absolute value is set (in units of veg index, else 
+    sets to default (0.3)
+    """
+    
+    def _sos_absamp(arr, doy, abs_value, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values left of pos and where slope +
+            diff = np.where(np.gradient(arr) > 0, True, False)       
+            s_l = np.where((doy <= pos_t) & diff, arr, np.nan)
+
+            # calc abs distances of each slope + val to absolute val
+            dists = np.abs(s_l - abs_value)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+            
+        except:
+            v, t = arr_tmp[0], doy[0]
+
+        return v, t  
+
+
+    # basic checks
+    if abs_value is None:
+        abs_value = 0.3
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_sos_absamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'abs_value': abs_value, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_sos_relamp(ds, factor=0.75, fix_edges=True, fill_nan=False):
+    """
+    Calculate start of season (sos) values, times. Uses the 
+    'relative amplitude' (relamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires an xarray data array of aos and bse generated
+    prior. Also requires a factor value, else sets to 
+    default (0.75)
+    """
+    
+    def _sos_relamp(arr, doy, factor, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values left of pos and where slope +
+            diff = np.where(np.gradient(arr) > 0, True, False)       
+            s_l = np.where((doy <= pos_t) & diff, arr, np.nan)
+
+            # get relative amp via robust max and base (10% cut off)
+            q_min = np.nanpercentile(arr, q=10)
+            q_max = np.nanpercentile(arr, q=90)
+            ramp = float(q_max - q_min)
+
+            # add max to relative amp and threshold it via factor
+            ramp = (ramp * factor) + q_min
                    
-        # use just the left slope min val (one), or use the bse/vos calc earlier (two) for sos
-        if thresh_sides == 'one_sided':
-            da_sos_values = (da_aos_values * factor) + slope_l.min('time')
-        elif thresh_sides == 'two_sided':
-            da_sos_values = (da_aos_values * factor) + da_base_values
-                        
-        # calc distance of pos vege from calculated sos value
-        dists_from_sos_values = abs(slope_l_pos - da_sos_values)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_sos_values.isnull().all('time')
-        dists_from_sos_values = xr.where(mask, 0.0, dists_from_sos_values)
-            
-        # get time index where min absolute dist from sos
-        i = dists_from_sos_values.argmin('time', skipna=True)
-                 
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
-                
-        # notify user
-        print('Calculating start of season (sos) times via method: seasonal_amplitude.')
-        
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
+            # calc abs distances of each slope + val to relative value
+            dists = np.abs(s_l - ramp)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+
+        except:
+            v, t = arr_tmp[0], doy[0]
+
+        return v, t  
+
+
+    # basic checks
+    if factor is None or factor < 0:
+        factor = 0.75
     
-    elif method == 'absolute_value':
-        
-        # notify user
-        print('Calculating start of season (sos) values via method: absolute_value.')
-        
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-        
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
-        
-        # calc abs distance of positive slope from absolute value
-        dists_from_abs_value = abs(slope_l_pos - abs_value)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_abs_value.isnull().all('time')
-        dists_from_abs_value = xr.where(mask, 0.0, dists_from_abs_value)
-        
-        # get time index where min absolute dist from sos (absolute value)
-        i = dists_from_abs_value.argmin('time', skipna=True)
-        
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating start of season (sos) times via method: absolute_value.')
-        
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
-        
-    elif method == 'relative_value':
-
-        # notify user
-        print('Calculating start of season (sos) values via method: relative_value.')
-        print('Warning: this can take a long time.')
-        
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-        
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
-
-        # get relative amplitude via robust max and base (10% cut off either side)
-        relative_amplitude = da.quantile(dim='time', q=0.90) - da.quantile(dim='time', q=0.10)
-        
-        # get sos value with user factor and robust mean base
-        da_sos_values = (relative_amplitude * factor) + da.quantile(dim='time', q=0.10)
-        
-        # drop annoying quantile attribute from sos, ignore errors
-        da_sos_values = da_sos_values.drop('quantile', errors='ignore')
-           
-        # calc abs distance of positive slope from sos values
-        dists_from_sos_values = abs(slope_l_pos - da_sos_values)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_sos_values.isnull().all('time')
-        dists_from_sos_values = xr.where(mask, 0.0, dists_from_sos_values)
-
-        # get time index where min absolute dist from sos
-        i = dists_from_sos_values.argmin('time', skipna=True)
-                
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
-
-        # notify user
-        print('Calculating start of season (sos) times via method: relative_value.')
-        
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
-        
-    elif method == 'stl_trend':
-        
-        # notify user
-        print('Calculating start of season (sos) values via method: stl_trend.')
-        
-        # check if num seasons for stl is odd, +1 if not
-        num_periods = len(da['time'])
-        if num_periods % 2 == 0:
-            num_periods = num_periods + 1
-            print('Number of stl periods is even number, added 1 to make it odd.')
-        
-        # prepare stl params
-        stl_params = {
-            'period': num_periods,
-            'seasonal': 7,
-            'trend': None,
-            'low_pass': None,
-            'robust': False
-        }
-        
-        # notify user
-        print('Performing seasonal decomposition via LOESS. Warning: this can take a long time.')
-        da_stl = xr.apply_ufunc(__func_stl__, da, 
-                                input_core_dims=[['time']], 
-                                output_core_dims=[['time']], 
-                                vectorize=True, 
-                                dask='parallelized', 
-                                output_dtypes=[np.float32],
-                                kwargs=stl_params)
-        
-        # get left slopes values, calc differentials, subset to positive differentials
-        slope_l = da.where(da['time.dayofyear'] <= da_peak_times)
-        slope_l_diffs = slope_l.differentiate('time')
-        slope_l_pos_diffs = xr.where(slope_l_diffs > 0, True, False)
-        
-        # select vege values where positive on left slope
-        slope_l_pos = slope_l.where(slope_l_pos_diffs)
-        
-        # get min value left known pos date
-        stl_l = da_stl.where(da_stl['time.dayofyear'] <= da_peak_times)
-        
-        # calc abs distance of positive slope from stl values
-        dists_from_stl_values = abs(slope_l_pos - stl_l)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_stl_values.isnull().all('time')
-        dists_from_stl_values = xr.where(mask, 0.0, dists_from_stl_values)
-
-        # get time index where min absolute dist from sos
-        i = dists_from_stl_values.argmin('time', skipna=True)
-                
-        # get vege start of season values and times (day of year)
-        da_sos_values = slope_l_pos.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating start of season (sos) times via method: stl_trend.')
-        
-        # get vege start of season times (day of year)
-        da_sos_times = slope_l_pos['time.dayofyear'].isel(time=i, drop=True)
-    
-    else:
-        raise ValueError('Provided method not supported.')
-        
-    # replace any all nan slices with first val and time in each pixel
-    da_sos_values = da_sos_values.where(~mask, np.nan)
-    da_sos_times = da_sos_times.where(~mask, np.nan)
-    
-    # convert type
-    da_sos_values = da_sos_values.astype('float32')
-    da_sos_times = da_sos_times.astype('int16')
-    
-    # rename
-    da_sos_values = da_sos_values.rename('sos_values')
-    da_sos_times = da_sos_times.rename('sos_times')
-            
-    # notify user
-    print('Success!')
-    return da_sos_values, da_sos_times
-
-
-def get_eos(da, da_peak_times, da_base_values, da_aos_values, method, factor, thresh_sides, abs_value):
-    """
-    Takes several xarray DataArrays containing the highest vege values and times (pos or mos), 
-    the lowest vege values (bse or vos), and the amplitude (aos) values and calculates the 
-    vegetation values and times at the end of season (eos). Several methods can be used to
-    detect the start of season; most are based on TIMESAT 3.3 methodology.
-
-    Parameters
-    ----------
-    da : xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at either the peak (pos) or middle (mos) of 
-        season.
-    da_base_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the base (bse) or valley (vos) of season.
-    da_aos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        amplitude of season (aos) value detected between the peak and base vege values
-        across the timeseries at each pixel.
-    method: str
-        A string indicating which start of season detection method to use. Default is
-        same as TIMESAT: seasonal_amplitude. The available options include:
-        1. first_of_slope: lowest vege value of slope is eos (i.e. first lowest value).
-        2. median_of_slope: middle vege value of slope is eos (i.e. median value).
-        3. seasonal_amplitude: uses a percentage of the amplitude from base to find eos.
-        4. absolute_value: users defined absolute value in vege index units is used to find eos.
-        5. relative_amplitude: robust mean peak and base, and a factor of that area, used to find eos.
-        6. stl_trend: robust but slow - uses seasonal decomp LOESS method to find trend line and eos.
-    factor: float
-        A float value between 0 and 1 which is used to increase or decrease the amplitude
-        threshold for the seasonal_amplitude method. A factor closer to 0 results in end 
-        of season nearer to min value, a factor closer to 1 results in end of season
-        closer to peak of season.
-    thresh_sides: str
-        A string indicating whether the sos value threshold calculation should be the min 
-        value of left slope (one_sided) only, or use the bse/vos value (two_sided) calculated
-        earlier. Default is two_sided, as per TIMESAT 3.3. That said, one_sided is potentially
-        more robust.
-    abs_value: float
-        For absolute_value method only. Defines the absolute value in units of the vege index to
-        which sos is defined. The part of the vege slope that the absolute value hits will be the
-        sos value and time.
-
-    Returns
-    -------
-    da_eos_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at the end of season (eos).
-    da_eos_times : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at the end of season (eos).
-    """
-
-    # imports
     try:
-        from statsmodels.tsa.seasonal import STL as stl
-    except:
-        print('Could not import statsmodel. Using seasonal amplitude method instead of stl.')
-        method = 'seasonal_amplitude'
-    
-    # notify user
-    print('Beginning calculation of end of season (eos) values and times.')
-    
-    # check factor
-    if factor < 0 or factor > 1:
-        raise ValueError('Provided factor value is not between 0 and 1. Aborting.')
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_sos_relamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'factor': factor, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
             
-    # check thresh_sides
-    if thresh_sides not in ['one_sided', 'two_sided']:
-        raise ValueError('Provided thresh_sides value is not one_sided or two_sided. Aborting.')
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_eos_fos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate end of season (eos) values, times. Uses the 
+    'first of slope' (fos) technique. Takes an xarray datatset 
+    with x, y, time and veg_idx variable. Set fill_nan to True 
+    for nan filling. If no nans present, will skip.    
+    """
+    
+    def _eos_fos(arr, doy, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+            
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values right of pos and where slope -
+            diff = np.where(np.gradient(arr) < 0, True, False)
+            s_r = np.where((doy >= pos_t) & diff, arr, np.nan)
+
+            # build non-nan start and end index ranges for slope -
+            clusts = np.ma.clump_unmasked(np.ma.masked_invalid(s_r))
+
+            # if cluster(s) exist, get last of slope
+            idx = -1
+            if len(clusts) != 0:
+                idx = clusts[0].stop - 1
+            
+            # set values
+            v, t = arr[idx], doy[idx]
+        
+        except:
+            v, t = arr_tmp[-1], doy[-1]
+
+        return v, t  
+    
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_eos_fos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_eos_mos(ds, fix_edges=True, fill_nan=False):
+    """
+    Calculate end of season (eos) values, times. Uses the 
+    'mean of slope' (mos) technique. Takes an xarray datatset 
+    with x, y, time and veg_idx variable. Set fill_nan to True 
+    for nan filling. If no nans present, will skip.    
+    """
+    
+    def _eos_mos(arr, doy, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values right of pos and where slope -
+            diff = np.where(np.gradient(arr) < 0, True, False)
+            s_r = np.where((doy >= pos_t) & diff, arr, np.nan)
+            
+            # get mean of all values in slope - areas
+            mean = np.nanmean(s_r)
+            
+            # calc abs distances of each slope - val and mean
+            dists = np.abs(s_r - mean)
+            
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+            
+            # set values
+            v = arr[idx]
+            t = doy[idx]
+
+        except:
+            v, t = arr_tmp[-1], doy[-1]
+            
+        return v, t
+    
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_eos_mos,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_eos_seaamp(ds, da_aos_v, da_bse_v, factor=0.75, fix_edges=True, fill_nan=False):
+    """
+    Calculate end of season (eos) values, times. Uses the 
+    'seasonal amplitude' (seaamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires an xarray data array of aos and bse generated
+    prior. Also requires a factor value, else sets to 
+    default (0.75)
+    """
+    
+    def _eos_seaamp(arr, doy, arr_aos_v, arr_bse_v, factor, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values right of pos and where slope -
+            diff = np.where(np.gradient(arr) < 0, True, False)       
+            s_r = np.where((doy >= pos_t) & diff, arr, np.nan)
+
+            # add base to amplitude and threshold it via factor
+            samp = float((arr_aos_v * factor) + arr_bse_v)
+
+            # calc abs distances of each slope - val to seas amp
+            dists = np.abs(s_r - samp)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+            
+        except:
+            v, t = arr_tmp[-1], doy[-1]
+
+        return v, t  
+
+
+    # basic checks
+    if factor is None or factor < 0:
+        factor = 0.75
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_eos_seaamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              da_aos_v,
+                              da_bse_v,
+                              input_core_dims=[['time'], ['time'], [], []],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'factor': factor, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_eos_absamp(ds, abs_value=0.3, fix_edges=True, fill_nan=False):
+    """
+    Calculate end of season (eos) values, times. Uses the 
+    'absolute amplitude' (absamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires a absolute value is set (in units of veg index, else 
+    sets to default (0.3)
+    """
+    
+    def _eos_absamp(arr, doy, abs_value, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values right of pos and where slope -
+            diff = np.where(np.gradient(arr) < 0, True, False)       
+            s_r = np.where((doy >= pos_t) & diff, arr, np.nan)
+
+            # calc abs distances of each slope - val to absolute val
+            dists = np.abs(s_r - abs_value)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+            
+        except:
+            v, t = arr_tmp[-1], doy[-1]
+
+        return v, t  
+
+    
+    # basic checks
+    if abs_value is None:
+        abs_value = 0.3
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_eos_absamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'abs_value': abs_value, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_eos_relamp(ds, factor=0.75, fix_edges=True, fill_nan=False):
+    """
+    Calculate end of season (eos) values, times. Uses the 
+    'relative amplitude' (relamp) technique. Takes an xarray 
+    datatset with x, y, time and veg_idx variable. Set fill_nan 
+    to True for nan filling. If no nans present, will skip. 
+    Requires an xarray data array of aos and bse generated
+    prior. Also requires a factor value, else sets to 
+    default (0.75)
+    """
+    
+    def _eos_relamp(arr, doy, factor, fix_edges):
+        try:
+            # make copy of arr for error handling
+            arr_tmp = arr.copy()
+            
+            # mask extreme edges
+            if fix_edges:
+                arr = clean_edges(arr, doy, 'max')
+
+            # get pos time (doy)
+            pos_t = doy[np.nanargmax(arr)]
+
+            # get all values right of pos and where slope +
+            diff = np.where(np.gradient(arr) < 0, True, False)       
+            s_r = np.where((doy >= pos_t) & diff, arr, np.nan)
+
+            # get relative amp via robust max and base (10% cut off)
+            q_min = np.nanpercentile(arr, q=10)
+            q_max = np.nanpercentile(arr, q=90)
+            ramp = float(q_max - q_min)
+
+            # add max to relative amp and threshold it via factor
+            ramp = (ramp * factor) + q_min
+
+            # calc abs distances of each slope + val to relative value
+            dists = np.abs(s_r - ramp)
+
+            # get the smallest idx
+            idx = np.nanargmin(dists)
+
+            # set values
+            v, t = arr[idx], doy[idx]
+            
+        except:
+            v, t = arr_tmp[-1], doy[-1]
+
+        return v, t     
+
+
+    # basic checks
+    if factor is None or factor < 0:
+        factor = 0.75
+    
+    try:
+        # wrap above in apply function
+        v, t = xr.apply_ufunc(_eos_relamp,
+                              ds['veg_idx'],
+                              ds['time.dayofyear'],
+                              input_core_dims=[['time'], ['time']],
+                              output_core_dims=[[], []],
+                              vectorize=True,
+                              dask='allowed',
+                              output_dtypes=['float32', 'float32'],
+                              kwargs={'factor': factor, 
+                                      'fix_edges': fix_edges})
+    except Exception as e:
+        raise ValueError(e)
+
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+            
+            # interp time array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v, t
+
+
+def get_los(da_sos_t, da_eos_t, fill_nan=False):
+    """
+    Calculate length of season (los) times, (no values). 
+    Takes arrays of sos times and eos times (doys). Set 
+    fill_nan to True for nan filling. If no nans present, 
+    will skip.
+    """   
+    
+    def _los(arr_sos_t, arr_eos_t):
+
+        # get los values
+        v = np.abs(arr_eos_t - arr_sos_t)    
+
+        return v
+    
+    
+    try:
+        # wrap above in apply function
+        t = xr.apply_ufunc(_los,
+                           da_sos_t,
+                           da_eos_t,
+                           dask='allowed',
+                           output_dtypes=['float32', 'float32'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if t.isnull().any() is True:
+                mask = xr.where(t.isnull(), True, False)
+                t = xr.apply_ufunc(interpolate_2d,
+                                   t, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return t
+
+
+def get_roi(da_pos_v, da_pos_t, da_sos_v, da_sos_t, fill_nan=False):
+    """
+    Calculate rate of increase (roi) values, (no times). 
+    Takes arrays of pos values and times and sos values
+    and times. Set fill_nan to True for nan filling. If no 
+    nans present, will skip.
+    """   
+    
+    def _roi(arr_pos_v, arr_pos_t, arr_sos_v, arr_sos_t):
+        try:
+            # get roi values   
+            v = ((arr_pos_v - arr_sos_v) / 
+                 (arr_pos_t - arr_sos_t) * 10000)
+
+            # get absolute if negatives
+            v = np.abs(v)
+        
+        except:
+            v = np.nan
+        
+        return v
+    
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_roi,
+                           da_pos_v,
+                           da_pos_t,
+                           da_sos_v,
+                           da_sos_t,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v
+
+
+def get_rod(da_pos_v, da_pos_t, da_eos_v, da_eos_t, fill_nan=False):
+    """
+    Calculate rate of decrease (rod) values, (no times). 
+    Takes arrays of pos values and times and eos values
+    and times. Set fill_nan to True for nan filling. If no 
+    nans present, will skip.
+    """   
+    
+    def _rod(arr_pos_v, arr_pos_t, arr_eos_v, arr_eos_t):
+        try:
+            # get rod values   
+            v = ((arr_eos_v - arr_pos_v) / 
+                 (arr_eos_t - arr_pos_t) * 10000)
+            
+            # get absolute if negatives
+            v = np.abs(v)
+            
+        except:
+            v = np.nan
+        
+        return v
+    
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_rod,
+                           da_pos_v,
+                           da_pos_t,
+                           da_eos_v,
+                           da_eos_t,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v
+
+
+def get_sios(ds, da_sos_t, da_eos_t, da_bse_v, fill_nan=False):
+    """
+    Calculate short integral of season (sios) values, 
+    (no times). Takes arrays of sos times and eos times 
+    and bse values. Set fill_nan to True for nan filling. 
+    If no nans present, will skip.
+    """   
+    
+    def _sios(arr, doy, arr_sos_t, arr_eos_t, arr_bse_v):
+        try:        
+            # subtract the base from the original array
+            arr = arr - arr_bse_v 
+            
+            # get all idxs between start and end of season
+            season_idxs = np.where((doy >= arr_sos_t) & 
+                                   (doy <= arr_eos_t))
+
+            # subset arr and doy whereever in range
+            arr = arr[season_idxs]
+            doy = doy[season_idxs]
+            
+            # get short integral of all values via trapz   
+            v = np.trapz(y=arr, x=doy)
+            
+            # rescale if negatives
+            #if np.min(v) < 0:
+                #v += np.abs(np.nanmin(v))
+        
+        except:
+            v = np.nan
+        
+        return v
+    
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_sios,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           da_sos_t.rolling(x=3, y=3, center=True, min_periods=1).mean(),
+                           da_eos_t.rolling(x=3, y=3, center=True, min_periods=1).mean(),
+                           da_bse_v,
+                           input_core_dims=[['time'], ['time'], [], [], []],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    # rescale if need be
+    if v.min() < 0:
+        v = v + np.abs(v.min())
+    
+    return v
+
+
+def get_lios(ds, da_sos_t, da_eos_t, fill_nan=False):
+    """
+    Calculate long integral of season (lios) values, 
+    (no times). Takes arrays of sos times and eos times. 
+    Set fill_nan to True for nan filling. If no nans 
+    present, will skip.
+    """   
+    
+    def _lios(arr, doy, arr_sos_t, arr_eos_t):
+        try:        
+            # get all idxs between start and end of season
+            season_idxs = np.where((doy >= arr_sos_t) &
+                                   (doy <= arr_eos_t))
+
+            # subset arr and doy whereever in range
+            arr = arr[season_idxs]
+            doy = doy[season_idxs]
+            
+            # get long integral of all values via trapz   
+            v = np.trapz(y=arr, x=doy)
+            
+            # rescale if negatives
+            #if np.min(v) < 0:
+                #v += np.abs(np.nanmin(v))
+        
+        except:
+            v = np.nan
+        
+        return v
+
+
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_lios,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           da_sos_t.rolling(x=3, y=3, center=True, min_periods=1).mean(),
+                           da_eos_t.rolling(x=3, y=3, center=True, min_periods=1).mean(),
+                           input_core_dims=[['time'], ['time'], [], []],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    # rescale if need be
+    if v.min() < 0:
+        v = v + np.abs(v.min())
+    
+    return v
+
+
+def get_siot(ds, da_bse_v, fill_nan=False):
+    """
+    Calculate short integral of total (siot) values, 
+    (no times). Takes array of base values, (no times).
+    Set fill_nan to True for nan filling. If no nans 
+    present, will skip.
+    """   
+    
+    def _siot(arr, doy, arr_bse_v):
+        try:        
+            # subtract the base from the orig array
+            arr = arr - arr_bse_v
                     
-    if method == 'first_of_slope':
-        
-        # notify user
-        print('Calculating end of season (eos) values via method: first_of_slope.')
-          
-        # get right slopes values, calc differentials, subset to negative differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-                
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)
-        
-        # get median of vege on neg right slope, calc vege dists from median
-        slope_r_med = slope_r_neg.median('time')
-        dists_from_median = slope_r_neg - slope_r_med 
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_median.isnull().all('time')
-        dists_from_median = xr.where(mask, 0.0, dists_from_median)
-        
-        # get time index where min dist from median (first on slope)
-        i = dists_from_median.argmin('time', skipna=True)
-        
-        # get vege end of season values and times (day of year)
-        da_eos_values = slope_r_neg.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating end of season (eos) times via method: first_of_slope.')
-        
-        # get vege start of season times (day of year)
-        da_eos_times = slope_r_neg['time.dayofyear'].isel(time=i, drop=True)
-
-    elif method == 'median_of_slope':
-        
-        # notify user
-        print('Calculating end of season (eos) values via method: median_of_slope.')
-          
-        # get right slopes values, calc differentials, subset to positive differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-                
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)
-        
-        # get median of vege on neg right slope, calc absolute vege dists from median
-        slope_r_med = slope_r_neg.median('time')
-        dists_from_median = slope_r_neg - slope_r_med
-        dists_from_median = abs(dists_from_median)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_median.isnull().all('time')
-        dists_from_median = xr.where(mask, 0.0, dists_from_median)
-        
-        # get time index where min absolute dist from median (median on slope)
-        i = dists_from_median.argmin('time', skipna=True)
-        
-        # get vege start of season values and times (day of year)
-        da_eos_values = slope_r_neg.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating end of season (eos) times via method: median_of_slope.')
-        
-        # get vege end of season times (day of year)
-        da_eos_times = slope_r_neg['time.dayofyear'].isel(time=i, drop=True)
-        
-    elif method == 'seasonal_amplitude':
-        
-        # notify user
-        print('Calculating end of season (eos) values via method: seasonal_amplitude.')
-        
-        # get right slopes values, calc differentials, subset to negative differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-        
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)       
-               
-        # use just the right slope min val (one), or use the bse/vos calc earlier (two) for sos
-        if thresh_sides == 'one_sided':
-            da_eos_values = (da_aos_values * factor) + slope_r.min('time')
-        elif thresh_sides == 'two_sided':
-            da_eos_values = (da_aos_values * factor) + da_base_values
+            # get long integral of all values via trapz first
+            v = np.trapz(y=arr, x=doy) 
             
-        # calc distance of neg vege from calculated eos value
-        dists_from_eos_values = abs(slope_r_neg - da_eos_values)
+            # rescale if negatives
+            #if np.min(v) < 0:
+                #v += np.abs(np.nanmin(v))
+
+        except:
+            v = np.nan
         
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_eos_values.isnull().all('time')
-        dists_from_eos_values = xr.where(mask, 0.0, dists_from_eos_values)
+        return v
+
+
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_siot,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           da_bse_v,
+                           input_core_dims=[['time'], ['time'], []],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
         
-        # get time index where min absolute dist from eos
-        i = dists_from_eos_values.argmin('time', skipna=True)
-                
-        # get vege end of season values and times (day of year)
-        da_eos_values = slope_r_neg.isel(time=i, drop=True)
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
         
-        # notify user
-        print('Calculating end of season (eos) times via method: seasonal_amplitude.')
-        
-        # get vege end of season times (day of year)
-        da_eos_times = slope_r_neg['time.dayofyear'].isel(time=i, drop=True)
+    # rescale if need be
+    if v.min() < 0:
+        v = v + np.abs(v.min())
     
-    elif method == 'absolute_value':
-        
-        # notify user
-        print('Calculating end of season (eos) values via method: absolute_value.')
-        
-        # get right slopes values, calc differentials, subset to negative differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-        
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)
-        
-        # calc abs distance of negative slope from absolute value
-        dists_from_abs_value = abs(slope_r_neg - abs_value)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_abs_value.isnull().all('time')
-        dists_from_abs_value = xr.where(mask, 0.0, dists_from_abs_value)
-        
-        # get time index where min absolute dist from eos (absolute value)
-        i = dists_from_abs_value.argmin('time', skipna=True)
-        
-        # get vege end of season values and times (day of year)
-        da_eos_values = slope_r_neg.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating end of season (eos) times via method: absolute_value.')
-        
-        # get vege end of season times (day of year)
-        da_eos_times = slope_r_neg['time.dayofyear'].isel(time=i, drop=True)
-        
-    elif method == 'relative_value':
-
-        # notify user
-        print('Calculating end of season (eos) values via method: relative_value.')
-        print('Warning: this can take a long time.')
-        
-        # get right slopes values, calc differentials, subset to negative differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-        
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)
-
-        # get relative amplitude via robust max and base (10% cut off either side)
-        relative_amplitude = da.quantile(dim='time', q=0.90) - da.quantile(dim='time', q=0.10)
-        
-        # get eos value with user factor and robust mean base
-        da_eos_values = (relative_amplitude * factor) + da.quantile(dim='time', q=0.10)
-        
-        # drop annoying quantile attribute from eos, ignore errors
-        da_eos_values = da_eos_values.drop('quantile', errors='ignore')
-           
-        # calc abs distance of negative slope from eos values
-        dists_from_eos_values = abs(slope_r_neg - da_eos_values)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_eos_values.isnull().all('time')
-        dists_from_eos_values = xr.where(mask, 0.0, dists_from_eos_values)
-
-        # get time index where min absolute dist from eos
-        i = dists_from_eos_values.argmin('time', skipna=True)
-                
-        # get vege end of season values and times (day of year)
-        da_eos_values = slope_r_neg.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating end of season (eos) times via method: relative_value.')
-        
-        # get vege end of season times (day of year)
-        da_eos_times = slope_r_neg['time.dayofyear'].isel(time=i, drop=True)
-        
-    elif method == 'stl_trend':
-        
-        # notify user
-        print('Calculating end of season (eos) values via method: stl_trend.')
-        
-        # check if num seasons for stl is odd, +1 if not
-        num_periods = len(da['time'])
-        if num_periods % 2 == 0:
-            num_periods = num_periods + 1
-            print('> Number of stl periods is even number, added 1 to make it odd.')
-        
-        # prepare stl params
-        stl_params = {
-            'period': num_periods,
-            'seasonal': 7,
-            'trend': None,
-            'low_pass': None,
-            'robust': False
-        }
-        
-        # notify user
-        print('Performing seasonal decomposition via LOESS. Warning: this can take a long time.')
-        da_stl = xr.apply_ufunc(__func_stl__, da, 
-                                input_core_dims=[['time']], 
-                                output_core_dims=[['time']], 
-                                vectorize=True, 
-                                dask='parallelized', 
-                                output_dtypes=[np.float32],
-                                kwargs=stl_params)
-        
-        # get right slopes values, calc differentials, subset to negative differentials
-        slope_r = da.where(da['time.dayofyear'] >= da_peak_times)
-        slope_r_diffs = slope_r.differentiate('time')
-        slope_r_neg_diffs = xr.where(slope_r_diffs < 0, True, False)
-        
-        # select vege values where negative on right slope
-        slope_r_neg = slope_r.where(slope_r_neg_diffs)
-        
-        # get min value right known pos date
-        stl_r = da_stl.where(da_stl['time.dayofyear'] >= da_peak_times)
-        
-        # calc abs distance of negative slope from stl values
-        dists_from_stl_values = abs(slope_r_neg - stl_r)
-        
-        # make mask for all nan pixels and fill with 0.0 (needs to be float)
-        mask = dists_from_stl_values.isnull().all('time')
-        dists_from_stl_values = xr.where(mask, 0.0, dists_from_stl_values)
-
-        # get time index where min absolute dist from eos
-        i = dists_from_stl_values.argmin('time', skipna=True)
-                
-        # get vege end of season values and times (day of year)
-        da_eos_values = slope_r_eos.isel(time=i, drop=True)
-        
-        # notify user
-        print('Calculating end of season (eos) times via method: stl_trend.')
-        
-        # get vege end of season times (day of year)
-        da_eos_times = slope_r_eos['time.dayofyear'].isel(time=i, drop=True)
-        
-    else:
-        raise ValueError('Provided method not supported.')
-
-    # replace any all nan slices with last val and time in each pixel
-    da_eos_values = da_eos_values.where(~mask, np.nan)
-    da_eos_times = da_eos_times.where(~mask, np.nan)
-    
-    # convert type
-    da_eos_values = da_eos_values.astype('float32')
-    da_eos_times = da_eos_times.astype('int16')
-    
-    # rename
-    da_eos_values = da_eos_values.rename('eos_values')
-    da_eos_times = da_eos_times.rename('eos_times')    
-        
-    # notify user
-    print('Success!')
-    return da_eos_values, da_eos_times    
+    return v
 
 
-def get_los(da, da_sos_times, da_eos_times):
+def get_liot(ds, fill_nan=False):
     """
-    Takes two xarray DataArrays containing the start of season (sos) times (day of year) 
-    and end of season (eos) times (day of year) and calculates the length of season (los). 
-    This is calculated as eos day of year minus sos day of year per pixel.
-
-    Parameters
-    ----------
-    da : xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-    da_sos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at start of season (sos).
-    da_eos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at end of season (eos).
-
-    Returns
-    -------
-    da_los_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        length of season (los) value detected between the sos and eos day of year values
-        across the timeseries at each pixel. The values in los represents number of days.
-    """
+    Calculate long integral of total (liot) values, 
+    (no times). Set fill_nan to True for nan filling. 
+    If no nans present, will skip.
+    """   
     
-    # notify user
-    print('Beginning calculation of length of season (los) values (times not possible).')
-    
-    # get attrs
-    attrs = da.attrs
-
-    # get los values (eos day of year - sos day of year)
-    print('Calculating length of season (los) values.')
-    da_los_values = da_eos_times - da_sos_times
-    
-    # correct los if negative values exist
-    if xr.where(da_los_values < 0, True, False).any():
+    def _liot(arr, doy):
+        try:
+            # get long integral of all values via trapz   
+            v = np.trapz(y=arr, x=doy)
+            
+            # rescale if negatives
+            #if np.min(v) < 0:
+                #v += np.abs(np.nanmin(v))
         
-        # get max time (day of year) and negatives into data arrays
-        da_max_times = da['time.dayofyear'].isel(time=-1)
-        da_neg_values = da_eos_times.where(da_los_values < 0) - da_sos_times.where(da_los_values < 0)
+        except:
+            v = np.nan
         
-        # replace negative values with max time 
-        da_los_values = xr.where(da_los_values >= 0, da_los_values, da_max_times + da_neg_values)
+        return v
+
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_liot,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           input_core_dims=[['time'], ['time']],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'])
+    except Exception as e:
+        raise ValueError(e)
         
-        # drop time dim if exists
-        da_los_values = da_los_values.drop({'time'}, errors='ignore')
-
-    # convert type, rename
-    da_los_values = da_los_values.astype('int16')
-    da_los_values = da_los_values.rename('los_values')
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    # rescale if need be
+    if v.min() < 0:
+        v = v + np.abs(v.min())
     
-    # add attrs back on
-    da_los_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_los_values    
+    return v
 
 
-def get_roi(da_peak_values, da_peak_times, da_sos_values, da_sos_times):
+def get_nos(ds, peak_spacing=12, fill_nan=False):
     """
-    Takes four xarray DataArrays containing the peak season values (either pos or 
-    mos) and times (day of year), and start of season (sos) values and times (day 
-    of year). The rate of increase (roi) is calculated as the ratio of the difference 
-    in peak and sos for vege values and time (day of year) per pixel. 
+    Calculate number of season (nos) values, (no times). 
+    Set fill_nan to True for nan filling. If no nans present, 
+    will skip. Set the peak spacing to divide the year of time 
+    series data up into equal sizes. For example, 365 days divided 
+    by 12 gives us month equal spaces.
+    """   
+    
+    def _nos(arr, doy, peak_spacing):
+        try:
+            # calculate peak prominence, divide by months
+            t = ((np.nanmax(arr) - np.nanmin(arr)) / 
+                 (len(doy) / peak_spacing))
 
-    Parameters
-    ----------
-    da_peak_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        vege value detected at either the peak (pos) or middle (mos) of season.
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at either the peak (pos) or middle (mos) of 
-        season.
-    da_sos_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        vege value detected at start of season (sos).
-    da_sos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at start of season (sos).
+            # generate peak information
+            peaks, _ = find_peaks(arr, prominence=t)
 
-    Returns
-    -------
-    da_roi_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        rate of increase value detected between the sos and peak values/times across the 
-        timeseries at each pixel. The values in roi represents rate of vege growth.
+            # set value to 1 season, else > 1
+            v = len(peaks) if len(peaks) > 0 else 1
+
+        except:
+            v = np.nan
+        
+        return v
+
+    
+    try:
+        # wrap above in apply function
+        v = xr.apply_ufunc(_nos,
+                           ds['veg_idx'],
+                           ds['time.dayofyear'],
+                           input_core_dims=[['time'], ['time']],
+                           output_core_dims=[[]],
+                           vectorize=True,
+                           dask='allowed',
+                           output_dtypes=['float32'],
+                           kwargs={'peak_spacing': peak_spacing})
+    except Exception as e:
+        raise ValueError(e)
+        
+    # fill nan pixels
+    if fill_nan is True:
+        try:
+            # interp value array
+            if v.isnull().any() is True:
+                mask = xr.where(v.isnull(), True, False)
+                v = xr.apply_ufunc(interpolate_2d,
+                                   v, mask,
+                                   dask='allowed',
+                                   output_dtypes=['float32'],
+                                   kwargs={'method': 'nearest'})
+        except:
+            print('Could not interpolate pixels, skipping.')
+        
+    return v
+
+
+def get_phenometrics(ds, metrics=None, method='relative_amplitude', factor=0.75, abs_value=0.3, peak_spacing=12, fix_edges=True, fill_nan=False):
     """
-    
-    # notify user
-    print('Beginning calculation of rate of increase (roi) values (times not possible).')
-    
-    # get attrs
-    attrs = da_peak_values.attrs
-
-    # get ratio between the difference in peak and sos values and times
-    print('Calculating rate of increase (roi) values.')
-    da_roi_values = (da_peak_values - da_sos_values) / (da_peak_times - da_sos_times)    
-
-    # convert type, rename
-    da_roi_values = da_roi_values.astype('float32')
-    da_roi_values = da_roi_values.rename('roi_values')
-    
-    # add attrs back on
-    da_roi_values.attrs = attrs
-
-    # notify user
-    print('Success!')
-    return da_roi_values
-
-
-def get_rod(da_peak_values, da_peak_times, da_eos_values, da_eos_times):
-    """
-    Takes four xarray DataArrays containing the peak season values (either pos or 
-    mos) and times (day of year), and end of season (eos) values and times (day 
-    of year). The rate of decrease (rod) is calculated as the ratio of the difference 
-    in peak and eos for vege values and time (day of year) per pixel. 
-
-    Parameters
-    ----------
-    da_peak_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        vege value detected at either the peak (pos) or middle (mos) of season.
-    da_peak_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) value detected at either the peak (pos) or middle (mos) of 
-        season.
-    da_eos_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        vege value detected at end of season (eos).
-    da_eos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at end of season (eos).
-
-    Returns
-    -------
-    da_roi_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        rate of decrease value detected between the eos and peak values/times across the 
-        timeseries at each pixel. The values in rod represents rate of vege decline.
-    """
-    
-    # notify user
-    print('Beginning calculation of rate of decrease (rod) values (times not possible).')   
-    
-    # get attrs
-    attrs = da_peak_values.attrs
-
-    # get abs ratio between the difference in peak and eos values and times
-    print('Calculating rate of decrease (rod) values.')
-    da_rod_values = abs((da_eos_values - da_peak_values) / (da_eos_times - da_peak_times))
-    
-    # convert type, rename
-    da_rod_values = da_rod_values.astype('float32')
-    da_rod_values = da_rod_values.rename('rod_values')
-    
-    # add attrs back on
-    da_rod_values.attrs = attrs
-
-    # notify user
-    print('Success!')
-    return da_rod_values
-
-
-def get_lios(da, da_sos_times, da_eos_times):
-    """
-    Takes three xarray DataArrays containing vege values and sos/eos times (day of year) to
-    calculate the long integral of season (lios) for each timeseries pixel. The lios is
-    considered to act as a surrogate of vegetation productivity during growing season. The 
-    long integral is calculated via the traperzoidal rule.
-
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values.
-    da_sos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at start of season (sos).
-    da_eos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at end of season (eos).
-
-    Returns
-    -------
-    da_lios_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        long integral of season (lios) value detected across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of long integral of season (lios) values (times not possible).')
-    
-    # get attrs
-    attrs = da.attrs
-
-    # get vals between sos and eos times, replace any outside vals with all time min
-    print('Calculating long integral of season (lios) values.')
-    da_lios_values = da.where((da['time.dayofyear'] >= da_sos_times) &
-                              (da['time.dayofyear'] <= da_eos_times), 0.0)
-    
-    # calculate lios using trapz (note: more sophisticated than integrate)
-    da_lios_values = xr.apply_ufunc(np.trapz, 
-                                    da_lios_values, 
-                                    input_core_dims=[['time']],
-                                    dask='parallelized', 
-                                    output_dtypes=[np.float32],
-                                    kwargs={'dx': 2})
-    
-    # convert type, rename
-    da_lios_values = da_lios_values.astype('float32')
-    da_lios_values = da_lios_values.rename('lios_values')
-    
-    # add attrs back on
-    da_lios_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_lios_values
-
-
-def get_sios(da, da_sos_times, da_eos_times, da_base_values):
-    """
-    Takes four xarray DataArrays containing vege values,  sos and eos times and base
-    values (vos or bse) and calculates the short integral of season (sios) for each 
-    timeseries pixel. The sios is considered to act as a surrogate of vegetation productivity 
-    minus the understorey vegetation during growing season. The short integral is calculated 
-    via integrating the array with the traperzoidal rule minus the trapezoidal of the base.
-
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values.
-    da_sos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at start of season (sos).
-    da_eos_times: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        time (day of year) detected at end of season (eos).
-    da_base_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the base (bse) or valley (vos) of season.
-
-    Returns
-    -------
-    da_sios_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        short integral of season (sios) value detected across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of short integral of season (sios) values (times not possible).')  
-    
-    # get attrs
-    attrs = da.attrs
-
-    # get veg vals between sos and eos times, replace any outside vals with 0
-    print('Calculating short integral of season (sios) values.')
-    da_sios_values = da.where((da['time.dayofyear'] >= da_sos_times) &
-                              (da['time.dayofyear'] <= da_eos_times), 0.0)
-    
-    # calculate sios using trapz (note: more sophisticated than integrate)
-    da_sios_values = xr.apply_ufunc(np.trapz, 
-                                    da_sios_values, 
-                                    input_core_dims=[['time']],
-                                    dask='parallelized', 
-                                    output_dtypes=[np.float32],
-                                    kwargs={'dx': 1})
-    
-    # combine 2d base vals with 3d da, projecting const base val to pixel timeseries (i.e. a rectangle)
-    da_sios_bse_values = da_base_values.combine_first(da)
-    
-    # get base vals between sos and eos times, replace any outside vals with 0
-    da_sios_bse_values = da_sios_bse_values.where((da_sios_bse_values['time.dayofyear'] >= da_sos_times) &
-                                                  (da_sios_bse_values['time.dayofyear'] <= da_eos_times), 0)
-    
-    # calculate trapz of base (note: more sophisticated than integrate)
-    da_sios_bse_values = xr.apply_ufunc(np.trapz, 
-                                        da_sios_bse_values, 
-                                        input_core_dims=[['time']],
-                                        dask='parallelized', 
-                                        output_dtypes=[np.float32],
-                                        kwargs={'dx': 1})
-    
-    # remove base trapz from sios values
-    da_sios_values = da_sios_values - da_sios_bse_values
-    
-    # convert type, rename
-    da_sios_values = da_sios_values.astype('float32')
-    da_sios_values = da_sios_values.rename('sios_values')
-    
-    # add attrs back on
-    da_sios_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_sios_values
-
-
-def get_liot(da):
-    """
-    Takes an xarray DataArray containing vege values and calculates the long integral of
-    total (liot) for each timeseries pixel. The liot is considered to act as a surrogate of 
-    vegetation productivty. The long integral is calculated via the traperzoidal rule.
-
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
-
-    Returns
-    -------
-    da_liot_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        long integral of total (liot) value detected across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of long integral of total (liot) values (times not possible).')
-    
-    # get attrs
-    attrs = da.attrs
-
-    # calculate liot using trapz (note: more sophisticated than integrate)
-    print('Calculating long integral of total (liot) values.')
-    da_liot_values = xr.apply_ufunc(np.trapz, 
-                                    da, 
-                                    input_core_dims=[['time']],
-                                    dask='parallelized', 
-                                    output_dtypes=[np.float32],
-                                    kwargs={'dx': 1})
-    
-    # convert type, rename
-    da_liot_values = da_liot_values.astype('float32')
-    da_liot_values = da_liot_values.rename('liot_values')
-    
-    # add attrs back on
-    da_liot_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_liot_values
-
-
-def get_siot(da, da_base_values):
-    """
-    Takes an xarray DataArray containing vege values and calculates the short integral of
-    total (siot) for each timeseries pixel. The siot is considered to act as a surrogate of 
-    vegetation productivity minus the understorey vegetation. The short integral is calculated 
-    via integrating the array with the traperzoidal rule minus the trapezoidal of the base.
-
-    Parameters
-    ----------
-    da: xarray DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values.
-    da_base_values: xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        veg_index value detected at either the base (bse) or valley (vos) of season.
-
-    Returns
-    -------
-    da_siot_values : xarray DataArray
-        An xarray DataArray type with an x and y dimension (no time). Each pixel is the 
-        short integral of total (siot) value detected across the timeseries at each pixel.
-    """
-    
-    # notify user
-    print('Beginning calculation of short integral of total (siot) values (times not possible).') 
-    
-    # get attrs
-    attrs = da.attrs
-
-    # calculate siot using trapz (note: more sophisticated than integrate)
-    print('Calculating short integral of total (siot) values.')
-    da_siot_values = xr.apply_ufunc(np.trapz, 
-                                    da, 
-                                    input_core_dims=[['time']],
-                                    dask='parallelized', 
-                                    output_dtypes=[np.float32],
-                                    kwargs={'dx': 1})
-    
-    # combine 2d base vals with 3d da, projecting const base val to pixel timeseries (i.e. a rectangle)
-    da_siot_bse_values = da_base_values.combine_first(da)
-    
-    # calculate trapz of base (note: more sophisticated than integrate)
-    da_siot_bse_values = xr.apply_ufunc(np.trapz, 
-                                        da_siot_bse_values, 
-                                        input_core_dims=[['time']],
-                                        dask='parallelized', 
-                                        output_dtypes=[np.float32],
-                                        kwargs={'dx': 1})
-    
-    # remove base trapz from siot values
-    da_siot_values = da_siot_values - da_siot_bse_values
-    
-    # convert type, rename
-    da_siot_values = da_siot_values.astype('float32')
-    da_siot_values = da_siot_values.rename('siot_values')
-    
-    # add attrs back on
-    da_siot_values.attrs = attrs
-    
-    # notify user
-    print('Success!')
-    return da_siot_values
-    
-
-def calc_phenometrics(ds, metric=None, peak_metric='pos', base_metric='bse', method='first_of_slope', factor=0.5,
-                      thresh_sides='two_sided', abs_value=0, inplace=True):
-    """
-    Generate 1 or more phenometrics from an xr dataset or array. Users can chose 
-    the peak (pos or mos) or base (vos or bse) metric to detect the amplitude
-    of the seasonal signal per pixel. Several methods are available to detect
-    sos and eos also (see below). 
+    Generate phenometrics from an xr dataset. Users can choose 
+    the seasonal derivation method for deriving season start and 
+    end. Some of these methods require parameters factor, abs_value
+    be set. Users can also set whether missing pixels are filled in.
+    Much of this method is based on the TIMESAT 3.3 software.
     
     Parameters
     ----------
-    ds : xarray Dataset/DataArray
-        A two-dimensional or multi-dimensional array containing an DataArray of veg_index 
-        and time values. 
+    ds : xarray Dataset
+        A three-dimensional or multi-dimensional array containing 
+        a variable of veg_index, x, y, and time dimensions. 
     metric : list or str
-        A string or list of metrics to return. Leave empty to fetch all.
-    peak_metric: str
-        A string of pos or mos. Defines the peak part of the signal to use
-        as the peak. Default is pos.
-    base_metric: str
-        A string of vos or bse. Defines the lowest part of the signal to use
-        as the base. Default is bse.
+        A string or list of metrics to return. Leave empty to fetch 
+        all.
     method: str
-        A string indicating which start of season detection method to use. Default is
-        same as TIMESAT: seasonal_amplitude. The available options include:
-        1. first_of_slope: lowest vege value of slope is sos (i.e. first lowest value).
-        2. median_of_slope: middle vege value of slope is sos (i.e. median value).
-        3. seasonal_amplitude: uses a percentage of the amplitude from base to find sos.
-        4. absolute_value: users defined absolute value in vege index units is used to find sos.
-        5. relative_amplitude: robust mean peak and base, and a factor of that area, used to find sos.
-        6. stl_trend: robust but slow - uses seasonal decomp LOESS method to find trend line and sos.
+        A string indicating which start of season detection method 
+        to use. The available options include:
+        1. first_of_slope: lowest vege value of slope is sos.
+        2. mean_of_slope: mean vege value of slope is sos.
+        3. seasonal_amplitude: uses a % of the amplitude between 
+           base and middle of season to find sos.
+        4. absolute_value: users defined absolute value in vege 
+           index units.
+        5. relative_amplitude: robust mean peak and base, and a 
+           factor of that area.
     factor: float
-        A float value between 0 and 1 which is used to increase or decrease the amplitude
-        threshold for the seasonal_amplitude method. A factor closer to 0 results in start 
-        of season nearer to min value, a factor closer to 1 results in start of season
-        closer to peak of season.
-    thresh_sides: str
-        A string indicating whether the sos value threshold calculation should be the min 
-        value of left slope (one_sided) only, or use the bse/vos value (two_sided) calculated
-        earlier. Default is two_sided, as per TIMESAT 3.3. That said, one_sided is potentially
-        more robust.
+        A float value between 0 and 1 which is used to increase or 
+        decrease the amplitude threshold for the seasonal_amplitude 
+        and relative_amplitude method. A factor closer to 0 results 
+        in start of season nearer to min value, a factor closer to 1 
+        results in start of season closer to peak of season.
     abs_value: float
-        For absolute_value method only. Defines the absolute value in units of the vege index to
-        which sos is defined. The part of the vege slope that the absolute value hits will be the
-        sos value and time.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
+        For absolute_value method only. Defines the absolute value in 
+        units of the vege index to which sos and eos is defined. The 
+        part of the vege slope that the absolute value hits will be the
+        sos/eos value and time.
+    peak_spacing : int
+        When deriving number of seasons, set the number divisions to
+        divide the time dimension by. Default is recommended.
+    fix_edges : bool
+        Some vegetation has a peak that may occur exactly on day of year
+        1 or 365. This can cause issues when deriving start and end of 
+        season. To skip these years and use the next closest peak or 
+        trough value in the pixel time series, turn this to True. In 
+        practical terms, this fixes some apparent noise, but slightly
+        reduces accuracy of the result.
+    fill_nan : bool
+        Some methods may return nan values, set this to True to
+        enforce a filling method to fill these pixels in using a
+        nearest neighbourhood interpolation technique.
         
     Returns
     -------
-    ds : xarray Dataset/DataArray
+    ds : xarray Dataset
         An xarray DataArray type with 1 or more phenometrics.
     """
-    
-    # notify user
-    print('Beginning calculation of phenometrics.')
-    
-    # check metrics supported
-    allowed_metrics = ['pos', 'mos', 'vos', 'bse','aos', 'sos', 'eos', 
-                       'los', 'roi', 'rod', 'lios', 'sios', 'liot', 'siot']
-    
-    # check metric provided
-    if metric is None or len(metric) == 0:
-        print('No metric requested, generating all.')   
-        metric = allowed_metrics
-           
-    # check metric is list, if not, make it one
-    metrics = metric if isinstance(metric, list) else [metric]
-    for metric in metrics:
-        if metric not in metrics:
-            raise ValueError('Metric: {} not supported.'.format(metric))
-    
-    # check xr type, dims
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) or 'y' not in list(ds.dims):
-        raise ValueError('No x, y dimension in dataset.')
-
-    # create copy ds if not inplace
-    if not inplace:
-        ds = ds.copy(deep=True)
-    
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # check if at least one year of data
-    if len(ds.groupby('time.year').groups) < 1:
-        raise ValueError('Need at least one year in dataset.')
-        
-    # convert to data array if dataset
-    if isinstance(ds, xr.Dataset):
-        ds = ds.to_array()
-        
-    # get vars in ds
-    temp_vars = list(ds['variable'])
-    if 'veg_idx' not in temp_vars:
-        raise ValueError('Vege var name not in dataset.')
-
-    # get attrs
-    attrs = ds.attrs
-    
-    # check if dask - not yet supported
-    if bool(ds.chunks):
-        print('Dask arrays not yet supported. Computing data.')    
-        
-    # check if max, min metric parameters supported
-    if peak_metric not in ['pos', 'mos']:
-        raise ValueError('> The peak_metric parameter must be either pos or mos.')
-    elif base_metric not in ['bse', 'vos']:
-        raise ValueError('> The base_metric parameter must be either bse or vos.')
-
-    # take a mask of all-nan slices for clean up at end and set all-nan to 0s
-    ds_all_nan_mask = ds.isnull().all('time')
-    ds = ds.where(~ds_all_nan_mask, 0.0)
-
-    # calc peak of season (pos) values and times
-    da_pos_values, da_pos_times = get_pos(da=ds)
-            
-    # calc valley of season (vos) values and times
-    da_vos_values, da_vos_times = get_vos(da=ds)
-
-    # calc middle of season (mos) value (time not possible)
-    da_mos_values = get_mos(da=ds, 
-                            da_peak_times=da_pos_times)
-    
-    # calc base (bse) values (time not possible).
-    da_bse_values = get_bse(da=ds, 
-                            da_peak_times=da_pos_times)
-
-    # calc amplitude of season (aos) values (time not possible)
-    da_peak = da_pos_values if peak_metric == 'pos' else da_mos_values
-    da_base = da_bse_values if base_metric == 'bse' else da_vos_values
-    da_aos_values = get_aos(da_peak_values=da_peak, 
-                            da_base_values=da_base)   
-     
-    # calc start of season (sos) values and times
-    da_sos_values, da_sos_times = get_sos(da=ds,
-                                          da_peak_times=da_pos_times, 
-                                          da_base_values=da_base,
-                                          da_aos_values=da_aos_values, 
-                                          method=method, 
-                                          factor=factor,
-                                          thresh_sides=thresh_sides, 
-                                          abs_value=abs_value)
-
-    # calc end of season (eos) values and times
-    da_eos_values, da_eos_times = get_eos(da=ds, 
-                                          da_peak_times=da_pos_times, 
-                                          da_base_values=da_base,
-                                          da_aos_values=da_aos_values, 
-                                          method=method, 
-                                          factor=factor,
-                                          thresh_sides=thresh_sides, 
-                                          abs_value=abs_value)     
-        
-    # calc length of season (los) values (time not possible)
-    da_los_values = get_los(da=ds, 
-                            da_sos_times=da_sos_times, 
-                            da_eos_times=da_eos_times)
-    
-    # calc rate of icnrease (roi) values (time not possible)
-    da_roi_values = get_roi(da_peak_values=da_pos_values, 
-                            da_peak_times=da_pos_times,
-                            da_sos_values=da_sos_values, 
-                            da_sos_times=da_sos_times)
-        
-    # calc rate of decrease (rod) values (time not possible)
-    da_rod_values = get_rod(da_peak_values=da_pos_values, 
-                            da_peak_times=da_pos_times,
-                            da_eos_values=da_eos_values, 
-                            da_eos_times=da_eos_times)
-    
-    # calc long integral of season (lios) values (time not possible)
-    da_lios_values = get_lios(da=ds, 
-                              da_sos_times=da_sos_times, 
-                              da_eos_times=da_eos_times)
- 
-    # calc short integral of season (sios) values (time not possible)
-    da_sios_values = get_sios(da=ds, 
-                              da_sos_times=da_sos_times, 
-                              da_eos_times=da_eos_times,
-                              da_base_values=da_base)
-
-    # calc long integral of total (liot) values (time not possible)
-    da_liot_values = get_liot(da=ds)
-        
-    # calc short integral of total (siot) values (time not possible)
-    da_siot_values = get_siot(da=ds, 
-                              da_base_values=da_base)
-    
-    # create dict of metrics
-    da_dict = {
-        'pos':  [da_pos_values, da_pos_times],
-        'mos':  [da_mos_values],
-        'vos':  [da_vos_values, da_vos_times],
-        'bse':  [da_bse_values],
-        'aos':  [da_aos_values],
-        'sos':  [da_sos_values, da_sos_times],
-        'eos':  [da_eos_values, da_eos_times],
-        'los':  [da_los_values],
-        'roi':  [da_roi_values],
-        'rod':  [da_rod_values],
-        'lios': [da_lios_values],
-        'sios': [da_sios_values],
-        'liot': [da_liot_values],
-        'siot': [da_siot_values]
-    }
-    
-    # if requested, add metric list
-    da_list = []
-    for metric in metrics:
-        da_list = da_list + da_dict.get(metric)
-
-    # combine data arrays into one dataset
-    ds = xr.merge(da_list)
-    
-    # set original all nan pixels back to nan
-    ds = ds.where(~ds_all_nan_mask)
-    
-    # add attrs back on
-    ds.attrs = attrs
-    
-    if was_da:
-        ds = ds.to_array()
 
     # notify user
-    print('Phenometrics calculated successfully!')
+    print('Preparing phenological metrics analysis...')
+
+    # set approved metrics
+    allowed_metrics = [
+        'pos', 
+        'vos', 
+        'mos', 
+        'bse',
+        'aos', 
+        'sos', 
+        'eos', 
+        'los', 
+        'roi', 
+        'rod', 
+        'lios', 
+        'sios', 
+        'liot', 
+        'siot',
+        'nos']
+
+    # check xarray
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Did not provide an xarray dataset.')
+    elif 'time' not in ds or 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x, y or time dimensions in dataset.')
+    elif len(ds.groupby('time.year')) != 1:
+        raise ValueError('More than one year in dataset.')
+    elif 'veg_idx' not in ds:
+        raise ValueError('No veg_idx variable in dataset.')
+    elif bool(ds.chunks):
+        ds = ds.compute()
+
+    # check metric type
+    if metrics is None:
+        metrics = allowed_metrics
+    elif isinstance(metrics, str):
+        metric = [metric]
+
+    # check if somethign in list
+    if len(metrics) == 0:
+        raise ValueError('Did not request a metric.')
+
+    # check if all metrics supported
+    for metric in metrics:
+        if metric not in allowed_metrics:
+            raise ValueError('Metric {} not supported'.format(metric))
+
+    allowed_methods = [
+        'first_of_slope',
+        'mean_of_slope',
+        'seasonal_amplitude',
+        'absolute_amplitude',
+        'relative_amplitude']
+
+    # check method is valid
+    if method not in allowed_methods:
+        raise ValueError('Method {} not supported'.format(method))
+
+    # check parameters given with method
+    if method == 'seasonal_amplitude' and factor is None:
+        raise ValueError('Did not provide factor for seasonal amplitude.')
+    elif method == 'absolute_amplitude' and abs_value is None:
+        raise ValueError('Did not provide absolute value for absolute amplitude.')
+    elif method == 'relative_amplitude' and factor is None:
+        raise ValueError('Did not provide factor for relative amplitude.')
+
+    # check peak spacing
+    if peak_spacing is None:
+        peak_spacing = 12
+
+    # check fill nan
+    if fill_nan is None:
+        fill_nan = False
+
+    # notify user
+    print('Generating phenological metrics...')
+
+    try:
+        # generate both pos abd vos v, t
+        print('Generating pos, vos...')
+        da_pos_v, da_pos_t = get_pos(ds=ds, 
+                                     fix_edges=fix_edges,
+                                     fill_nan=fill_nan)
+        da_vos_v, da_vos_t = get_vos(ds=ds, 
+                                     fix_edges=fix_edges,
+                                     fill_nan=fill_nan)
+
+        # generate both mos and bse v (no t)
+        print('Generating mos, bse...')
+        da_mos_v = get_mos(ds=ds, 
+                           fix_edges=fix_edges,
+                           fill_nan=fill_nan)    
+        da_bse_v = get_bse(ds=ds, 
+                           fix_edges=fix_edges,
+                           fill_nan=fill_nan)    
+
+        # generate aos v (no t)
+        print('Generating aos...')
+        da_aos_v = get_aos(da_upper=da_mos_v, 
+                           da_lower=da_bse_v, 
+                           fill_nan=fill_nan)      
+
+        # generate both sos and eos v, t
+        print('Generating sos, eos...')
+        if method == 'first_of_slope':
+            da_sos_v, da_sos_t = get_sos_fos(ds=ds, 
+                                             fix_edges=fix_edges,
+                                             fill_nan=fill_nan)
+            da_eos_v, da_eos_t = get_eos_fos(ds=ds, 
+                                             fix_edges=fix_edges,
+                                             fill_nan=fill_nan)
+
+        elif method == 'mean_of_slope':
+            da_sos_v, da_sos_t = get_sos_mos(ds=ds, 
+                                             fix_edges=fix_edges,
+                                             fill_nan=fill_nan)
+            da_eos_v, da_eos_t = get_eos_mos(ds=ds, 
+                                             fix_edges=fix_edges,
+                                             fill_nan=fill_nan)
+
+        elif method == 'seasonal_amplitude':
+            da_sos_v, da_sos_t = get_sos_seaamp(ds=ds, 
+                                                da_aos_v=da_aos_v,
+                                                da_bse_v=da_bse_v,
+                                                factor=factor,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+            da_eos_v, da_eos_t = get_eos_seaamp(ds=ds, 
+                                                da_aos_v=da_aos_v,
+                                                da_bse_v=da_bse_v,
+                                                factor=factor,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+
+        elif method == 'absolute_amplitude':     
+            da_sos_v, da_sos_t = get_sos_absamp(ds=ds, 
+                                                abs_value=abs_value,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+            da_eos_v, da_eos_t = get_eos_absamp(ds=ds, 
+                                                abs_value=abs_value,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+
+        elif method == 'relative_amplitude':     
+            da_sos_v, da_sos_t = get_sos_relamp(ds=ds, 
+                                                factor=factor,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+            da_eos_v, da_eos_t = get_eos_relamp(ds=ds, 
+                                                factor=factor,
+                                                fix_edges=fix_edges,
+                                                fill_nan=fill_nan)
+
+        # generate los t (no v)
+        print('Generating los...')
+        da_los_t = get_los(da_sos_t=da_sos_t,
+                           da_eos_t=da_eos_t,
+                           fill_nan=fill_nan)
+
+        # generate roi v (no t)
+        print('Generating roi...')
+        da_roi_v = get_roi(da_pos_v=da_pos_v, 
+                           da_pos_t=da_pos_t, 
+                           da_sos_v=da_sos_v, 
+                           da_sos_t=da_sos_t, 
+                           fill_nan=fill_nan)
+
+        # generate rod v (no t)
+        print('Generating rod...')
+        da_rod_v = get_rod(da_pos_v=da_pos_v, 
+                           da_pos_t=da_pos_t, 
+                           da_eos_v=da_eos_v, 
+                           da_eos_t=da_eos_t, 
+                           fill_nan=fill_nan)
+
+        # generate sios v (no t)
+        print('Generating sios...')
+        da_sios_v = get_sios(ds=ds,
+                             da_sos_t=da_sos_t,
+                             da_eos_t=da_eos_t,
+                             da_bse_v=da_bse_v,
+                             fill_nan=fill_nan)
+
+        # generate lios v (no t)
+        print('Generating lios...')
+        da_lios_v = get_lios(ds=ds,
+                             da_sos_t=da_sos_t,
+                             da_eos_t=da_eos_t,
+                             fill_nan=fill_nan)
+
+        # generate siot v (no t)
+        print('Generating siot...')
+        da_siot_v = get_siot(ds=ds,
+                             da_bse_v=da_bse_v,
+                             fill_nan=fill_nan)
+
+        # generate liot v (no t)
+        print('Generating liot...')
+        da_liot_v = get_liot(ds=ds, fill_nan=fill_nan)
+
+        # generate nos v (no t)
+        print('Generating nos...')
+        da_nos_v = get_nos(ds=ds, 
+                           peak_spacing=peak_spacing,
+                           fill_nan=fill_nan)
+
+    except Exception as e:
+        raise ValueError(e)
+
+
+        # notify user
+        print('Success! Cleaning up...')
+
+    try:
+        # build dataset from var names and arrays
+        ds = xr.merge([{
+            'pos_values':  da_pos_v,
+            'pos_times':   da_pos_t,
+            'vos_values':  da_vos_v,
+            'vos_times':   da_vos_t,
+            'mos_values':  da_mos_v,
+            'bse_values':  da_bse_v,
+            'aos_values':  da_aos_v,
+            'sos_values':  da_sos_v,
+            'sos_times':   da_sos_t,
+            'eos_values':  da_eos_v,
+            'eos_times':   da_eos_t,
+            'los_times':   da_los_t,
+            'roi_values':  da_roi_v,
+            'rod_values':  da_rod_v,
+            'sios_values': da_sios_v,
+            'lios_values': da_lios_v,
+            'siot_values': da_siot_v,
+            'liot_values': da_liot_v,
+            'nos_values':  da_nos_v}])
+        
+        # update names of requested metrics
+        metrics = (['{}_values'.format(m) for m in metrics] +
+                   ['{}_times'.format(m) for m in metrics])
+
+        # remove any metrics user did not request
+        for var in ds:
+            if var not in metrics:
+                ds = ds.drop_vars(var)
+
+    except Exception as e:
+        raise ValueError(e)
+
+    # notify user and return
+    print('Generated phenological metrics successfully.')
     return ds

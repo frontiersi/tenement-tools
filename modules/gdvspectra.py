@@ -1798,10 +1798,8 @@ def remove_salt_pepper(ds, iterations=1):
     # check dataset
     if not isinstance(ds, xr.Dataset):
         raise TypeError('Not an xarray dataset.')
-        raise
     elif 'x' not in ds or 'y' not in ds:
         raise TypeError('Dataset does not contain an x or y dimension.')
-        raise
         
     # check iterations
     if iterations <= 0:

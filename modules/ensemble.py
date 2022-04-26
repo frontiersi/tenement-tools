@@ -441,7 +441,6 @@ def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     # return
     return out_list 
 
-
 # meta
 def get_target_res_xr(ds_list, target='Lowest Resolution'):
     """takes a list of xarray datasets, finds lowest/highest 
