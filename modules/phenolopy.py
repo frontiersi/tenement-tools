@@ -2333,7 +2333,7 @@ def get_phenometrics(ds, metrics=None, method='relative_amplitude', factor=0.75,
         2. mean_of_slope: mean vege value of slope is sos.
         3. seasonal_amplitude: uses a % of the amplitude between 
            base and middle of season to find sos.
-        4. absolute_value: users defined absolute value in vege 
+        4. absolute_amplitude: users defined absolute value in vege 
            index units.
         5. relative_amplitude: robust mean peak and base, and a 
            factor of that area.
