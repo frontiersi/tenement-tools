@@ -528,10 +528,13 @@ def load_local_nc(nc_path=None, use_dask=True, conform_nodata_to=-9999):
     return ds
 
 
-def group_dupe_times(ds):
+def group_by_solar_day(ds):
     """
-    Read a netcdf file (e.g. nc) and combine duplicate times.
-
+    Smaller helper function that mimics the odc dea 
+    day grouper. Landsat and Sentinel overlaps often
+    have dates on same day - this method groups by day
+    based on string y-m-d representation.
+    
     Parameters
     ----------
     ds: xarray dataset
@@ -542,34 +545,40 @@ def group_dupe_times(ds):
     ds : xarray Dataset
     """
     
-    # check if time in cube
     if not isinstance(ds, xr.Dataset):
-        print('Input is not xarray dataset type.')
-        raise
+        raise TypeError('Did not provide an xarray dataset type.')
     elif 'time' not in ds:
-        print('No time dimension in input dataset.')
-        raise
+        raise ValueError('No time dimension in dataset.')
         
     # get attributes from dataset
     ds_attrs = ds.attrs
     ds_band_attrs = ds[list(ds)[0]].attrs
     ds_spatial_ref_attrs = ds['spatial_ref'].attrs
     
-    # get datetimes in array, count unique counts
-    dts = ds['time'].values
+    # get datetimes strings in array, count unique counts
+    dts = ds['time'].dt.strftime('%Y-%m-%d')
     _, num_dupes = np.unique(dts, return_counts=True)
     
     # flag if duplicate times occur
     if len(np.unique(num_dupes)) > 1:
-        print('Duplicate times detected in dataset. Merging duplicates.')
-        
-        # group by times
-        ds = ds.groupby('time').max()
-        
-        # append attrbutes on to dataset and bands
-        ds.attrs = ds_attrs
-        ds['spatial_ref'].attrs = ds_spatial_ref_attrs
-        for var in list(ds):
-            ds[var].attrs = ds_band_attrs
+    
+        # get y-m-d as strings for grouping
+        ds['time'] = ds['time'].dt.strftime('%Y-%m-%d')
 
+        # group by strings
+        ds = ds.groupby('time').max('time')
+    
+        # convert strings back to numpy datetimes
+        dts = [] 
+        for dt in ds['time'].values:
+            dts.append(np.datetime64(str(dt)))
+            
+        # replace datetimes
+        ds['time'] = dts
+        
+        # rechunk if chunked 
+        if bool(ds.chunks) is True:
+            ds = ds.chunk({'time': -1})
+    
     return ds
+ 

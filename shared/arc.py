@@ -336,6 +336,7 @@ def convert_smoother_code(code):
         raise
 
 
+# deprecated
 def get_bbox_from_geom(in_geom):
     """Helper func to take an arcpy geom type and
     project it to albers. The bbox is obtained from 
@@ -421,7 +422,7 @@ def read_shp_for_threshold(in_occurrence_feat=None, in_pa_column=None):
     return df_records
    
    
-# checks, meta
+# deprecated
 def convert_arcpy_geom_to_gjson(arcpy_geom):
     """Arcpy and ogr geom dont play nicely. The easiest
     way to convert arcpy geometry to ogr geometry is via

@@ -50,9 +50,9 @@ def enforce_edge_dates(ds, years=None):
     Returns
     -------
     ds : xarray Dataset
-        The original xarray Dataset inputted into the function, with a 
-        dummy 1st jan and 31st dec times (if needed).
-    
+        The original xarray Dataset inputted into the 
+        function, with a dummy 1st jan and 31st dec times 
+        (if needed).
     """
 
     # check dataset
@@ -1909,7 +1909,11 @@ def get_roi(da_pos_v, da_pos_t, da_sos_v, da_sos_t, fill_nan=False):
 
             # get absolute if negatives
             v = np.abs(v)
-        
+            
+            # enforce 0 if nan
+            if np.isnan(v) is True:
+                v = 0
+            
         except:
             v = np.nan
         
@@ -1925,6 +1929,10 @@ def get_roi(da_pos_v, da_pos_t, da_sos_v, da_sos_t, fill_nan=False):
                            da_sos_t,
                            dask='allowed',
                            output_dtypes=['float32'])
+                           
+        # smooth output 
+        v = v.rolling(x=3, y=3, center=True, min_periods=1).median()
+        
     except Exception as e:
         raise ValueError(e)
         
@@ -1962,6 +1970,10 @@ def get_rod(da_pos_v, da_pos_t, da_eos_v, da_eos_t, fill_nan=False):
             # get absolute if negatives
             v = np.abs(v)
             
+            # enforce 0 if nan
+            if np.isnan(v) is True:
+                v = 0
+            
         except:
             v = np.nan
         
@@ -1977,6 +1989,10 @@ def get_rod(da_pos_v, da_pos_t, da_eos_v, da_eos_t, fill_nan=False):
                            da_eos_t,
                            dask='allowed',
                            output_dtypes=['float32'])
+    
+        # smooth output 
+        v = v.rolling(x=3, y=3, center=True, min_periods=1).median()
+    
     except Exception as e:
         raise ValueError(e)
         

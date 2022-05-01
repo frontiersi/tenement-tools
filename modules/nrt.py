@@ -42,170 +42,60 @@ sys.path.append('../../shared')
 import arc, satfetcher, tools
 
 
-# meta
-def interp_nans(ds, drop_edge_nans=False):
-    """"""
-    
-    # check if time dimension exists 
-    if isinstance(ds, xr.Dataset) and 'time' not in ds:
-        raise ValueError('Dataset has no time dimension.')
-    elif isinstance(ds, xr.DataArray) and 'time' not in ds.dims:
-        raise ValueError('DataArray has no time dimension.')
-        
-    try:
-        # interpolate all values via linear interp
-        ds = ds.interpolate_na('time')
-    
-        # remove any remaining nan (first and last indices, for e.g.)
-        if drop_edge_nans is True:
-            ds = ds.where(~ds.isnull(), drop=True)
-    except:
-        return
-    
-    return ds
-
-
-# meta
-def add_required_vars(ds):
-    """"""
-
-    # set required variable names
-    new_vars = [
-        'veg_clean', 
-        'static_raw', 
-        'static_clean',
-        'static_rule_one',
-        'static_rule_two',
-        'static_rule_three',
-        'static_zones',
-        'static_alerts',
-        'dynamic_raw', 
-        'dynamic_clean',
-        'dynamic_rule_one',
-        'dynamic_rule_two',
-        'dynamic_rule_three',
-        'dynamic_zones',
-        'dynamic_alerts']
-
-    # iter each var and add as nans to xr, if not exist
-    for new_var in new_vars:
-        if new_var not in ds:
-            ds[new_var] = xr.full_like(ds['veg_idx'], np.nan)
-            
-    return ds
-
-
-# meta, check the checks
-def combine_old_new_xrs(ds_old, ds_new):
-    """"""
-    
-    # check if old provided, else return new
-    if ds_old is None:
-        print('Old dataset is empty, returning new.')
-        return ds_new
-    elif ds_new is None:
-        print('New dataset is empty, returning old.')
-        return ds_old
-        
-    # check time dimension
-    if 'time' not in ds_old or 'time' not in ds_new:
-        print('Datasets lack time coordinates.')
-        return
-    
-    # combien old with new
-    try:
-        ds_cmb = xr.concat([ds_old, ds_new], dim='time')
-    except:
-        print('Could not combine old and new datasets.')
-        return
-    
-    return ds_cmb
-    
-    
-# meta
-def safe_load_ds(ds):
-    """this method loads existing dataset"""
-
-    # check if file existd and try safe open
-    if ds is not None:
-        try:
-            ds = ds.load()
-            ds.close()
-            
-            return ds
-                    
-        except:
-            print('Could not open dataset, returning None.')
-            return
-    else:
-        print('Dataset not provided')
-        return
-
-
-# meta, checks
-def safe_load_nc(in_path):
-    """Performs a safe load on local netcdf. Reads 
-    NetCDF, loads it, and closes connection to file
-    whilse maintaining data in memory"""    
-    
-    # check if file existd and try safe open
-    if os.path.exists(in_path):
-        try:
-            with xr.open_dataset(in_path) as ds_local:
-                ds_local.load()
-            
-            return ds_local
-                    
-        except:
-            print('Could not open cube: {}, returning None.'.format(in_path))
-            return
-    
-    else:
-        print('File does not exist: {}, returning None.'.format(in_path))
-        return
-
-
-# checks, metadata
 def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
     """
-    Takes a path to a netcdf file, a start and end date, bounding box and
-    obtains the latest satellite imagery from DEA AWS. If an existing
-    dataset is provided, the metadata from that is used to define the
-    coordinates, etc. This function is used to 'grab' all existing cubes
-    Note: currently this func contains a temp solution to the sentinel nrt 
-    fmask band name issue
+    Takes a set of metadata (dea product names, band names,
+    start and end datesm bbox in wgs84 lat and lons,
+    a resolution value and an existing dataset, and fetches
+    all available dea satellite data for the query. Returns
+    an xarray dataset object (lazy).
     
     Parameters
     ----------
-    out_nc: str
-        A path to an existing monitoring areas gdb feature class.
+    collections: list
+        A list of dea collection names.
+    bands : list
+        A list of dea band names.
+    start_dt : string
+        Starting datetime of query in format YYYY-MM-DD.
+    end_dt : string
+        Ending datetime of query in format YYYY-MM-DD.
+    bbox: list 
+        List of bounding box lat/lon pairs. XMIN, YMIN, 
+        XMAX, YMAX.
+    resolution: int, float 
+        Resolution of resampled pixels.
+    ds_existing: xarray dataset 
+        Use an existing xarray dataset to generate query,
+        outside of start and end date.
+
+    Returns
+    -------
+    ds : xarray Dataset
     """
-    
-    # checks
-    # todo
-    
+
     # notify
     print('Obtaining all satellite data for monitoring area.')
 
-    # query stac endpoint
     try:
+        # query stac endpoint
         items = cog_odc.fetch_stac_items_odc(stac_endpoint='https://explorer.sandbox.dea.ga.gov.au/stac', 
                                              collections=collections, 
                                              start_dt=start_dt, 
                                              end_dt=end_dt, 
                                              bbox=bbox,
-                                             slc_off=False,    # never want slc-off data
+                                             slc_off=False,
                                              limit=250)
                
         # replace s3 prefix with https for each band - arcgis doesnt like s3
         items = cog_odc.replace_items_s3_to_https(items=items, 
                                           from_prefix='s3://dea-public-data', 
                                           to_prefix='https://data.dea.ga.gov.au')                            
-    except:
-        raise ValueError('Error occurred during fetching of stac metadata.')
+    except Exception as e:
+        raise ValueError(e)
 
-    # build xarray dataset from stac data
     try:
+        # build xarray dataset from stac data
         ds = cog_odc.build_xr_odc(items=items,
                                   bbox=bbox,
                                   bands=bands,
@@ -221,124 +111,764 @@ def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, d
         ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)
         ds = cog_odc.fix_xr_time_for_arc_cog(ds)
     except Exception as e:
-        #raise ValueError(e)
-        raise ValueError('Error occurred building of xarray dataset.')
+        raise ValueError(e)
 
     return ds
 
 
-# meta
-def extract_new_xr_dates(ds_old, ds_new):
-    """"""
-    
-    # check if xarray is adequate 
-    if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
-        raise TypeError('Datasets not of Xarray type.')
-    elif 'time' not in ds_old or 'time' not in ds_new:
-        raise ValueError('Datasets do not have a time coordinate.')
-    elif len(ds_old['time']) == 0 or len(ds_new['time']) == 0:
-        raise ValueError('Datasets empty.')
-    
-    try:
-        # select only those times greater than latest date in old dataset 
-        new_dates = ds_new['time'].where(ds_new['time'] > ds_old['time'].isel(time=-1), drop=True)
-        ds_new = ds_new.sel(time=new_dates)
-        
-        # check if new dates, else return none
-        if len(ds_new['time']) != 0:
-            return ds_new
-    except:
-        return
-
-    return 
-
-
-# meta
-def get_satellite_params(platform=None):
+def rasterize_polygon(ds, geom):
     """
-    Helper function to generate Landsat or Sentinel query information
-    for quick use during NRT cube creation or sync only.
+    Takes an esri polygon geometry object associated
+    with a monitoring area and rasterizes into a binary 
+    mask using ogr and gdal. 
     
     Parameters
     ----------
-    platform: str
-        Name of a satellite platform, Landsat or Sentinel only.
-    
-    params
+    ds: xarray dataset
+        A dataset containing x, y, geobox and attributes.
+    geom : arcpy polygon geometry
+        A single polygon geometry object.
+
+    Returns
+    -------
+    da : xarray Dataset
     """
     
-    # check platform name
-    if platform is None:
-        raise ValueError('Must provide a platform name.')
-    elif platform.lower() not in ['landsat', 'sentinel', 'sentinel_provisional']:
-        raise ValueError('Platform must be Landsat or Sentinel.')
-        
-    # set up dict
-    params = {}
+    # check dataset 
+    if ds is None:
+        raise ValueError('Dataset not provided.')
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not an xarray type.')
+    if not hasattr(ds, 'geobox'):
+        raise ValueError('Dataset has no geobox.')
     
-    # get porams depending on platform
-    if platform.lower() == 'landsat':
+    # check geometry
+    if geom.type != 'polygon':
+        raise TypeError('Geometry is not polygon type.')
+    elif geom.isMultipart is True:
+        raise TypeError('Do not support multi-part geometry.')
+    
+    try:
+        # convert esri geometry to ogr layer
+        wkb = ogr.CreateGeometryFromWkb(geom.WKB)
+        jsn = wkb.ExportToJson()
+        jsn = ogr.Open(jsn, 0)
+        lyr = jsn.GetLayer()
         
-        # get collections
-        collections = [
-            'ga_ls5t_ard_3', 
-            'ga_ls7e_ard_3', 
-            'ga_ls8c_ard_3',
-            #'ga_ls7e_ard_provisional_3',  # will always be slc-off
-            'ga_ls8c_ard_provisional_3']
+        # get dataset x, y coords
+        x = np.array(ds['x'])
+        y = np.array(ds['y'])
         
-        # get bands
-        bands = [
-            'nbart_red', 
-            'nbart_green', 
-            'nbart_blue', 
-            'nbart_nir', 
-            'nbart_swir_1', 
-            'nbart_swir_2', 
-            'oa_fmask']
+        # get x, y num cells
+        ncol = ds.sizes['x']
+        nrow = ds.sizes['y']
         
-        # get resolution
-        resolution = 30
+        # get transform of dataset
+        t = ds.geobox.transform
+        tran = (t[2], t[0], 0.0, t[5], 0.0, t[4])
         
-        # build dict
-        params = {
-            'collections': collections,
-            'bands': bands,
-            'resolution': resolution}
+        # get bounding box and bl, tr
+        bbox = ds.geobox.extent.boundingbox
+        xmin, ymin, xmax, ymax = bbox 
         
-    # the product 3 is not yet avail on dea. we use s2 for now.
-    elif platform.lower() == 'sentinel':
-        
-        # get collections
-        collections = [
-            's2a_ard_granule', 
-            's2b_ard_granule',
-            'ga_s2am_ard_provisional_3', 
-            'ga_s2bm_ard_provisional_3'
-            ]
-        
-        # get bands
-        bands = [
-            'nbart_red', 
-            'nbart_green', 
-            'nbart_blue', 
-            'nbart_nir_1', 
-            'nbart_swir_2', 
-            'nbart_swir_3', 
-            'fmask']
-        
-        # get resolution
-        resolution = 10
-        
-        # build dict
-        params = {
-            'collections': collections,
-            'bands': bands,
-            'resolution': resolution}   
+        # create empty gdal raster in memory
+        rast = gdal.GetDriverByName('MEM').Create('', ncol, nrow, 1, gdal.GDT_Byte)
+        rast.SetGeoTransform(tran)
 
-    return params
+        # set raster transform and initial band values
+        band = rast.GetRasterBand(1)
+        band.Fill(0)
+        band.SetNoDataValue(0)
+        
+        # rasterise vector with new raster as canvas
+        gdal.RasterizeLayer(rast, [1], lyr, burn_values=[1])
+        rast.FlushCache()
+        
+        # build an xarray data array from result
+        da = xr.DataArray(
+            data=rast.GetRasterBand(1).ReadAsArray(),
+            dims=['y', 'x'],
+            coords={'y': y, 'x': x}
+        )
+        
+        return da
+    
+    except Exception as e:
+        raise ValueError(e)
+
+
+def remove_spikes(da, factor=2, win_size=3):
+    """
+    Removes outliers using a moving window median filter with 
+    a neighbour max and min check technique based on the TIMESAT 
+    3.3 software. Only works on an xarray data array type.
+    
+    Parameters
+    ----------
+    da: xarray dataarray
+        A data array containing x, y, time, geobox and 
+        attributes.
+    factor : int
+        The factor in which to multiply the std threshold.
+        A lower value will remove more outliers, a higher 
+        value will remove fewer.
+    win_size : int 
+        The size of the moving window. A higher win size 
+        will capture more standard deviation.
+
+    Returns
+    -------
+    da : xarray Dataset
+    """
+
+    # notify user
+    print('Removing spike outliers.')
+
+    # check if user factor provided
+    if factor <= 0:
+        factor = 1
+
+    # check win_size not less than 3 and odd num
+    if win_size < 3:
+        win_size == 3
+    elif win_size % 2 == 0:
+        win_size += 1
+
+    # calc cutoff val per pixel (std of pixel) multiply by user-factor 
+    cutoff = da.std('time') * factor
+
+    # calc rolling median for whole dataset
+    da_med = da.rolling(time=win_size, center=True).median()
+
+    # calc abs diff of orig and med vals
+    da_dif = abs(da - da_med)
+
+    # calc mask
+    da_mask = da_dif > cutoff
+
+    # shift vals left, right one time index, get mean and fmax per center
+    l = da.shift(time=1).where(da_mask)
+    r = da.shift(time=-1).where(da_mask)
+    da_mean = (l + r) / 2
+    da_fmax = xr.ufuncs.fmax(l, r)
+
+    # flag only if mid val < mean of l, r - cutoff or mid val > max val + cutoff
+    da_spikes = xr.where((da.where(da_mask) < (da_mean - cutoff)) | 
+                         (da.where(da_mask) > (da_fmax + cutoff)), True, False)
+
+    # set spikes to nan
+    da = da.where(~da_spikes)
+
+    # notify and return
+    print('Spike removal completed successfully.')
+    return da
  
  
+def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0):
+    """
+    Performs EWMACD change detection on a 1d array of variable 
+    values. 
+
+    Parameters
+    ----------
+    ds: xarray dataset
+        A dataset containing x, y, time dimensions. Values are 
+        extracted to this dataset.
+    method: str
+        Can be static, dynamic or both. If both, both
+        static and dynamic analyses are done.
+    var : str
+        A string with the name of the variable to perform 
+        change detection on.
+    train_start : int 
+        Start year of training period.
+    end_start : int 
+        End year of training period.
+    persistence : float 
+        Vegetation persistence value.
+        
+    Returns
+    -------
+    ds : xarray Dataset
+    """
+    
+    # checks
+    if ds is None:
+        raise ValueError('Dataset is empty.')
+    elif not isinstance(ds, xr.Dataset):
+        raise ValueError('Dataset type expected.')
+    elif 'time' not in ds:
+        raise ValueError('Dataset needs a time dimension.')
+        
+    # check method is supported, set default if wrong
+    if method not in ['static', 'dynamic', 'both']:
+        method = 'both'
+    
+    # check if var in dataset
+    if var not in ds:
+        raise ValueError('Requested variable not found.')
+        
+    # check training start
+    if train_start is None:
+        raise ValueError('Provide a training start year.')
+    elif train_start >= ds['time.year'].max():
+        raise ValueError('Training start must be lower within dataset range.')
+        
+    # notify
+    print('Beginning change detection.')
+    
+    # check if any data exists
+    if len(ds['time']) == 0:
+        raise ValueError('No data in training period.')
+        
+    try:
+        # perform change detection (static)
+        ds_stc = EWMACD(ds=ds[var].to_dataset(),
+                        trainingPeriod='static',
+                        trainingStart=train_start,
+                        trainingEnd=train_end,
+                        persistence_per_year=persistence)
+    except Exception as e:
+        raise ValueError(e)
+   
+    try:
+        # perform change detection (dynamic)
+        ds_dyn = EWMACD(ds=ds[var].to_dataset(),
+                        trainingPeriod='dynamic',
+                        trainingStart=train_start,
+                        trainingEnd=train_end,
+                        persistence_per_year=persistence)
+    except Exception as e:
+        raise ValueError(e)
+                    
+    # rename static, dynamic output var
+    ds_stc = ds_stc.rename({var: 'static_raw'})
+    ds_dyn = ds_dyn.rename({var: 'dynamic_raw'})
+    
+    # return based on method (both, static, dynamic)
+    if method == 'both':
+        ds['static_raw'] = ds_stc['static_raw']
+        ds['dynamic_raw'] = ds_dyn['dynamic_raw']
+    elif method == 'static':
+        ds['static_raw'] = ds_stc['static_raw']
+    else:
+        ds['dynamic_raw'] = ds_dyn['dynamic_raw']
+
+    return ds
+
+
+def transfer_xr_values(ds_to, ds_from, data_vars):    
+    """
+    Transfers all values, date-by-date, from the 'from' dataset 
+    to the 'to' dataset only where datetimes in 'to' correspond to 
+    those in 'from'. As Xarray has no replace value, this is the 
+    safest (albeit inefficient) method for moving values between
+    datatsets.
+    
+    Parameters
+    ----------
+    ds_to: xarray dataset
+        A dataset containing x, y, time dimensions. Values are 
+        extracted to this dataset.
+    ds_from: xarray dataset
+        A dataset containing x, y, time dimensions. Values are 
+        extracted from this dataset.
+    data_vars : list 
+        List of variables to extract values to - from.
+
+    Returns
+    -------
+    ds_to : xarray Dataset
+    """
+    
+    # check data vars provided
+    if data_vars is None:
+        data_vars = []
+    elif isinstance(data_vars, str):
+        data_vars = [data_vars]    
+    
+    # check if time is in datasets
+    if 'time' not in ds_to or 'time' not in ds_from:
+        raise ValueError('Time dimension not in both datasets.')
+    
+    # check if variables exist in both datasets
+    for var in data_vars:
+        if var not in ds_to or var not in ds_from:
+            raise ValueError('Requested vars not in both datasets.')
+            
+    # iter new dates and manual update change vars
+    for dt in ds_from['time']:
+        da = ds_from.sel(time=dt)
+        
+        # if time exists in transfer 'to ds', proceed
+        if da['time'].isin(ds_to['time']) == True:
+            for var in data_vars:
+                ds_to[var].loc[{'time': dt}] = da[var]
+            
+    return ds_to
+
+
+def build_zones(arr):   
+    """
+    Takes a static and/or change detection array of values 
+    and classifies into 1 of 11 zones. These zones are used 
+    to drive the alert and colouring system of the NRT
+    method. The output values include zone direction  in way 
+    of sign (-/+).
+    
+    Parameters
+    ----------
+    arr: numpy arr
+        A 1d numpy array of raw change values.
+
+    Returns
+    -------
+    arr : numpy array
+    """
+
+    # set up zone ranges (stdv ranges)
+    zones = [
+        [0, 1],    # zone 1 - from 0 to 1 (+/-)
+        [1, 3],    # zone 2 - between 1 and 3 (+/-)
+        [3, 5],    # zone 3 - between 3 and 5 (+/-)
+        [5, 7],    # zone 4 - between 5 and 7 (+/-)
+        [7, 9],    # zone 5 - between 7 and 9 (+/-)
+        [9, 11],   # zone 6 - between 9 and 11 (+/-)
+        [11, 13],  # zone 7 - between 11 and 13 (+/-)
+        [13, 15],  # zone 8 - between 13 and 15 (+/-)
+        [15, 17],  # zone 9 - between 15 and 17 (+/-)
+        [17, 19],  # zone 10 - between 17 and 19 (+/-)
+        [19]       # zone 11- above 19 (+/-)
+    ]
+
+    # create negative sign mask
+    arr_neg_mask = np.where(arr < 0, True, False)
+    
+    # create template arr
+    arr_temp = np.full_like(arr, np.nan)
+    
+    # get abs of arr
+    arr = np.abs(arr)
+
+    # iter zones
+    for i, z in enumerate(zones, start=1):
+
+        if i == 1:
+            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
+            
+        elif i == 11:
+            arr_temp[np.where(arr >= z[0])] = i
+            
+        else:
+            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
+        
+    # check if arr sizes match
+    if len(arr) != len(arr_temp):
+        raise ValueError('Input array differs in size to output array.')
+        
+    # mask signs
+    arr_temp = np.where(arr_neg_mask, arr_temp * -1, arr_temp)
+    
+    return arr_temp
+
+
+def zone_to_std(zone):
+    """
+    Takes a zone value (0-11 or above) and converts it 
+    to its associated standard deviation. For example, if 
+    entering zone 2, the stdv value that will be returned 
+    is [1, 3]. Returns 0 if zone 0 requested. Returns 999 
+    if zone 11, or not supported.
+    
+    Parameters
+    ----------
+    zone: int
+        A zone value from 0-11 or above.
+
+    Returns
+    -------
+    arr : An array of lower and upper values of zone.
+    """
+    
+    if zone is None:
+        return [0, 0]
+    if zone == 0:
+        return [0, 0]
+    elif zone == 1:
+        return [0, 1]    
+    elif zone == 2:
+        return [1, 3]
+    elif zone == 3:
+        return [3, 5]
+    elif zone == 4:
+        return [5, 7]
+    elif zone == 5:
+        return [7, 9]
+    elif zone == 6:
+        return [9, 11]
+    elif zone == 7:
+        return [11, 13]
+    elif zone == 8:
+        return [13, 15]
+    elif zone == 9:
+        return [15, 17]
+    elif zone == 10:
+        return [17, 19]
+    elif zone >= 11:
+        return [19, 999]
+    else:
+        return [19, 999]
+
+
+def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
+    """
+    Takes a static and/or change detection array of values 
+    and generates consequtive value runs. If raw values continuously
+    decline, date after date, a run is started and each time is 
+    counted. Once this goes up, the count is stopped and reset until
+    the next decline trajectory. Same for incline. The output values 
+    include run direction in way of sign (-/+). Users can set the 
+    minimum number of consequtives required before run begins, as well
+    as to include post-consequtive plateaus of identical values in run 
+    count.
+    
+    Parameters
+    ----------
+    arr: numpy arr
+        A 1d numpy array of raw change values.
+    min_conseqs : int 
+        Controls the number of consequtive inclines 
+        or declines before counts are recorded. 
+    inc_plateaus : bool 
+        Whether to include plateau values in the run 
+        count. 
+
+    Returns
+    -------
+    arr : numpy array
+    """
+    
+    # check if arr is all nan
+    if np.isnan(arr).all():
+        raise ValueError('Array is all nan.')
+        
+    # check min stdvs
+    if min_conseqs is None:
+        print('No minimum consequtives provided, setting to default (3).')
+        min_stdv = 0
+    elif not isinstance(min_conseqs, (int, float)):
+        print('Minimum consequtives not numeric, returning original array.')
+        return arr
+    elif min_conseqs < 0:
+        print('Minimum consequtives only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+    
+    # check plateaus
+    if not isinstance(inc_plateaus, bool):
+        print('Include plateaus must be boolean. Setting to False.')
+        inc_plateaus = False
+        
+    # set up empty incline and decline arrays
+    arr_incs = np.zeros(len(arr))
+    arr_decs = np.zeros(len(arr))
+    
+    # build runs of consequtive positive values
+    direction = 0
+    for i in range(1, len(arr)):
+
+        # if curr not 0 and curr > prev, + 1
+        if arr[i] != 0 and arr[i] > arr[i - 1]:
+            arr_incs[i] = arr_incs[i - 1] + 1  
+            direction = 1  
+
+        # if curr == prev (non-zero plateau) and prev dir was incline, + 1
+        elif arr[i] != 0 and arr[i] == arr[i - 1] and direction == 1 and inc_plateaus:
+            arr_incs[i] = arr_incs[i - 1] + 1  
+
+        # reset dir otherwise
+        else:
+            direction = 0  
+                
+    # build runs of consequtive decline values
+    direction = 0
+    for i in range(1, len(arr)):
+
+        # if curr not 0 and curr < prev, - 1
+        if arr[i] != 0 and arr[i] < arr[i - 1]:
+            arr_decs[i] = arr_decs[i - 1] - 1
+            direction = -1  
+
+        # if curr == prev (non-zero plateau) and prev dir was decline, - 1
+        elif arr[i] != 0 and arr[i] == arr[i - 1] and direction == -1 and inc_plateaus:
+            arr_decs[i] = arr_decs[i - 1] - 1 
+
+        # reset dir otherwise
+        else:
+            direction = 0  
+    
+    # combine both into one
+    arr_runs = arr_incs + arr_decs
+    
+    # remove any run values under min consequtives 
+    if min_conseqs > 0:
+        arr_runs = np.where(np.abs(arr_runs) >= min_conseqs, arr_runs, 0)
+        
+    # convert to float32
+    arr_runs = arr_runs.astype('float32')
+    
+    return arr_runs
+
+
+def build_rule_two_mask(arr, min_stdv=0):
+    """
+    Takes a static and/or change detection array of values 
+    and masks out any change deviations beneath a specified 
+    minimum threshold. Masked values set to 0. The output 
+    values include direction in way of sign (-/+). Users can 
+    set the minimum std of allowed values.
+    
+    Parameters
+    ----------
+    min_stdv: int
+        Minimum stdv to keep after threshold.
+
+    Returns
+    -------
+    arr : array of values above min stdv threshold.
+    """
+    
+    # check if arr is all nan
+    if np.isnan(arr).all():
+        raise ValueError('Array is all nan.')
+        
+    # check min stdvs
+    if min_stdv is None:
+        print('No minimum std. dev.provided, setting to default (0).')
+        min_stdv = 0
+    elif not isinstance(min_stdv, (int, float)):
+        print('Minimum std. dev., returning original array.')
+        return arr
+    elif min_stdv < 0:
+        print('Minimum std. dev. only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+        
+    # threshold out all values within threshold area, if 0, ignore it
+    if min_stdv == 0:
+        arr_thresh = np.where(np.abs(arr) > min_stdv, arr, 0)
+    else:
+        arr_thresh = np.where(np.abs(arr) >= min_stdv, arr, 0)
+
+    # convert to float32
+    arr_thresh = arr_thresh.astype('float32')
+
+    return arr_thresh
+
+
+def build_rule_three_spikes(arr, min_stdv=4):
+    """
+    Takes a static and/or change detection array of values 
+    and detects any sharp spikes in stdv jumps between
+    dates. The output values include direction in way of 
+    sign (-/+). Users can set the minimum number of stdv
+    required between leaps before an alarm is triggered.
+    
+    Parameters
+    ----------
+    min_stdv: int
+        Minimum stdv of leap between dates.
+
+    Returns
+    -------
+    arr : array of values where leap was detected.
+    """
+    
+    # check if arr is all nan
+    if np.isnan(arr).all():
+        raise ValueError('Array is all nan.')
+        
+    # check min stdvs
+    if min_stdv is None:
+        print('No minimum std. dev.provided, setting to default (4).')
+        min_stdv = 4
+    elif not isinstance(min_stdv, (int, float)):
+        print('Minimum std. dev., returning original array.')
+        return arr
+    elif min_stdv < 0:
+        print('Minimum std. dev. only takes positives, getting absolute.')
+        arr = abs(min_stdv)
+        
+    # get differences between values
+    arr_diffs = np.diff(arr, prepend=arr[0])
+    
+    # threshold out all values within threshold area, if 0, ignore it
+    if min_stdv == 0:
+        arr_spikes = np.where(np.abs(arr_diffs) > min_stdv, arr, 0)
+    else:
+        arr_spikes = np.where(np.abs(arr_diffs) >= min_stdv, arr, 0)
+    
+    # convert to float32
+    arr_spikes = arr_spikes.astype('float32')
+    
+    return arr_spikes
+
+
+def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1 and 2 or 3', direction='Decline only (any)'):
+    """
+    Builds alert mask (1s and 0s) based on combined rule
+    values and assigned ruleset. Takes vars of rule 1, 
+    rule 2, rule 3 of both static and dynamic change methods 
+    and combines them using ruleset. Users can also set
+    the direction of the change required for an alert to be 
+    set to 1 (true).
+    
+    Parameters
+    ----------
+    arr_r1: numpy array
+        Numpy array of rule one values.
+    arr_r2: numpy array
+        Numpy array of rule two values.
+    arr_r3: numpy array
+        Numpy array of rule three values.   
+    ruleset : str 
+        Set the ruleset combination.
+    direction : str
+        Set the direction of values required to set alert.
+
+    Returns
+    -------
+    arr : array of alert mask values.
+    """
+    
+    # set up valid rulesets
+    valid_rules = [
+        '1 only', 
+        '2 only', 
+        '3 only', 
+        '1 and 2', 
+        '1 and 3', 
+        '2 and 3', 
+        '1 or 2', 
+        '1 or 3', 
+        '2 or 3', 
+        '1 and 2 and 3', 
+        '1 or 2 and 3',
+        '1 and 2 or 3', 
+        '1 or 2 or 3'
+        ]
+     
+    # check if ruleset is valid
+    if ruleset not in valid_rules:
+        raise ValueError('Ruleset is not supported.')
+     
+    # set up valid directions 
+    valid_directions = [
+        'Incline only (any)',
+        'Decline only (any)',
+        'Incline only (+ zones only)',
+        'Decline only (- zones only)',
+        'Incline or Decline (any)',
+        'Incline or Decline (+/- zones only)'
+        ]
+    
+    # check if direction is valid
+    if direction not in valid_directions:
+        raise ValueError('Direction is not supported.')
+        
+    # check if rule arrays are empty 
+    if np.isnan(arr_r1).all():
+        raise ValueError('Rule one arr is empty.')
+    elif np.isnan(arr_r2).all():
+        raise ValueError('Rule two arr is empty.')
+    elif np.isnan(arr_r3).all():
+        raise ValueError('Rule three arr is empty.')
+    
+    try:
+        # correct raw rule vals for direction and set 1 if alert, 0 if not
+        if direction == 'Incline only (any)':
+            arr_r1 = np.where(arr_r1 > 0, 1, 0)
+            arr_r2 = np.where(arr_r2 != 0, 1, 0)  # ignore sign for exclusion zone
+            arr_r3 = np.where(arr_r3 > 0, 1, 0)
+            
+        elif direction == 'Decline only (any)':
+            arr_r1 = np.where(arr_r1 < 0, 1, 0)
+            arr_r2 = np.where(arr_r2 != 0, 1, 0)  # ignore sign for exclusion zone
+            arr_r3 = np.where(arr_r3 < 0, 1, 0)
+
+        elif direction == 'Incline only (+ zones only)':
+            arr_r1 = np.where(arr_r1 > 0, 1, 0)
+            arr_r2 = np.where(arr_r2 > 0, 1, 0)
+            arr_r3 = np.where(arr_r3 > 0, 1, 0)
+            
+        elif direction == 'Decline only (- zones only)':
+            arr_r1 = np.where(arr_r1 < 0, 1, 0)
+            arr_r2 = np.where(arr_r2 < 0, 1, 0)
+            arr_r3 = np.where(arr_r3 < 0, 1, 0)    
+
+        elif direction == 'Incline or Decline (any)':
+            arr_r1 = np.where(arr_r1 != 0, 1, 0)
+            arr_r2 = np.where(arr_r2 != 0, 1, 0)
+            arr_r3 = np.where(arr_r3 != 0, 1, 0) 
+
+        elif direction == 'Incline or Decline (+/- zones only)':
+            arr_r1 = np.where(((arr_r1 > 0) & (arr_r2 > 0)) | 
+                              ((arr_r1 < 0) & (arr_r2 < 0)), 1, 0)
+            arr_r2 = np.where(arr_r2 != 0, 1, 0)
+            arr_r3 = np.where(arr_r3 != 0, 1, 0) 
+    
+    except Exception as e:
+        raise ValueError(e)
+
+    try:
+        # create alert arrays based on singular rule
+        if ruleset == '1':
+            arr_alerts = arr_r1
+        elif ruleset == '2':
+            arr_alerts = arr_r2
+        elif ruleset == '3':
+            arr_alerts = arr_r3    
+        
+        # create alert arrays based on dual "and" rule
+        if ruleset == '1 and 2':
+            arr_alerts  = arr_r1 & arr_r2
+        elif ruleset == '1 and 3':
+            arr_alerts  = arr_r1 & arr_r3
+        elif ruleset == '2 and 3':
+            arr_alerts  = arr_r2 & arr_r3  
+        
+        # create alert arrays based on dual "or" rule
+        if ruleset == '1 or 2':
+            arr_alerts  = arr_r1 | arr_r2
+        elif ruleset == '1 or 3':
+            arr_alerts  = arr_r1 | arr_r3
+        elif ruleset == '2 or 3':
+            arr_alerts  = arr_r2 | arr_r3    
+        
+        # create alert arrays based on complex rule
+        if ruleset == '1 and 2 and 3':  
+            arr_alerts  = arr_r1 & arr_r2 & arr_r3
+        elif ruleset == '1 or 2 and 3':  
+            arr_alerts  = arr_r1 | arr_r2 & arr_r3
+        elif ruleset == '1 and 2 or 3':  
+            arr_alerts  = arr_r1 & arr_r2 | arr_r3
+        elif ruleset == '1 or 2 or 3':  
+            arr_alerts  = arr_r1 | arr_r2 | arr_r3
+    
+    except Exception as e:
+        raise ValueError(e)
+    
+    # check if result is empty
+    if np.isnan(arr_alerts).all():
+        raise ValueError('Alert array is empty.')
+    
+    return arr_alerts
+
+
+
+
+
+
+
+
 # meta
 def validate_monitoring_areas(in_feat):
     """
@@ -425,271 +955,29 @@ def validate_monitoring_areas(in_feat):
  
 
 # meta
-def validate_monitoring_area(row):
-    """
-    Does relevant checks for information for a
-    single monitoring area.
-    """
+def extract_new_xr_dates(ds_old, ds_new):
+    """"""
     
-    # check if row is tuple
-    if not isinstance(row, tuple):
-        print('Row must be of type tuple.')
-        return False
-            
-    # parse row info
-    area_id = row[0]
-    platform = row[1]
-    s_year = row[2]
-    e_year = row[3]
-    index = row[4]
-    persistence = row[5]
-    rule_1_min_conseqs = row[6]
-    rule_1_inc_plateaus = row[7]
-    rule_2_min_zone = row[8]
-    rule_3_num_zones = row[9]
-    ruleset = row[10]
-    alert = row[11]
-    method = row[12]
-    alert_direction = row[13]
-    email = row[14]
-    ignore = row[15]
+    # check if xarray is adequate 
+    if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
+        raise TypeError('Datasets not of Xarray type.')
+    elif 'time' not in ds_old or 'time' not in ds_new:
+        raise ValueError('Datasets do not have a time coordinate.')
+    elif len(ds_old['time']) == 0 or len(ds_new['time']) == 0:
+        raise ValueError('Datasets empty.')
     
-    # check area id exists
-    if area_id is None:
-        print('No area id exists, flagging as invalid.')
-        return False
-
-    # check platform is Landsat or Sentinel
-    if platform is None:
-        print('No platform exists, flagging as invalid.')
-        return False
-    elif platform.lower() not in ['landsat', 'sentinel']:
-        print('Platform must be Landsat or Sentinel, flagging as invalid.')
-        return False
-
-    # check if start and end years are valid
-    if not isinstance(s_year, int) or not isinstance(e_year, int):
-        print('Start and end year values must be integers, flagging as invalid.')
-        return False
-    elif s_year < 1980 or s_year > 2050:
-        print('Start year must be between 1980 and 2050, flagging as invalid.')
-        return False
-    elif e_year < 1980 or e_year > 2050:
-        print('End year must be between 1980 and 2050, flagging as invalid.')
-        return False
-    elif e_year <= s_year:
-        print('Start year must be less than end year, flagging as invalid.')
-        return False
-    elif abs(e_year - s_year) < 2:
-        print('Must be at least 2 years between start and end year, flagging as invalid.')
-        return False
-    elif platform.lower() == 'sentinel' and s_year < 2016:
-        print('Start year must not be < 2016 when using Sentinel, flagging as invalid.')
-        return False
-
-    # check if index is acceptable
-    if index is None:
-        print('No index exists, flagging as invalid.')
-        return False
-    elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
-        print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
-        return False
-    
-    # check if persistence is accepptable
-    if persistence is None:
-        print('No persistence exists, flagging as invalid.')
-        return False
-    elif persistence < 0.001 or persistence > 9.999:
-        print('Persistence must be before 0.0001 and 9.999, flagging as invalid.')
-        return False
-
-    # check if rule_1_min_conseqs is accepptable
-    if rule_1_min_conseqs is None:
-        print('No rule_1_min_conseqs exists, flagging as invalid.')
-        return False
-    elif rule_1_min_conseqs < 0 or rule_1_min_conseqs > 99:
-        print('Rule_1_min_conseqs must be between 0 and 99, flagging as invalid.')
-        return False
-    
-    # check if rule_1_min_conseqs is accepptable
-    if rule_1_inc_plateaus is None:
-        print('No rule_1_inc_plateaus exists, flagging as invalid.')
-        return False
-    elif rule_1_inc_plateaus not in ['Yes', 'No']:
-        print('Rule_1_inc_plateaus must be Yes or No, flagging as invalid.')
-        return False    
-    
-    # check if rule_2_min_stdv is accepptable
-    if rule_2_min_zone is None:
-        print('No rule_2_min_zone exists, flagging as invalid.')
-        return False
-    elif rule_2_min_zone < 0 or rule_2_min_zone > 99:
-        print('Rule_2_min_zone must be between 0 and 99, flagging as invalid.')
-        return False      
-
-    # check if rule_2_bidirectional is accepptable
-    if rule_3_num_zones is None:
-        print('No rule_3_num_zones exists, flagging as invalid.')
-        return False
-    elif rule_3_num_zones < 0 or rule_3_num_zones > 99:
-        print('Rule_3_num_zones must be between 0 and 99, flagging as invalid.')
-        return False       
-
-    # check if ruleset is accepptable   
-    if ruleset is None:
-        print('No ruleset exists, flagging as invalid.')
-        return False
-    
-    # check if alert is accepptable
-    if alert is None:
-        print('No alert exists, flagging as invalid.')
-        return False
-    elif alert not in ['Yes', 'No']:
-        print('Alert must be Yes or No, flagging as invalid.')
-        return False
-    
-    # check method 
-    if method.lower() not in ['static', 'dynamic']:
-        print('Method must be Static or Dynamic, flagging as invalid.')
-        return False
-    
-    
-    # set up alert directions 
-    alert_directions = [
-        'Incline only (any)', 
-        'Decline only (any)', 
-        'Incline only (+ zones only)', 
-        'Decline only (- zones only)', 
-        'Incline or Decline (any)',
-        'Incline or Decline (+/- zones only)'
-        ]
-    
-    # check if alert_direction is accepptable
-    if alert_direction is None:
-        print('No alert_direction exists, flagging as invalid.')
-        return False
-    elif alert_direction not in alert_directions:
-        print('Alert_direction is not supported.')
-        return False  
-
-    # check if email address is accepptable
-    if alert == 'Yes' and email is None:
-        print('Must provide an email if alert is set to Yes.')
-        return False
-    elif email is not None:
-        if '@' not in email or '.' not in email:
-            print('No @ or . character in email exists, flagging as invalid.')
-            return False
-
-    # check if ignore is accepptable
-    if ignore is None:
-        print('No ignore exists, flagging as invalid.')
-        return False
-    elif ignore not in ['Yes', 'No']:
-        print('Ignore must be Yes or No, flagging as invalid.')
-        return False    
-
-    # all good!
-    return True 
- 
- 
-# meta 
-def validate_xr_site_attrs(ds, feat):
-    """
-    For NRT monitoring, site information taken from
-    the associated shapefile feature are appended to
-    the attributes of the associated netcdf file before 
-    moving to the next area. We check these attributes
-    every new iteration to check if user has changed
-    any monitoring area prameters. If key parameters 
-    have been changed, we need to ignore the existing
-    netcdf and create a new one.
-    """
-    
-    # check if dataset exists (could be first run)
-    if ds is None:
-        print('Dataset is none. Returning none.')
-        return
-    elif not isinstance(ds, xr.Dataset):
-        print('Dataset is not an xarray type. Returning none.')
-        return
-    elif not hasattr(ds, 'attrs'):
-        print('Dataset has no attributes. Returning none.')
-        return
-    
-    # check if dict is right length
-    if not isinstance(feat, (list, tuple)):
-        print('Feature not a list or tuple, returning none.')
-        return
-    elif len(feat) == 0:
-        print('Feature has no data, returning none.')
-        return
-    
-    # set up required attributes (key attrs only)
-    attrs = [
-        'area_id',
-        'platform',
-        's_year',
-        'e_year',
-        'index',
-        'persistence',
-        'rule_1_min_conseqs',
-        'rule_1_inc_plateaus',
-        'rule_2_min_zone',
-        'rule_3_num_zones',
-        'ruleset',
-        'alert',
-        'method',
-        'alert_direction',
-        'email',
-        'ignore'
-    ]
-    
-    # iterate attributes and check
-    for attr in attrs:
-        if not hasattr(ds, attr):
-            print('Attribute {} does not exist, returning none.')
-            return
+    try:
+        # select only those times greater than latest date in old dataset 
+        new_dates = ds_new['time'].where(ds_new['time'] > ds_old['time'].isel(time=-1), drop=True)
+        ds_new = ds_new.sel(time=new_dates)
         
-    # check if key dataset attributes differ from current feat
-    if ds.attrs.get('platform') != str(feat[1]):
-        print('Platform has changed, returning none.')
+        # check if new dates, else return none
+        if len(ds_new['time']) != 0:
+            return ds_new
+    except:
         return
-    elif ds.attrs.get('s_year') != str(feat[2]):
-        print('Start year has changed, returning none.')
-        return
-    elif ds.attrs.get('e_year') != str(feat[3]):
-        print('End year has changed, returning none.')
-        return
-    elif ds.attrs.get('index') != str(feat[4]):
-        print('Vegetation index has changed, returning none.')
-        return    
-    elif ds.attrs.get('persistence') != str(feat[5]):
-        print('Persistence has changed, returning none.')
-        return        
-    elif ds.attrs.get('rule_1_min_conseqs') != str(feat[6]):
-        print('Rule 1 min consequtives has changed, returning none.')
-        return         
-    elif ds.attrs.get('rule_1_inc_plateaus') != str(feat[7]):
-        print('Rule 1 include plateaus has changed, returning none.')
-        return       
-    elif ds.attrs.get('rule_2_min_zone') != str(feat[8]):
-        print('Rule 2 min zone has changed, returning none.')
-        return           
-    elif ds.attrs.get('rule_3_num_zones') != str(feat[9]):
-        print('Rule 3 num zones has changed, returning none.')
-        return  
-    elif ds.attrs.get('ruleset') != str(feat[10]):
-        print('Ruleset has changed, returning none.')
-        return      
-    elif ds.attrs.get('method') != str(feat[12]):
-        print('Method has changed, returning none.')
-        return       
-    elif ds.attrs.get('alert_direction') != str(feat[13]):
-        print('Alert direction has changed, returning none.')
-        return      
-    
-    return ds
+
+    return 
 
 
 # meta
@@ -743,192 +1031,6 @@ def append_xr_site_attrs(ds, feat):
         raise ValueError('Could not create attribute dictionary.')
 
     return ds
-
-
-# meta
-def remove_spikes(da, user_factor=2, win_size=3):
-    """
-    Takes a xarray data array. Removes spikes based on timesat
-    formula.
-    """
-
-    # notify user
-    print('Removing spike outliers.')
-
-    # check if user factor provided
-    if user_factor <= 0:
-        user_factor = 1
-
-    # check win_size not less than 3 and odd num
-    if win_size < 3:
-        win_size == 3
-    elif win_size % 2 == 0:
-        win_size += 1
-
-    # calc cutoff val per pixel i.e. stdv of pixel multiply by user-factor 
-    cutoff = da.std('time') * user_factor
-
-    # calc rolling median for whole dataset
-    da_med = da.rolling(time=win_size, center=True).median()
-
-    # calc abs diff of orig and med vals
-    da_dif = abs(da - da_med)
-
-    # calc mask
-    da_mask = da_dif > cutoff
-
-    # shift vals left, right one time index, get mean and fmax per center
-    l = da.shift(time=1).where(da_mask)
-    r = da.shift(time=-1).where(da_mask)
-    da_mean = (l + r) / 2
-    da_fmax = xr.ufuncs.fmax(l, r)
-
-    # flag only if mid val < mean of l, r - cutoff or mid val > max val + cutoff
-    da_spikes = xr.where((da.where(da_mask) < (da_mean - cutoff)) | 
-                         (da.where(da_mask) > (da_fmax + cutoff)), True, False)
-
-    # set spikes to nan
-    da = da.where(~da_spikes)
-
-    # notify and return
-    print('Spike removal completed successfully.')
-    return da
- 
- 
-# meta
-def mask_xr_via_polygon(ds, geom, mask_value=1):
-    """
-    geom object from gdal
-    x, y = arrays of coordinates from xr dataset
-    bbox 
-    transform from geobox
-    ncols, nrows = len of x, y
-    """
-    
-    # check dataset
-    if 'x' not in ds or 'y' not in ds:
-        raise ValueError('Dataset has no x or y dimensions.')
-    elif not hasattr(ds, 'geobox'):
-        raise ValueError('Dataset does not have a geobox.')
-        
-    # extract raw x and y value arrays, bbox, transform and num col, row
-    x, y = ds['x'].data, ds['y'].data
-    bbox = ds.geobox.extent.boundingbox
-    transform = ds.geobox.transform
-    ncols, nrows = len(ds['x']), len(ds['y'])
-    
-    # extract bounding box extents
-    xmin, ymin, xmax, ymax = bbox.left, bbox.bottom, bbox.right, bbox.top
-
-    # create ogr transform structure
-    geotransform = (transform[2], transform[0], 0.0, 
-                    transform[5], 0.0, transform[4])
-
-    # create template raster in memory
-    dst_rast = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 , gdal.GDT_Byte)
-    dst_rb = dst_rast.GetRasterBand(1)      # get a band
-    dst_rb.Fill(0)                          # init raster with zeros
-    dst_rb.SetNoDataValue(0)                # set nodata to zero
-    dst_rast.SetGeoTransform(geotransform)  # resample, transform
-
-    # rasterise vector and flush
-    err = gdal.RasterizeLayer(dst_rast, [1], geom, burn_values=[mask_value])
-    dst_rast.FlushCache()
-
-    # get numpy version of classified raster
-    arr = dst_rast.GetRasterBand(1).ReadAsArray()
-
-    # create mask
-    mask = xr.DataArray(data=arr,
-                        dims=['y', 'x'],
-                        coords={'y': y, 'x': x})
-
-    return mask
-    
-
-# meta, other genera improvements - check if error results in da with nan, or numpy with nan. will cause issues
-def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0, add_to_ds=True):
-    """"""
-    
-    # checks
-    if ds is None:
-        raise ValueError('Dataset is empty.')
-    elif not isinstance(ds, xr.Dataset):
-        raise ValueError('Dataset type expected.')
-    elif 'time' not in ds:
-        raise ValueError('Dataset needs a time dimension.')
-        
-    # check method is supported, set default if wrong
-    if method not in ['static', 'dynamic', 'both']:
-        method = 'both'
-    
-    # check if var in dataset
-    if var not in ds:
-        raise ValueError('Requested variable not found.')
-        
-    # check training start
-    if train_start is None:
-        raise ValueError('Provide a training start year.')
-    elif train_start >= ds['time.year'].max():
-        raise ValueError('Training start must be lower within dataset range.')
-        
-    # notify
-    print('Beginning change detection.')
-    
-    # check if any data exists
-    if len(ds['time']) == 0:
-        raise ValueError('Training period lacks data, change training start.')
-        
-    try:
-        # perform change detection (static)
-        ds_stc = EWMACD(ds=ds[var].to_dataset(),
-                        trainingPeriod='static',
-                        trainingStart=train_start,
-                        trainingEnd=train_end,
-                        persistence_per_year=persistence)
-    except:
-        print('Error occurred during static detection. Creating nan array.')
-        ds_stc = xr.full_like(ds[var].to_dataset(), np.nan)
-   
-    try:
-        # perform change detection (dynamic)
-        ds_dyn = EWMACD(ds=ds[var].to_dataset(),
-                        trainingPeriod='dynamic',
-                        trainingStart=train_start,
-                        trainingEnd=train_end,
-                        persistence_per_year=persistence)
-    except:
-        print('Error occurred during dynamic detection. Creating nan array.')
-        ds_dyn = xr.full_like(ds[var].to_dataset(), np.nan) 
-                    
-    # rename static, dynamic output var
-    ds_stc = ds_stc.rename({var: 'static_raw'})
-    ds_dyn = ds_dyn.rename({var: 'dynamic_raw'})
-    
-    # return based on method (both, static, dynamic)
-    if method == 'both':
-        if add_to_ds == True:
-            ds['static_raw'] = ds_stc['static_raw']
-            ds['dynamic_raw'] = ds_dyn['dynamic_raw']
-            return ds
-        else:
-            return ds_stc, ds_dyn
-    
-    elif method == 'static':
-        if add_to_ds == True:
-            ds['static_raw'] = ds_stc['static_raw']
-            return ds
-        else:
-            return ds_stc
-
-    else:
-        if add_to_ds == True:
-            ds['dynamic_raw'] = ds_dyn['dynamic_raw']
-            return ds
-        else:
-            return ds_dyn    
-    
-    return
 
 
 # meta
@@ -1017,451 +1119,6 @@ def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None,
                 
     return
 
-
-# meta 
-def smooth_signal(da):
-    """
-    Basic func to smooth change signal using
-    a savgol filter with win size 3. works best
-    for our data. minimal smoothing, yet removes
-    small spikes.
-    """
-    
-    # check if data array 
-    if not isinstance(da, xr.DataArray):
-        print('Only numpy arrays supported, returning original array.')
-        return da
-    elif len(da) <= 3:
-        print('Cannot smooth array <= 3 values. Returning raw array.')
-        return da
-    
-    try:
-        # smooth using savgol filter with win size 3
-        da_out = xr.apply_ufunc(savgol_filter, da, 3, 1)
-        return da_out
-    except:
-        print('Couldnt smooth, returning raw array.')
-    
-    return da
-
-
-# meta
-def transfer_xr_values(ds_to, ds_from, data_vars):
-    """transfers all values, date-by-date, from
-    the 'from' dataset to the 'to' dataset only where
-    datetimes in 'to' correspond to those in 'from'. 
-    this is used to safely move values without the need
-    to drop times or use xr.merge, which is prone to errors
-    when veg index values slughtly fluctuate due to differnt
-    smoothing results. to is old, from is new in nrt module.
-    """
-    
-    # check data vars provided
-    if data_vars is None:
-        data_vars = []
-    elif isinstance(data_vars, str):
-        data_vars = [data_vars]    
-    
-    # check if time is in datasets
-    if 'time' not in ds_to or 'time' not in ds_from:
-        raise ValueError('Time dimension not in both datasets.')
-    
-    # check if variables exist in both datasets
-    for var in data_vars:
-        if var not in ds_to or var not in ds_from:
-            raise ValueError('Requested vars not in both datasets.')
-            
-    # iter new dates and manual update change vars
-    for dt in ds_from['time']:
-        da = ds_from.sel(time=dt)
-        
-        # if time exists in transfer 'to ds', proceed
-        if da['time'].isin(ds_to['time']) == True:
-            for var in data_vars:
-                ds_to[var].loc[{'time': dt}] = da[var]
-            
-    return ds_to
-
-
-# meta, checks for nan
-def build_zones(arr):
-    """
-    takes a smoothed (or raw) ewmacd change detection
-    signal and classifies into 1 of 11 zones based on the
-    stdv values. this is used to help flag and colour
-    outputs for nrt monitoring. Outputs include 
-    zone direction information in way of sign (-/+).
-    """   
-
-    # set up zone ranges (stdvs)
-    zones = [
-        [0, 1],    # zone 1 - from 0 to 1 (+/-)
-        [1, 3],    # zone 2 - between 1 and 3 (+/-)
-        [3, 5],    # zone 3 - between 3 and 5 (+/-)
-        [5, 7],    # zone 4 - between 5 and 7 (+/-)
-        [7, 9],    # zone 5 - between 7 and 9 (+/-)
-        [9, 11],   # zone 6 - between 9 and 11 (+/-)
-        [11, 13],  # zone 7 - between 11 and 13 (+/-)
-        [13, 15],  # zone 8 - between 13 and 15 (+/-)
-        [15, 17],  # zone 9 - between 15 and 17 (+/-)
-        [17, 19],  # zone 10 - between 17 and 19 (+/-)
-        [19]       # zone 11- above 19 (+/-)
-    ]
-
-    # create negative sign mask
-    arr_neg_mask = np.where(arr < 0, True, False)
-    
-    # create template arr
-    arr_temp = np.full_like(arr, np.nan)
-    
-    # get abs of arr
-    arr = np.abs(arr)
-
-    # iter zones
-    for i, z in enumerate(zones, start=1):
-
-        if i == 1:
-            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
-            
-        elif i == 11:
-            arr_temp[np.where(arr >= z[0])] = i
-            
-        else:
-            arr_temp[np.where((arr >= z[0]) & (arr < z[1]))] = i
-        
-    # check if arr sizes match
-    if len(arr) != len(arr_temp):
-        raise ValueError('Input array differs in size to output array.')
-    
-    # check if any nan within
-    
-    # mask signs
-    arr_temp = np.where(arr_neg_mask, arr_temp * -1, arr_temp)
-    
-    return arr_temp
-
-
-# meta
-def zone_to_std_dev(zone):
-    """
-    takes a zone value e.g. zone 2 and converts
-    it to the [min, max] std dev value of that zone.
-    for example, if entering zone 2, the stdv 
-    value that will be returned is [1, 3]. returns 0 
-    if zone 0 requested. returns 999 if zone 11 or not
-    supported.
-    """
-    
-    if zone is None:
-        return [0, 0]
-    if zone == 0:
-        return [0, 0]
-    elif zone == 1:
-        return [0, 1]    
-    elif zone == 2:
-        return [1, 3]
-    elif zone == 3:
-        return [3, 5]
-    elif zone == 4:
-        return [5, 7]
-    elif zone == 5:
-        return [7, 9]
-    elif zone == 6:
-        return [9, 11]
-    elif zone == 7:
-        return [11, 13]
-    elif zone == 8:
-        return [13, 15]
-    elif zone == 9:
-        return [15, 17]
-    elif zone == 10:
-        return [17, 19]
-    elif zone >= 11:
-        return [19, 999]
-    else:
-        return [19, 999]
-
-
-# meta, checks
-def build_rule_one_runs(arr, min_conseqs=3, inc_plateaus=False):
-    """calculates all runs, + and -, with optional
-    plateau inclusion in run counts. then uses min conseqs
-    to threshold out any parts of a run <= given value (set to 0).
-    """
-    
-    # check if arr is all nan
-    if np.isnan(arr).all():
-        print('All values are nan, returning all nan array.')
-        return arr
-        
-    # check min stdvs
-    if min_conseqs is None:
-        print('No minimum consequtives provided, setting to default (3).')
-        min_stdv = 0
-    elif not isinstance(min_conseqs, (int, float)):
-        print('Minimum consequtives not numeric, returning original array.')
-        return arr
-    elif min_conseqs < 0:
-        print('Minimum consequtives only takes positives, getting absolute.')
-        arr = abs(min_stdv)
-    
-    # check plateaus
-    if not isinstance(inc_plateaus, bool):
-        print('Include plateaus must be boolean. Setting to False.')
-        inc_plateaus = False
-        
-    # set up empty incline and decline arrays
-    arr_incs = np.zeros(len(arr))
-    arr_decs = np.zeros(len(arr))
-    
-    # build runs of consequtive positive values
-    direction = 0
-    for i in range(1, len(arr)):
-
-        # if curr not 0 and curr > prev, + 1
-        if arr[i] != 0 and arr[i] > arr[i - 1]:
-            arr_incs[i] = arr_incs[i - 1] + 1  
-            direction = 1  
-
-        # if curr == prev (non-zero plateau) and prev dir was incline, + 1
-        elif arr[i] != 0 and arr[i] == arr[i - 1] and direction == 1 and inc_plateaus:
-            arr_incs[i] = arr_incs[i - 1] + 1  
-
-        # reset dir otherwise
-        else:
-            direction = 0  
-                
-    # build runs of consequtive decline values
-    direction = 0
-    for i in range(1, len(arr)):
-
-        # if curr not 0 and curr < prev, - 1
-        if arr[i] != 0 and arr[i] < arr[i - 1]:
-            arr_decs[i] = arr_decs[i - 1] - 1
-            direction = -1  
-
-        # if curr == prev (non-zero plateau) and prev dir was decline, - 1
-        elif arr[i] != 0 and arr[i] == arr[i - 1] and direction == -1 and inc_plateaus:
-            arr_decs[i] = arr_decs[i - 1] - 1 
-
-        # reset dir otherwise
-        else:
-            direction = 0  
-    
-    # combine both into one
-    arr_runs = arr_incs + arr_decs
-    
-    # remove any run values under min consequtives 
-    if min_conseqs > 0:
-        arr_runs = np.where(np.abs(arr_runs) >= min_conseqs, arr_runs, 0)
-        
-    # convert to float32
-    arr_runs = arr_runs.astype('float32')
-    
-    return arr_runs
-
-
-# meta, checks
-def build_rule_two_mask(arr, min_stdv=0):
-    """calculates all valid candidates outside a specified 
-    mask range in both + and - directions. Example, with
-    a min_stdv of 3, all incline stdvs < 3 and declines > -3 will
-    be masked out. if set to 0, all will be flagged except 0 
-    itself (i.e. ignore stable regions)."""
-    
-    # check if arr is all nan
-    if np.isnan(arr).all():
-        print('All values are nan, returning all nan array.')
-        return arr
-        
-    # check min stdvs
-    if min_stdv is None:
-        print('No minimum std. dev.provided, setting to default (0).')
-        min_stdv = 0
-    elif not isinstance(min_stdv, (int, float)):
-        print('Minimum std. dev., returning original array.')
-        return arr
-    elif min_stdv < 0:
-        print('Minimum std. dev. only takes positives, getting absolute.')
-        arr = abs(min_stdv)
-        
-    # threshold out all values within threshold area, if 0, ignore it
-    if min_stdv == 0:
-        arr_thresh = np.where(np.abs(arr) > min_stdv, arr, 0)
-    else:
-        arr_thresh = np.where(np.abs(arr) >= min_stdv, arr, 0)
-
-    # convert to float32
-    arr_thresh = arr_thresh.astype('float32')
-
-    return arr_thresh
-
-
-# meta, checks
-def build_rule_three_spikes(arr, min_stdv=3):
-    """calculates all spikes, defined as where one sample has
-    'jumped' a specified number of stdvs in one increment. The
-    default value is 3, which is one whole zone."""
-    
-    # check if arr is all nan
-    if np.isnan(arr).all():
-        print('All values are nan, returning all nan array.')
-        return arr
-        
-    # check min stdvs
-    if min_stdv is None:
-        print('No minimum std. dev.provided, setting to default (0).')
-        min_stdv = 3
-    elif not isinstance(min_stdv, (int, float)):
-        print('Minimum std. dev., returning original array.')
-        return arr
-    elif min_stdv < 0:
-        print('Minimum std. dev. only takes positives, getting absolute.')
-        arr = abs(min_stdv)
-        
-    # get differences between values
-    arr_diffs = np.diff(arr, prepend=arr[0])
-    
-    # threshold out all values within threshold area, if 0, ignore it
-    if min_stdv == 0:
-        arr_spikes = np.where(np.abs(arr_diffs) > min_stdv, arr, 0)
-    else:
-        arr_spikes = np.where(np.abs(arr_diffs) >= min_stdv, arr, 0)
-    
-    # convert to float32
-    arr_spikes = arr_spikes.astype('float32')
-    
-    return arr_spikes
-
-
-# meta, checks, test all rule combos
-def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1&2|3', direction='dec_any'):
-    """
-    Builds alert mask (1s and 0s) based on combined rule
-    values and assigned ruleset. Takes several numpy arrays
-    as input, for rule 1, rule 2, rule 3 either static or 
-    dynamic.
-    """
-    
-    # set up valid rulesets
-    valid_rules = [
-        '1 only', 
-        '2 only', 
-        '3 only', 
-        '1 and 2', 
-        '1 and 3', 
-        '2 and 3', 
-        '1 or 2', 
-        '1 or 3', 
-        '2 or 3', 
-        '1 and 2 and 3', 
-        '1 or 2 and 3',
-        '1 and 2 or 3', 
-        '1 or 2 or 3'
-        ]
-        
-    # set up valid directions 
-    valid_directions = [
-        'Incline only (any)',
-        'Decline only (any)',
-        'Incline only (+ zones only)',
-        'Decline only (- zones only)',
-        'Incline or Decline (any)',
-        'Incline or Decline (+/- zones only)'
-        ]
-    
-    # check if ruleset in allowed rules, direction is valid
-    if ruleset not in valid_rules:
-        raise ValueError('Ruleset is not supported.')
-    elif direction not in valid_directions:
-        raise ValueError('Direction is not supported.')
-        
-    # check nan
-    if np.isnan(arr_r1).all():
-        return np.zeros(len(arr_r1))
-    elif np.isnan(arr_r2).all():
-        return np.zeros(len(arr_r2))
-    elif np.isnan(arr_r3).all():
-        return np.zeros(len(arr_r3))
-    
-    # check if all arrays same size
-    #if len(arr_r1) != len(arr_r2) != len(arr_r3):
-        #return np.zeros(len(arr_r1))
-    
-    try:
-        # correct raw rule vals for direction and set 1 if alert, 0 if not
-        if direction == 'Incline only (any)':
-            arr_r1 = np.where(arr_r1 > 0, 1, 0)
-            arr_r2 = np.where(arr_r2 != 0, 1, 0)  # ignore sign for exclusion zone
-            arr_r3 = np.where(arr_r3 > 0, 1, 0)
-            
-        elif direction == 'Decline only (any)':
-            arr_r1 = np.where(arr_r1 < 0, 1, 0)
-            arr_r2 = np.where(arr_r2 != 0, 1, 0)  # ignore sign for exclusion zone
-            arr_r3 = np.where(arr_r3 < 0, 1, 0)
-
-        elif direction == 'Incline only (+ zones only)':
-            arr_r1 = np.where(arr_r1 > 0, 1, 0)
-            arr_r2 = np.where(arr_r2 > 0, 1, 0)
-            arr_r3 = np.where(arr_r3 > 0, 1, 0)
-            
-        elif direction == 'Decline only (- zones only)':
-            arr_r1 = np.where(arr_r1 < 0, 1, 0)
-            arr_r2 = np.where(arr_r2 < 0, 1, 0)
-            arr_r3 = np.where(arr_r3 < 0, 1, 0)    
-
-        elif direction == 'Incline or Decline (any)':
-            arr_r1 = np.where(arr_r1 != 0, 1, 0)
-            arr_r2 = np.where(arr_r2 != 0, 1, 0)
-            arr_r3 = np.where(arr_r3 != 0, 1, 0) 
-
-        elif direction == 'Incline or Decline (+/- zones only)':
-            arr_r1 = np.where(((arr_r1 > 0) & (arr_r2 > 0)) | 
-                              ((arr_r1 < 0) & (arr_r2 < 0)), 1, 0)
-            arr_r2 = np.where(arr_r2 != 0, 1, 0)
-            arr_r3 = np.where(arr_r3 != 0, 1, 0) 
-    except:
-        raise ValueError('Could not create rules.')
-
-    # create alert arrays based on singular rule
-    if ruleset == '1':
-        arr_alerts = arr_r1
-    elif ruleset == '2':
-        arr_alerts = arr_r2
-    elif ruleset == '3':
-        arr_alerts = arr_r3    
-    
-    # create alert arrays based on dual "and" rule
-    if ruleset == '1 and 2':
-        arr_alerts  = arr_r1 & arr_r2
-    elif ruleset == '1 and 3':
-        arr_alerts  = arr_r1 & arr_r3
-    elif ruleset == '2 and 3':
-        arr_alerts  = arr_r2 & arr_r3  
-    
-    # create alert arrays based on dual "or" rule
-    if ruleset == '1 or 2':
-        arr_alerts  = arr_r1 | arr_r2
-    elif ruleset == '1 or 3':
-        arr_alerts  = arr_r1 | arr_r3
-    elif ruleset == '2 or 3':
-        arr_alerts  = arr_r2 | arr_r3    
-    
-    # create alert arrays based on complex rule
-    if ruleset == '1 and 2 and 3':  
-        arr_alerts  = arr_r1 & arr_r2 & arr_r3
-    elif ruleset == '1 or 2 and 3':  
-        arr_alerts  = arr_r1 | arr_r2 & arr_r3
-    elif ruleset == '1 and 2 or 3':  
-        arr_alerts  = arr_r1 & arr_r2 | arr_r3
-    elif ruleset == '1 or 2 or 3':  
-        arr_alerts  = arr_r1 | arr_r2 | arr_r3
-    
-    # check nan
-    if np.isnan(arr_alerts).all():
-        return np.zeros(len(arr_alerts))
-    
-    return arr_alerts
 
 
 
@@ -2305,6 +1962,7 @@ def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, tr
     
     #return dataset
     return ds
+
 
 
 
@@ -3161,3 +2819,559 @@ def apply_rule_combo(arr_r1, arr_r2, arr_r3, ruleset='1&2|3'):
     arr_comb = np.where(arr_comb != 0, arr_comb, np.nan)
         
     return arr_comb
+
+
+# meta, deprecated
+def validate_monitoring_area(row):
+    """
+    Does relevant checks for information for a
+    single monitoring area.
+    """
+    
+    # check if row is tuple
+    if not isinstance(row, tuple):
+        print('Row must be of type tuple.')
+        return False
+            
+    # parse row info
+    area_id = row[0]
+    platform = row[1]
+    s_year = row[2]
+    e_year = row[3]
+    index = row[4]
+    persistence = row[5]
+    rule_1_min_conseqs = row[6]
+    rule_1_inc_plateaus = row[7]
+    rule_2_min_zone = row[8]
+    rule_3_num_zones = row[9]
+    ruleset = row[10]
+    alert = row[11]
+    method = row[12]
+    alert_direction = row[13]
+    email = row[14]
+    ignore = row[15]
+    
+    # check area id exists
+    if area_id is None:
+        print('No area id exists, flagging as invalid.')
+        return False
+
+    # check platform is Landsat or Sentinel
+    if platform is None:
+        print('No platform exists, flagging as invalid.')
+        return False
+    elif platform.lower() not in ['landsat', 'sentinel']:
+        print('Platform must be Landsat or Sentinel, flagging as invalid.')
+        return False
+
+    # check if start and end years are valid
+    if not isinstance(s_year, int) or not isinstance(e_year, int):
+        print('Start and end year values must be integers, flagging as invalid.')
+        return False
+    elif s_year < 1980 or s_year > 2050:
+        print('Start year must be between 1980 and 2050, flagging as invalid.')
+        return False
+    elif e_year < 1980 or e_year > 2050:
+        print('End year must be between 1980 and 2050, flagging as invalid.')
+        return False
+    elif e_year <= s_year:
+        print('Start year must be less than end year, flagging as invalid.')
+        return False
+    elif abs(e_year - s_year) < 2:
+        print('Must be at least 2 years between start and end year, flagging as invalid.')
+        return False
+    elif platform.lower() == 'sentinel' and s_year < 2016:
+        print('Start year must not be < 2016 when using Sentinel, flagging as invalid.')
+        return False
+
+    # check if index is acceptable
+    if index is None:
+        print('No index exists, flagging as invalid.')
+        return False
+    elif index.lower() not in ['ndvi', 'mavi', 'kndvi']:
+        print('Index must be NDVI, MAVI or kNDVI, flagging as invalid.')
+        return False
+    
+    # check if persistence is accepptable
+    if persistence is None:
+        print('No persistence exists, flagging as invalid.')
+        return False
+    elif persistence < 0.001 or persistence > 9.999:
+        print('Persistence must be before 0.0001 and 9.999, flagging as invalid.')
+        return False
+
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_min_conseqs is None:
+        print('No rule_1_min_conseqs exists, flagging as invalid.')
+        return False
+    elif rule_1_min_conseqs < 0 or rule_1_min_conseqs > 99:
+        print('Rule_1_min_conseqs must be between 0 and 99, flagging as invalid.')
+        return False
+    
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_inc_plateaus is None:
+        print('No rule_1_inc_plateaus exists, flagging as invalid.')
+        return False
+    elif rule_1_inc_plateaus not in ['Yes', 'No']:
+        print('Rule_1_inc_plateaus must be Yes or No, flagging as invalid.')
+        return False    
+    
+    # check if rule_2_min_stdv is accepptable
+    if rule_2_min_zone is None:
+        print('No rule_2_min_zone exists, flagging as invalid.')
+        return False
+    elif rule_2_min_zone < 0 or rule_2_min_zone > 99:
+        print('Rule_2_min_zone must be between 0 and 99, flagging as invalid.')
+        return False      
+
+    # check if rule_2_bidirectional is accepptable
+    if rule_3_num_zones is None:
+        print('No rule_3_num_zones exists, flagging as invalid.')
+        return False
+    elif rule_3_num_zones < 0 or rule_3_num_zones > 99:
+        print('Rule_3_num_zones must be between 0 and 99, flagging as invalid.')
+        return False       
+
+    # check if ruleset is accepptable   
+    if ruleset is None:
+        print('No ruleset exists, flagging as invalid.')
+        return False
+    
+    # check if alert is accepptable
+    if alert is None:
+        print('No alert exists, flagging as invalid.')
+        return False
+    elif alert not in ['Yes', 'No']:
+        print('Alert must be Yes or No, flagging as invalid.')
+        return False
+    
+    # check method 
+    if method.lower() not in ['static', 'dynamic']:
+        print('Method must be Static or Dynamic, flagging as invalid.')
+        return False
+    
+    
+    # set up alert directions 
+    alert_directions = [
+        'Incline only (any)', 
+        'Decline only (any)', 
+        'Incline only (+ zones only)', 
+        'Decline only (- zones only)', 
+        'Incline or Decline (any)',
+        'Incline or Decline (+/- zones only)'
+        ]
+    
+    # check if alert_direction is accepptable
+    if alert_direction is None:
+        print('No alert_direction exists, flagging as invalid.')
+        return False
+    elif alert_direction not in alert_directions:
+        print('Alert_direction is not supported.')
+        return False  
+
+    # check if email address is accepptable
+    if alert == 'Yes' and email is None:
+        print('Must provide an email if alert is set to Yes.')
+        return False
+    elif email is not None:
+        if '@' not in email or '.' not in email:
+            print('No @ or . character in email exists, flagging as invalid.')
+            return False
+
+    # check if ignore is accepptable
+    if ignore is None:
+        print('No ignore exists, flagging as invalid.')
+        return False
+    elif ignore not in ['Yes', 'No']:
+        print('Ignore must be Yes or No, flagging as invalid.')
+        return False    
+
+    # all good!
+    return True 
+ 
+ 
+ # deprecated, meta, checks
+def safe_load_nc(in_path):
+    """Performs a safe load on local netcdf. Reads 
+    NetCDF, loads it, and closes connection to file
+    whilse maintaining data in memory"""    
+    
+    # check if file existd and try safe open
+    if os.path.exists(in_path):
+        try:
+            with xr.open_dataset(in_path) as ds_local:
+                ds_local.load()
+            
+            return ds_local
+                    
+        except:
+            print('Could not open cube: {}, returning None.'.format(in_path))
+            return
+    
+    else:
+        print('File does not exist: {}, returning None.'.format(in_path))
+        return
+
+
+# deprecated meta 
+def validate_xr_site_attrs(ds, feat):
+    """
+    For NRT monitoring, site information taken from
+    the associated shapefile feature are appended to
+    the attributes of the associated netcdf file before 
+    moving to the next area. We check these attributes
+    every new iteration to check if user has changed
+    any monitoring area prameters. If key parameters 
+    have been changed, we need to ignore the existing
+    netcdf and create a new one.
+    """
+    
+    # check if dataset exists (could be first run)
+    if ds is None:
+        print('Dataset is none. Returning none.')
+        return
+    elif not isinstance(ds, xr.Dataset):
+        print('Dataset is not an xarray type. Returning none.')
+        return
+    elif not hasattr(ds, 'attrs'):
+        print('Dataset has no attributes. Returning none.')
+        return
+    
+    # check if dict is right length
+    if not isinstance(feat, (list, tuple)):
+        print('Feature not a list or tuple, returning none.')
+        return
+    elif len(feat) == 0:
+        print('Feature has no data, returning none.')
+        return
+    
+    # set up required attributes (key attrs only)
+    attrs = [
+        'area_id',
+        'platform',
+        's_year',
+        'e_year',
+        'index',
+        'persistence',
+        'rule_1_min_conseqs',
+        'rule_1_inc_plateaus',
+        'rule_2_min_zone',
+        'rule_3_num_zones',
+        'ruleset',
+        'alert',
+        'method',
+        'alert_direction',
+        'email',
+        'ignore'
+    ]
+    
+    # iterate attributes and check
+    for attr in attrs:
+        if not hasattr(ds, attr):
+            print('Attribute {} does not exist, returning none.')
+            return
+        
+    # check if key dataset attributes differ from current feat
+    if ds.attrs.get('platform') != str(feat[1]):
+        print('Platform has changed, returning none.')
+        return
+    elif ds.attrs.get('s_year') != str(feat[2]):
+        print('Start year has changed, returning none.')
+        return
+    elif ds.attrs.get('e_year') != str(feat[3]):
+        print('End year has changed, returning none.')
+        return
+    elif ds.attrs.get('index') != str(feat[4]):
+        print('Vegetation index has changed, returning none.')
+        return    
+    elif ds.attrs.get('persistence') != str(feat[5]):
+        print('Persistence has changed, returning none.')
+        return        
+    elif ds.attrs.get('rule_1_min_conseqs') != str(feat[6]):
+        print('Rule 1 min consequtives has changed, returning none.')
+        return         
+    elif ds.attrs.get('rule_1_inc_plateaus') != str(feat[7]):
+        print('Rule 1 include plateaus has changed, returning none.')
+        return       
+    elif ds.attrs.get('rule_2_min_zone') != str(feat[8]):
+        print('Rule 2 min zone has changed, returning none.')
+        return           
+    elif ds.attrs.get('rule_3_num_zones') != str(feat[9]):
+        print('Rule 3 num zones has changed, returning none.')
+        return  
+    elif ds.attrs.get('ruleset') != str(feat[10]):
+        print('Ruleset has changed, returning none.')
+        return      
+    elif ds.attrs.get('method') != str(feat[12]):
+        print('Method has changed, returning none.')
+        return       
+    elif ds.attrs.get('alert_direction') != str(feat[13]):
+        print('Alert direction has changed, returning none.')
+        return      
+    
+    return ds
+    
+# deprecated meta
+def get_satellite_params(platform=None):
+    """
+    Helper function to generate Landsat or Sentinel query information
+    for quick use during NRT cube creation or sync only.
+    
+    Parameters
+    ----------
+    platform: str
+        Name of a satellite platform, Landsat or Sentinel only.
+    
+    params
+    """
+    
+    # check platform name
+    if platform is None:
+        raise ValueError('Must provide a platform name.')
+    elif platform.lower() not in ['landsat', 'sentinel', 'sentinel_provisional']:
+        raise ValueError('Platform must be Landsat or Sentinel.')
+        
+    # set up dict
+    params = {}
+    
+    # get porams depending on platform
+    if platform.lower() == 'landsat':
+        
+        # get collections
+        collections = [
+            'ga_ls5t_ard_3', 
+            'ga_ls7e_ard_3', 
+            'ga_ls8c_ard_3',
+            #'ga_ls7e_ard_provisional_3',  # will always be slc-off
+            'ga_ls8c_ard_provisional_3']
+        
+        # get bands
+        bands = [
+            'nbart_red', 
+            'nbart_green', 
+            'nbart_blue', 
+            'nbart_nir', 
+            'nbart_swir_1', 
+            'nbart_swir_2', 
+            'oa_fmask']
+        
+        # get resolution
+        resolution = 30
+        
+        # build dict
+        params = {
+            'collections': collections,
+            'bands': bands,
+            'resolution': resolution}
+        
+    # the product 3 is not yet avail on dea. we use s2 for now.
+    elif platform.lower() == 'sentinel':
+        
+        # get collections
+        collections = [
+            's2a_ard_granule', 
+            's2b_ard_granule',
+            'ga_s2am_ard_provisional_3', 
+            'ga_s2bm_ard_provisional_3'
+            ]
+        
+        # get bands
+        bands = [
+            'nbart_red', 
+            'nbart_green', 
+            'nbart_blue', 
+            'nbart_nir_1', 
+            'nbart_swir_2', 
+            'nbart_swir_3', 
+            'fmask']
+        
+        # get resolution
+        resolution = 10
+        
+        # build dict
+        params = {
+            'collections': collections,
+            'bands': bands,
+            'resolution': resolution}   
+
+    return params
+ 
+ 
+ # deprecated meta
+def mask_xr_via_polygon(ds, geom, mask_value=1):
+    """
+    geom object from gdal
+    x, y = arrays of coordinates from xr dataset
+    bbox 
+    transform from geobox
+    ncols, nrows = len of x, y
+    """
+    
+    # check dataset
+    if 'x' not in ds or 'y' not in ds:
+        raise ValueError('Dataset has no x or y dimensions.')
+    elif not hasattr(ds, 'geobox'):
+        raise ValueError('Dataset does not have a geobox.')
+        
+    # extract raw x and y value arrays, bbox, transform and num col, row
+    x, y = ds['x'].data, ds['y'].data
+    bbox = ds.geobox.extent.boundingbox
+    transform = ds.geobox.transform
+    ncols, nrows = len(ds['x']), len(ds['y'])
+    
+    # extract bounding box extents
+    xmin, ymin, xmax, ymax = bbox.left, bbox.bottom, bbox.right, bbox.top
+
+    # create ogr transform structure
+    geotransform = (transform[2], transform[0], 0.0, 
+                    transform[5], 0.0, transform[4])
+
+    # create template raster in memory
+    dst_rast = gdal.GetDriverByName('MEM').Create('', ncols, nrows, 1 , gdal.GDT_Byte)
+    dst_rb = dst_rast.GetRasterBand(1)      # get a band
+    dst_rb.Fill(0)                          # init raster with zeros
+    dst_rb.SetNoDataValue(0)                # set nodata to zero
+    dst_rast.SetGeoTransform(geotransform)  # resample, transform
+
+    # rasterise vector and flush
+    err = gdal.RasterizeLayer(dst_rast, [1], geom, burn_values=[mask_value])
+    dst_rast.FlushCache()
+
+    # get numpy version of classified raster
+    arr = dst_rast.GetRasterBand(1).ReadAsArray()
+
+    # create mask
+    mask = xr.DataArray(data=arr,
+                        dims=['y', 'x'],
+                        coords={'y': y, 'x': x})
+
+    return mask
+ 
+ 
+ # deprecated, meta
+def safe_load_ds(ds):
+    """
+    
+    """
+
+    # check if file existd and try safe open
+    if ds is not None:
+        try:
+            ds = ds.load()
+            ds.close()
+            
+            return ds
+                    
+        except:
+            print('Could not open dataset, returning None.')
+            return
+    else:
+        print('Dataset not provided')
+        return
+
+
+# deprecated meta
+def interp_nans(ds, drop_edge_nans=False):
+    """"""
+    
+    # check if time dimension exists 
+    if isinstance(ds, xr.Dataset) and 'time' not in ds:
+        raise ValueError('Dataset has no time dimension.')
+    elif isinstance(ds, xr.DataArray) and 'time' not in ds.dims:
+        raise ValueError('DataArray has no time dimension.')
+        
+    try:
+        # interpolate all values via linear interp
+        ds = ds.interpolate_na('time')
+    
+        # remove any remaining nan (first and last indices, for e.g.)
+        if drop_edge_nans is True:
+            ds = ds.where(~ds.isnull(), drop=True)
+    except:
+        return
+    
+    return ds
+    
+
+# deprecated meta
+def add_required_vars(ds):
+    """"""
+
+    # set required variable names
+    new_vars = [
+        'veg_clean', 
+        'static_raw', 
+        'static_clean',
+        'static_rule_one',
+        'static_rule_two',
+        'static_rule_three',
+        'static_zones',
+        'static_alerts',
+        'dynamic_raw', 
+        'dynamic_clean',
+        'dynamic_rule_one',
+        'dynamic_rule_two',
+        'dynamic_rule_three',
+        'dynamic_zones',
+        'dynamic_alerts']
+
+    # iter each var and add as nans to xr, if not exist
+    for new_var in new_vars:
+        if new_var not in ds:
+            ds[new_var] = xr.full_like(ds['veg_idx'], np.nan)
+            
+    return ds
+
+
+# deprecated meta, check the checks
+def combine_old_new_xrs(ds_old, ds_new):
+    """"""
+    
+    # check if old provided, else return new
+    if ds_old is None:
+        print('Old dataset is empty, returning new.')
+        return ds_new
+    elif ds_new is None:
+        print('New dataset is empty, returning old.')
+        return ds_old
+        
+    # check time dimension
+    if 'time' not in ds_old or 'time' not in ds_new:
+        print('Datasets lack time coordinates.')
+        return
+    
+    # combien old with new
+    try:
+        ds_cmb = xr.concat([ds_old, ds_new], dim='time')
+    except:
+        print('Could not combine old and new datasets.')
+        return
+    
+    return ds_cmb
+    
+    
+# deprecated 
+def smooth_signal(da):
+    """
+    Basic func to smooth change signal using
+    a savgol filter with win size 3. works best
+    for our data. minimal smoothing, yet removes
+    small spikes.
+    """
+    
+    # check if data array 
+    if not isinstance(da, xr.DataArray):
+        print('Only numpy arrays supported, returning original array.')
+        return da
+    elif len(da) <= 3:
+        print('Cannot smooth array <= 3 values. Returning raw array.')
+        return da
+    
+    try:
+        # smooth using savgol filter with win size 3
+        da_out = xr.apply_ufunc(savgol_filter, da, 3, 1)
+        return da_out
+    except:
+        print('Couldnt smooth, returning raw array.')
+    
+    return da
