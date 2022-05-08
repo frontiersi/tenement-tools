@@ -40,9 +40,15 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for fetch data
-            Add(new GalleryItem(text: "Fetch Satellite Data",
+            Add(new GalleryItem(text: "COG Fetch (ODC Tool)",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/COG_Fetch_32.png",
-                                tooltip: "Fetch satellite data from Digital Earth Australia (DEA).",
+                                tooltip: "Fetch satellite data (ODC method).",
+                                group: "Fetching Tools"));
+            
+            // add gallery item for fetch data
+            Add(new GalleryItem(text: "COG Fetch (Legacy Tool)",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/COG_Fetch_Legacy_32.png",
+                                tooltip: "Fetch satellite data (Legacy method).",
                                 group: "Fetching Tools"));
 
             // add gallery item for visualise data
@@ -66,8 +72,7 @@ namespace TenementToolsApp
             // get name of clicked gallery item
             var gallery_item = base.SelectedItem.ToString();
 
-            // open tool pane
-            if (gallery_item == "Fetch Satellite Data")
+            if (gallery_item == "COG Fetch (ODC Tool)")
             {
                 try
                 {
@@ -77,6 +82,18 @@ namespace TenementToolsApp
                 catch (Exception e)
                 {
                     Debug.WriteLine("Could not find COG Fetch (ODC) tool. Did you add the toolbox?");
+                };
+            }
+            else if(gallery_item == "COG Fetch (Legacy Tool)")
+            {
+                try
+                {
+                    string toolname = "COG_Fetch_Legacy";
+                    Geoprocessing.OpenToolDialog(toolname, null);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find COG Fetch (Legacy) tool. Did you add the toolbox?");
                 };
             }
             else if (gallery_item == "Explore Satellite Data")
