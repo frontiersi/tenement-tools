@@ -18,7 +18,8 @@ from odc import stac
 from datetime import datetime
    
    
-def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, limit=250):
+def fetch_stac_items_odc(stac_endpoint, collections, start_dt, end_dt, bbox, 
+                         slc_off=False, limit=250):
     """
     Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac'),
     a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of
@@ -67,8 +68,8 @@ def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, en
     # get catalog
     try:
         catalog = pystac_client.Client.open(stac_endpoint)
-    except:
-        raise ValueError('Could not reach STAC endpoint. Is it down?')
+    except Exception as e:
+        raise ValueError(e)
     
     # prepare collection list
     if collections is None:
@@ -81,9 +82,10 @@ def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, en
         raise ValueError('No start or end date provided.')
     elif not isinstance(start_dt, str) or not isinstance(end_dt, str):
         raise ValueError('Start and end date must be strings.')
-    else:
-        start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
-        end_dt_obj = datetime.strptime(end_dt, "%Y-%m-%d")
+
+    # convert date strings to datetime objects
+    start_dt_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+    end_dt_obj = datetime.strptime(end_dt, "%Y-%m-%d")
         
     # check bounding bix
     if not isinstance(bbox, list) or len(bbox) != 4:
@@ -117,11 +119,14 @@ def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, en
         if limit <= 0 or limit > 999:
             limit = 999
                         
-        # query current collection
-        query = catalog.search(collections=collection,
-                               datetime=dt,
-                               bbox=bbox,
-                               limit=limit)
+        try:
+            # query current collection
+            query = catalog.search(collections=collection,
+                                   datetime=dt,
+                                   bbox=bbox,
+                                   limit=limit)
+        except Exception as e:
+            raise ValueError(e)
         
         # if items return, add to queries
         if items is None:
@@ -134,7 +139,8 @@ def fetch_stac_items_odc(stac_endpoint=None, collections=None, start_dt=None, en
     return items
 
 
-def replace_items_s3_to_https(items, from_prefix='s3://dea-public-data', to_prefix='https://data.dea.ga.gov.au'):
+def replace_items_s3_to_https(items, from_prefix='s3://dea-public-data', 
+                              to_prefix='https://data.dea.ga.gov.au'):
     """
     Iterate all items in pystac ItemCollection and replace
     the DEA AWS s3prefix with https (from/to). ArcGIS Pro
@@ -180,7 +186,8 @@ def replace_items_s3_to_https(items, from_prefix='s3://dea-public-data', to_pref
     return items
 
 
-def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, chunks={}, group_by='solar_day', sort_by=True, skip_broken_datasets=True, like=None):
+def build_xr_odc(items, bbox, bands, crs, res, resampling='Nearest', align=None,
+                 group_by='solar_day', chunks={}, like=None):
     """
     Takes a pystac ItemCollection of prepared DEA stac items from the 
     fetch_stac_items_odc function and converts it into lazy-load (or not,
@@ -203,23 +210,24 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
     crs : int
         Reprojects output satellite images into this coordinate system. 
         Must be a int, later converted to 'EPSG:####' string.
-    resolution: tuple
-        Output size of raster cells. If higher or greater than raw pixel
+    res: tuple
+        Resolution, i.e. size of raster cells. If higher or greater than raw pixel
         size on dea aws, resampling will occur to up/down scale to user
         provided resolution. Careful - units must be in units of provided
         epsg. Tenement tools sets this to 30, 10 for landsat, sentinel 
         respectively.
-    chunks: dict
-        Must be a dict of dimension names and chunk size of each. For exmaple
-        {'x': 512, 'y': 512}. Set to None for optimal lazy load.
+    resampling : str 
+        Resampling method when resampling pixels. Options include Nearest,
+        Bilinear, Cubic and Average.
+    align : int 
+        Align pixels to corner of pixel or center (default). If set to None, 
+        will use default. 
     group_by: str
         Whether to group scenes based on solar day (i.e. overlaps in a single
         pass) or time.
-    skip_broken_datasets: bool
-        If an error occurs, whether to skip the errorneous data and keep
-        going or error.
-    sort_by_time: bool
-        Sort resulting xr datset by time.
+    chunks: dict
+        Must be a dict of dimension names and chunk size of each. For exmaple
+        {'x': 512, 'y': 512}. Set to None for optimal lazy load.
     like: xr dataset
         If another dataset provided, will use the x, y and attributes to
         generate a new xr dataset for new dates for within this same extent.
@@ -240,12 +248,12 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
     # prepare band list
     if bands is None:
         bands = []
-    if not isinstance(bands, (list)):
+    elif not isinstance(bands, (list)):
         bands = [bands]
     if len(bands) == 1 and bands[0] is None:
         raise ValueError('Must request at least one asset/band.')      
     
-    # check bounding bix
+    # check bounding box
     if not isinstance(bbox, list) or len(bbox) != 4:
         raise TypeError('Bounding box must contain four numbers.')
         
@@ -254,126 +262,62 @@ def build_xr_odc(items=None, bbox=None, bands=None, crs=3577, resolution=None, c
         crs = None
     elif not isinstance(crs, int):
         raise TypeError('The crs provided must be an integer e.g., 4326.')
-    else:
-        crs = 'EPSG:{}'.format(crs)
         
     # resolution
     if like is not None:
-        resolution = None
-    elif not isinstance(resolution, (int, float)):
+        res = None
+    elif not isinstance(res, (int, float)):
         raise TypeError('Resoluton must be a single integer or float.')
-    else:
-        resolution = (resolution * -1, resolution)
+    elif res <= 0:
+        raise ValueError('Resolution must be > 0.')
     
-    # check chunks
-    if chunks is None or chunks == -1:
-        chunks = {}
-    if not isinstance(chunks, dict):
-        raise TypeError('Chunks must be a dictionary or None.')
+    # check resampling 
+    if resampling not in ['Nearest', 'Bilinear', 'Cubic', 'Average']:
+        raise ValueError('Resampling method not supported.')
         
     # check group_by is either time or solar_day
     if group_by not in ['solar_day', 'time']:
-        raise ValueError('Group_by must be either solar_day or time.')
-        
-    try:
-        # handle incosistent fmask name for sent nrt coll 3
-        config = {
-            "ga_s2am_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
-            "ga_s2bm_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
+        raise ValueError('Group_by must be either solar_day or time.')   
+    
+    # check align 
+    if align is not None:
+        if align < 0 or align > res:
+            raise ValueError('Align must be > 0 but <= resolution.')
+
+    # check chunks
+    if chunks is not None and not isinstance(chunks, dict):
+        raise TypeError('Chunks must be a dictionary or None.')
+
+    # prepare config... nice if I did this for band names...
+    config = {
+        "ga_s2am_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
+        "ga_s2bm_ard_provisional_3": {"aliases": {"fmask": "oa_fmask",}},
         }
     
-        # use the odc-stac module to build lazy xr dataset
+    try:   
+        # use the odc-stac module to build dataset
         ds = stac.load(items=items,
                        bbox=bbox,
                        bands=bands,
-                       crs=crs,
-                       resolution=resolution,
-                       chunks=chunks,
+                       crs='EPSG:{}'.format(crs),
+                       resolution=(res * -1, res),
+                       resampling=resampling,
                        group_by=group_by,
-                       skip_broken_datasets=skip_broken_datasets,
+                       align=align,
+                       chunks=chunks,
+                       skip_broken_datasets=True,
+                       #progress_cbk
                        stac_cfg=config,
                        like=like)
         
-    except:
-        raise ValueError('Could not create xr dataset from stac result.')
-        
-    # sort by time if requested
-    if sort_by:
+        # sort by time (to be safe)
         ds = ds.sortby('time')
-    
+        
+    except Exception as e:
+        raise ValueError(e)
+
     # notify and return
     print('Created xarray dataset via odc-stac successfully.')
-    return ds
-
-
-# may need to add more
-def append_query_attrs_odc(ds, bbox, collections, bands, resolution, dtype, fill_value, slc_off, resampling):
-    """
-    Takes a newly constructed xr dataset and appends some of the original query
-    parameters (e.g., collections, bands, bbox, slc-off) to assist in updates later
-    on.
-    
-    Parameters
-    -------------
-    ds : xr dataset
-        An xr dataset object that holds the lazy-loaded raster images obtained
-        from the majority of this code base. Attributes are appended to this
-        object.
-    bbox : list of ints/floats
-        The bounding box of area of interest for which to query for 
-        satellite data. Is in latitude and longitudes with format: 
-        (min lon, min lat, max lon, max lat). Only used to append to 
-        attributes, here.
-    collections : list
-        A list of names for the requested satellite dea collections. For example,
-        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
-        just dded to attributes.
-    bands : list
-        List of band names requested original query.
-    resolution : int or float
-        A integer or float containing resolution.
-    dtype : str
-        Data type of output dataset, e.g., int16, float32. In numpy
-        dtype that the output xarray dataset will be encoded in.
-    fill_value : int or float
-        The value used to fill null or errorneous pixels with from prior methods.
-        Not used in analysis here, just included in the attributes. Used to set
-        nodatavalue attribute.
-    slc_off : bool
-        Whether to include Landsat 7 errorneous SLC data. Only relevant
-        for Landsat data. Not used in analysis here, only appended to attributes.
-    resampling : str
-        The rasterio-based resampling method used when pixels are reprojected
-        rescaled to different crs from the original. Just used here to append
-        to attributes.
-        
-    Returns
-    ----------
-    A xr dataset with new attributes appended to it.
-    """
-    
-    # notify
-    print('Preparing and appending attributes to dataset.')
-
-    # set resolution
-    ds = ds.assign_attrs({'res': resolution})
-
-    # set transform
-    ds = ds.assign_attrs({'transform': tuple(ds.geobox.transform)})
-
-    # set nodatavals
-    ds = ds.assign_attrs({'nodatavals': fill_value})
-
-    # create top level query parameters
-    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
-    ds = ds.assign_attrs({'orig_collections': tuple(collections)}) # set original collections
-    ds = ds.assign_attrs({'orig_bands': tuple(bands)})             # set original bands
-    ds = ds.assign_attrs({'orig_dtype': dtype})                    # set original dtype
-    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
-    ds = ds.assign_attrs({'orig_resample': resampling})            # set original resample method 
-
-    # notify and return
-    print('Attributes appended to dataset successfully.')
     return ds
 
 
@@ -466,17 +410,8 @@ def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_f
     return ds
 
 
-# helpers
-def convert_type(ds, to_type='int16'):
-    """
-    Small helper to update an existing odc-stac derived
-    xr dataset to type int16, which is needed for tenement
-    tools.
-    """
-    
-    return ds.astype(to_type)
 
-
+# deprecated
 def change_nodata_odc(ds, orig_value=0, fill_value=-999):
     """
     Takes original xr dataset  odc-stac nodata values (0) 
@@ -506,6 +441,7 @@ def change_nodata_odc(ds, orig_value=0, fill_value=-999):
     return ds
 
 
+# deprecated
 def fix_xr_time_for_arc_cog(ds):
     """
     Small helper function to strip milliseconds from
@@ -520,4 +456,87 @@ def fix_xr_time_for_arc_cog(ds):
     # strip milliseconds
     ds['time'] = dts
     
+    return ds
+    
+
+# deprecated
+def convert_type(ds, to_type='int16'):
+    """
+    Small helper to update an existing odc-stac derived
+    xr dataset to type int16, which is needed for tenement
+    tools.
+    """
+    
+    return ds.astype(to_type)
+
+
+
+# deprecated
+def append_query_attrs_odc(ds, bbox, collections, bands, resolution, dtype, fill_value, slc_off, resampling):
+    """
+    Takes a newly constructed xr dataset and appends some of the original query
+    parameters (e.g., collections, bands, bbox, slc-off) to assist in updates later
+    on.
+    
+    Parameters
+    -------------
+    ds : xr dataset
+        An xr dataset object that holds the lazy-loaded raster images obtained
+        from the majority of this code base. Attributes are appended to this
+        object.
+    bbox : list of ints/floats
+        The bounding box of area of interest for which to query for 
+        satellite data. Is in latitude and longitudes with format: 
+        (min lon, min lat, max lon, max lat). Only used to append to 
+        attributes, here.
+    collections : list
+        A list of names for the requested satellite dea collections. For example,
+        ga_ls5t_ard_3 for lansat 5 analysis ready data. Not used in analysis here,
+        just dded to attributes.
+    bands : list
+        List of band names requested original query.
+    resolution : int or float
+        A integer or float containing resolution.
+    dtype : str
+        Data type of output dataset, e.g., int16, float32. In numpy
+        dtype that the output xarray dataset will be encoded in.
+    fill_value : int or float
+        The value used to fill null or errorneous pixels with from prior methods.
+        Not used in analysis here, just included in the attributes. Used to set
+        nodatavalue attribute.
+    slc_off : bool
+        Whether to include Landsat 7 errorneous SLC data. Only relevant
+        for Landsat data. Not used in analysis here, only appended to attributes.
+    resampling : str
+        The rasterio-based resampling method used when pixels are reprojected
+        rescaled to different crs from the original. Just used here to append
+        to attributes.
+        
+    Returns
+    ----------
+    A xr dataset with new attributes appended to it.
+    """
+    
+    # notify
+    print('Preparing and appending attributes to dataset.')
+
+    # set resolution
+    ds = ds.assign_attrs({'res': resolution})
+
+    # set transform
+    ds = ds.assign_attrs({'transform': tuple(ds.geobox.transform)})
+
+    # set nodatavals
+    ds = ds.assign_attrs({'nodatavals': fill_value})
+
+    # create top level query parameters
+    ds = ds.assign_attrs({'orig_bbox': tuple(bbox)})               # set original bbox
+    ds = ds.assign_attrs({'orig_collections': tuple(collections)}) # set original collections
+    ds = ds.assign_attrs({'orig_bands': tuple(bands)})             # set original bands
+    ds = ds.assign_attrs({'orig_dtype': dtype})                    # set original dtype
+    ds = ds.assign_attrs({'orig_slc_off': str(slc_off)})           # set original slc off
+    ds = ds.assign_attrs({'orig_resample': resampling})            # set original resample method 
+
+    # notify and return
+    print('Attributes appended to dataset successfully.')
     return ds

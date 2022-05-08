@@ -956,7 +956,7 @@ def __predict__(ds_input, estimator):
     # flatten and chunk each dim array and add to flatten list
     input_data_flat = []
     for da in input_data_list:
-        data = da.data.flatten().rechunk(chunk_size)
+        data = da.data.flatten().rechunk(chunk_size)  #!?!
         input_data_flat.append(data)
 
     # reshape for prediction via dask array type (dda)

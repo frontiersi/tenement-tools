@@ -980,149 +980,6 @@ def extract_new_xr_dates(ds_old, ds_new):
     return 
 
 
-# meta
-def append_xr_site_attrs(ds, feat):
-    """
-    Takes a xarray Dataset and appends monitoring area
-    attributes to it. Requires a dataset (xarray type) and
-    a list or tuple of monitoring area feature values, 
-    typically captured from a row via arcpy or ogr.
-    """
-    
-    # check if ds is dataset
-    if ds is None:
-        raise TypeError('Dataset not an xarray type.')
-    if not isinstance(ds, xr.Dataset):
-        raise TypeError('Dataset not an xarray type.')
-    
-    # check if dict is right length
-    if not isinstance(feat, (list, tuple)):
-        print('Feature not a list or tuple, returning original dataset.')
-        return ds
-    elif len(feat) == 0:
-        print('Feature has no data, returning original dataset.')
-        return ds
-
-    try:
-        # build dict
-        attrs = {
-            'area_id':             str(feat[0]),
-            'platform':            str(feat[1]),
-            's_year':              str(feat[2]),
-            'e_year':              str(feat[3]),
-            'index':               str(feat[4]),
-            'persistence':         str(feat[5]),
-            'rule_1_min_conseqs':  str(feat[6]),
-            'rule_1_inc_plateaus': str(feat[7]),
-            'rule_2_min_zone':     str(feat[8]),
-            'rule_3_num_zones':    str(feat[9]),
-            'ruleset':             str(feat[10]),
-            'alert':               str(feat[11]),
-            'method':              str(feat[12]),
-            'alert_direction':     str(feat[13]),
-            'email':               str(feat[14]),
-            'ignore':              str(feat[15])
-        }
-    
-        # update attributes on dataset
-        ds.attrs = attrs
-    
-    except:
-        raise ValueError('Could not create attribute dictionary.')
-
-    return ds
-
-
-# meta
-def create_email_dicts(row_count):
-    """meta"""
-    
-    if row_count is None or row_count == 0:
-        print('No rows to build email dictionaries.')
-        return
-    
-    # setup email contents list
-    email_contents = []
-            
-    # pack list full of 'empty' dicts
-    for i in range(row_count):
-    
-        # set up empty email dict
-        email_dict = {
-            'area_id': None,
-            's_year': None,
-            'e_year': None,
-            'index': None,
-            'ruleset': None,
-            'alert': None,
-            'alert_direction': None,
-            'email': None,
-            'ignore': None,
-            'triggered': None
-        }
-    
-        email_contents.append(email_dict)
-        
-    return email_contents
-
-
-# todo checks, meta
-def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
-    """
-    """
-    
-    # check sent from
-    if not isinstance(sent_from, str):
-        raise TypeError('Sent from must be string.')
-    elif not isinstance(sent_to, str):
-        raise TypeError('Sent to must be string.')
-    elif not isinstance(subject, str):
-        raise TypeError('Subject must be string.')
-    elif not isinstance(body_text, str):
-        raise TypeError('Body text must be string.')     
-    elif not isinstance(smtp_server, str):
-        raise TypeError('SMTP server must be string.')        
-    elif not isinstance(smtp_port, int):
-        raise TypeError('SMTP port must be integer.')
-    elif not isinstance(username, str):
-        raise TypeError('Username must be string.')     
-    elif not isinstance(password, str):
-        raise TypeError('Password must be string.')
-        
-    # notify
-    print('Emailing alert.')
-    
-    # construct header text
-    msg = MIMEMultipart()
-    msg['From'] = sent_from
-    msg['To'] = sent_to
-    msg['Subject'] = subject
-
-    # construct body text (plain)
-    mime_body_text = MIMEText(body_text)
-    msg.attach(mime_body_text)
-
-    # create secure connection with server and send
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-
-        # begin ttls
-        server.starttls()
-
-        # login to server
-        server.login(username, password)
-
-        # send email
-        server.sendmail(sent_from, sent_to, msg.as_string())
-
-        # notify
-        print('Emailed alert area.')
-                
-    return
-
-
-
-
-
 # meta, checks
 def reclassify_signal_to_zones(arr):
     """
@@ -1169,70 +1026,6 @@ def reclassify_signal_to_zones(arr):
         
     return vec_temp
 
-
-# need params from feat, conseq count e.g., 3)
-def prepare_and_send_alert(ds, back_idx=-2, send_email=False):
-    """
-    ds = change dataset with required vars
-    back_idx = set backwards index (-1 is latest image, -2 is second last, etc)
-    """
-    
-    # check if we have all vars required
-
-    # get second latest date
-    latest_date = ds['time'].isel(time=back_idx)
-    latest_date = latest_date.dt.strftime('%Y-%m-%d %H:%M:%S')
-    latest_date = str(latest_date.values)
-
-    # get latest zone
-    latest_zone = ds['zones'].isel(time=back_idx)
-    latest_zone = latest_zone.mean(['x', 'y']).values
-
-    # get latest incline candidate
-    latest_inc_candidate = ds['cands_inc'].isel(time=back_idx)
-    latest_inc_candidate = latest_inc_candidate.mean(['x', 'y']).values
-
-    # get latest decline candidate
-    latest_dec_candidate = ds['cands_dec'].isel(time=back_idx)
-    latest_dec_candidate = latest_dec_candidate.mean(['x', 'y']).values
-
-    # get latest incline consequtives
-    latest_inc_consequtives = ds['consq_inc'].isel(time=back_idx)
-    latest_inc_consequtives = latest_inc_consequtives.mean(['x', 'y']).values
-
-    # get latest incline consequtives
-    latest_dec_consequtives = ds['consq_dec'].isel(time=back_idx)
-    latest_dec_consequtives = latest_dec_consequtives.mean(['x', 'y']).values
-    
-    
-    # alert user via ui and python before email
-    if latest_inc_candidate == 1:
-        print('- ' * 10)
-        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
-        print('An increasing vegetation trajectory has been detected.')
-        print('Alert triggered via image captured on {}.'.format(str(latest_date)))
-        print('Area is in zone {}.'.format(int(latest_zone)))
-        print('Increase has been on-going for {} images (i.e., dates).'.format(int(latest_inc_consequtives)))       
-        print('')
-
-        
-    elif latest_dec_candidate == 1:
-        print('- ' * 10)
-        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
-        print('An decreasing vegetation trajectory has been detected.')
-        print('Alert triggered via image captured  {}.'.format(str(latest_date)))
-        print('Area is in zone {}.'.format(int(latest_zone)))
-        print('Decrease has been on-going for {} images (i.e., dates).'.format(int(latest_dec_consequtives)))
-        print('')  
-        
-    else:
-        print('- ' * 10)
-        print('No alert was triggered for Monitoring Area: {}.'.format('<placeholder>'))
-        print('')
-        
-    # if requested, send email
-    if send_email:
-        print('todo...')
 
 
 
@@ -3375,3 +3168,209 @@ def smooth_signal(da):
         print('Couldnt smooth, returning raw array.')
     
     return da
+    
+    
+# deprecated
+def append_xr_site_attrs(ds, feat):
+    """
+    Takes a xarray Dataset and appends monitoring area
+    attributes to it. Requires a dataset (xarray type) and
+    a list or tuple of monitoring area feature values, 
+    typically captured from a row via arcpy or ogr.
+    """
+    
+    # check if ds is dataset
+    if ds is None:
+        raise TypeError('Dataset not an xarray type.')
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    
+    # check if dict is right length
+    if not isinstance(feat, (list, tuple)):
+        print('Feature not a list or tuple, returning original dataset.')
+        return ds
+    elif len(feat) == 0:
+        print('Feature has no data, returning original dataset.')
+        return ds
+
+    try:
+        # build dict
+        attrs = {
+            'area_id':             str(feat[0]),
+            'platform':            str(feat[1]),
+            's_year':              str(feat[2]),
+            'e_year':              str(feat[3]),
+            'index':               str(feat[4]),
+            'persistence':         str(feat[5]),
+            'rule_1_min_conseqs':  str(feat[6]),
+            'rule_1_inc_plateaus': str(feat[7]),
+            'rule_2_min_zone':     str(feat[8]),
+            'rule_3_num_zones':    str(feat[9]),
+            'ruleset':             str(feat[10]),
+            'alert':               str(feat[11]),
+            'method':              str(feat[12]),
+            'alert_direction':     str(feat[13]),
+            'email':               str(feat[14]),
+            'ignore':              str(feat[15])
+        }
+    
+        # update attributes on dataset
+        ds.attrs = attrs
+    
+    except:
+        raise ValueError('Could not create attribute dictionary.')
+
+    return ds
+    
+    
+# deprecated meta
+def create_email_dicts(row_count):
+    """meta"""
+    
+    if row_count is None or row_count == 0:
+        print('No rows to build email dictionaries.')
+        return
+    
+    # setup email contents list
+    email_contents = []
+            
+    # pack list full of 'empty' dicts
+    for i in range(row_count):
+    
+        # set up empty email dict
+        email_dict = {
+            'area_id': None,
+            's_year': None,
+            'e_year': None,
+            'index': None,
+            'ruleset': None,
+            'alert': None,
+            'alert_direction': None,
+            'email': None,
+            'ignore': None,
+            'triggered': None
+        }
+    
+        email_contents.append(email_dict)
+        
+    return email_contents
+
+
+# deprecated todo checks, meta
+def send_email_alert(sent_from=None, sent_to=None, subject=None, body_text=None, smtp_server=None, smtp_port=None, username=None, password=None):
+    """
+    """
+    
+    # check sent from
+    if not isinstance(sent_from, str):
+        raise TypeError('Sent from must be string.')
+    elif not isinstance(sent_to, str):
+        raise TypeError('Sent to must be string.')
+    elif not isinstance(subject, str):
+        raise TypeError('Subject must be string.')
+    elif not isinstance(body_text, str):
+        raise TypeError('Body text must be string.')     
+    elif not isinstance(smtp_server, str):
+        raise TypeError('SMTP server must be string.')        
+    elif not isinstance(smtp_port, int):
+        raise TypeError('SMTP port must be integer.')
+    elif not isinstance(username, str):
+        raise TypeError('Username must be string.')     
+    elif not isinstance(password, str):
+        raise TypeError('Password must be string.')
+        
+    # notify
+    print('Emailing alert.')
+    
+    # construct header text
+    msg = MIMEMultipart()
+    msg['From'] = sent_from
+    msg['To'] = sent_to
+    msg['Subject'] = subject
+
+    # construct body text (plain)
+    mime_body_text = MIMEText(body_text)
+    msg.attach(mime_body_text)
+
+    # create secure connection with server and send
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+
+        # begin ttls
+        server.starttls()
+
+        # login to server
+        server.login(username, password)
+
+        # send email
+        server.sendmail(sent_from, sent_to, msg.as_string())
+
+        # notify
+        print('Emailed alert area.')
+                
+    return
+
+
+# deprecated need params from feat, conseq count e.g., 3)
+def prepare_and_send_alert(ds, back_idx=-2, send_email=False):
+    """
+    ds = change dataset with required vars
+    back_idx = set backwards index (-1 is latest image, -2 is second last, etc)
+    """
+    
+    # check if we have all vars required
+
+    # get second latest date
+    latest_date = ds['time'].isel(time=back_idx)
+    latest_date = latest_date.dt.strftime('%Y-%m-%d %H:%M:%S')
+    latest_date = str(latest_date.values)
+
+    # get latest zone
+    latest_zone = ds['zones'].isel(time=back_idx)
+    latest_zone = latest_zone.mean(['x', 'y']).values
+
+    # get latest incline candidate
+    latest_inc_candidate = ds['cands_inc'].isel(time=back_idx)
+    latest_inc_candidate = latest_inc_candidate.mean(['x', 'y']).values
+
+    # get latest decline candidate
+    latest_dec_candidate = ds['cands_dec'].isel(time=back_idx)
+    latest_dec_candidate = latest_dec_candidate.mean(['x', 'y']).values
+
+    # get latest incline consequtives
+    latest_inc_consequtives = ds['consq_inc'].isel(time=back_idx)
+    latest_inc_consequtives = latest_inc_consequtives.mean(['x', 'y']).values
+
+    # get latest incline consequtives
+    latest_dec_consequtives = ds['consq_dec'].isel(time=back_idx)
+    latest_dec_consequtives = latest_dec_consequtives.mean(['x', 'y']).values
+    
+    
+    # alert user via ui and python before email
+    if latest_inc_candidate == 1:
+        print('- ' * 10)
+        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
+        print('An increasing vegetation trajectory has been detected.')
+        print('Alert triggered via image captured on {}.'.format(str(latest_date)))
+        print('Area is in zone {}.'.format(int(latest_zone)))
+        print('Increase has been on-going for {} images (i.e., dates).'.format(int(latest_inc_consequtives)))       
+        print('')
+
+        
+    elif latest_dec_candidate == 1:
+        print('- ' * 10)
+        print('Alert! Monitoring Area {} has triggered the alert system.'.format('<placeholder>'))
+        print('An decreasing vegetation trajectory has been detected.')
+        print('Alert triggered via image captured  {}.'.format(str(latest_date)))
+        print('Area is in zone {}.'.format(int(latest_zone)))
+        print('Decrease has been on-going for {} images (i.e., dates).'.format(int(latest_dec_consequtives)))
+        print('')  
+        
+    else:
+        print('- ' * 10)
+        print('No alert was triggered for Monitoring Area: {}.'.format('<placeholder>'))
+        print('')
+        
+    # if requested, send email
+    if send_email:
+        print('todo...')
+

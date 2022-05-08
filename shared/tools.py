@@ -496,8 +496,8 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     """
     Takes a pandas dataframe of occurrence records and clips them
     to a xarray dataset or array. It is recommended a binary mask is used 
-    as ds input, with nan represented by nodata_value paramter. if_nodata = if any vars in pixel
-    are nan, ignore point, if all are, ignore.
+    as ds input, with nan represented by nodata_value paramter. if_nodata = if 
+    any vars in pixel are nan, ignore point, if all are, ignore.
 
     Parameters
     ----------
@@ -836,6 +836,109 @@ def get_xr_extent(ds):
     return extent
     
 
+def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
+    """
+    Extracts xarray dataset or array values at input coordinates. 
+    Used mostly for training and testing models.
+    
+    Parameters
+    ----------
+    ds: xarray dataset
+        A dataset with data variables.
+    coords : pandas dataframe
+        A pandas dataframe containing x and y columns with records.
+    keep_xy : bool
+        Keep the x and y coordinate value columns in output.
+    res_factor : int
+        A threshold multiplier used during pixel + point intersection. For example
+        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
+
+    Returns
+    ----------
+    df_samples : pandas dataframe
+    """
+
+    # notify user
+    print('Extracting xarray values to x and y coordinates.')
+    
+    # check if dataset adequate
+    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
+        raise TypeError('Provided dataset is not an xarray dataset type. Please check input.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset.') 
+
+    # check if coords is a pandas dataframe
+    if not isinstance(coords, pd.DataFrame):
+        raise TypeError('Provided coords is not a numpy ndarray type. Please check input.')
+    elif len(coords.columns) != 2:
+        raise ValueError('Num of columns in coords not equal to 2.')
+
+    # check if res factor is int type
+    if not res_factor >= 1:
+        raise ValueError('Resolution factor must be value of 1 or greater.')
+        
+    # check if xr has nodatavals
+    if not hasattr(ds, 'nodatavals'):
+        raise ValueError('Dataset does not have nodata value attribute.')
+    elif ds.nodatavals == 'unknown':
+        raise ValueError('Dataset nodata value is unknown.')    
+
+    # get cell resolution from dataset
+    res = get_xr_resolution(ds)
+    if not res:
+        raise ValueError('No resolution extracted from dataset.')
+
+    # loop through data var and extract values at coords
+    values = []
+    for i, row in coords.iterrows():
+        try:            
+            # get values from vars at current pixel
+            pixel = ds.sel(x=row.get('x'), 
+                           y=row.get('y'), 
+                           method='nearest', 
+                           tolerance=res * res_factor)
+            pixel = pixel.to_array().values
+            pixel = list(pixel)
+
+        except:
+            # fill with list of nan equal to data var size
+            pixel = [ds.nodatavals] * len(ds.data_vars)
+            
+        # add current point x and y columns if wanted
+        if keep_xy:
+            pixel = [row.get('x'), row.get('y')] + pixel
+
+        # append to list
+        values.append(pixel)
+
+    # get x, y dtypes
+    x_dtype, y_dtype = coords['x'].dtype, coords['y'].dtype
+    
+    # get original var dtypes as dict
+    col_dtypes_dict = {}
+    for var in ds.data_vars:
+        col_dtypes_dict[var] = np.dtype(ds[var].dtype)
+            
+    try:
+        # prepare whether to retain or discared coords x and y
+        if keep_xy:
+            col_names = ['x', 'y'] + list(ds.data_vars)
+            col_dtypes_dict.update({'x': x_dtype, 'y': y_dtype})
+        else:
+            col_names = list(ds.data_vars)
+
+        # convert values list into pandas dataframe, ensure types match dataset
+        df_samples = pd.DataFrame(values, columns=col_names)
+        df_samples = df_samples.astype(col_dtypes_dict)
+
+    except:
+        raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
+
+    # notify user and return
+    print('Extracted xarray values successfully.')
+    return df_samples 
+
+
 def remove_nodata_records(df_records, nodata_value=-999):
     """
     Read a numpy record array and remove nodata records.
@@ -931,112 +1034,6 @@ def export_xr_as_nc(ds, filename):
     print('Exported xarray as netcdf successfully.')
     
 
-def extract_xr_values(ds, coords, keep_xy=False, res_factor=3):
-    """
-    Extracts xarray dataset or array values at input coordinates. 
-    Used mostly for training and testing models.
-    
-    Parameters
-    ----------
-    ds: xarray dataset
-        A dataset with data variables.
-    coords : pandas dataframe
-        A pandas dataframe containing x and y columns with records.
-    keep_xy : bool
-        Keep the x and y coordinate value columns in output.
-    res_factor : int
-        A threshold multiplier used during pixel + point intersection. For example
-        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-
-    Returns
-    ----------
-    df_samples : pandas dataframe
-    """
-
-    # notify user
-    print('Extracting xarray values to x and y coordinates.')
-    
-    # check if dataset adequate
-    if not isinstance(ds, (xr.DataArray, xr.Dataset)):
-        raise TypeError('Provided dataset is not an xarray dataset type. Please check input.')
-    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('> No x and/or y coordinate dimension in dataset.') 
-
-    # check if coords is a pandas dataframe
-    if not isinstance(coords, pd.DataFrame):
-        raise TypeError('Provided coords is not a numpy ndarray type. Please check input.')
-    elif len(coords.columns) != 2:
-        raise ValueError('Num of columns in coords not equal to 2.')
-
-    # check if res factor is int type
-    if not res_factor >= 1:
-        raise ValueError('Resolution factor must be value of 1 or greater.')
-        
-    # check if xr has nodatavals
-    if not hasattr(ds, 'nodatavals'):
-        raise ValueError('Dataset does not have nodata value attribute.')
-    elif ds.nodatavals == 'unknown':
-        raise ValueError('Dataset nodata value is unknown.')    
-
-    # get cell resolution from dataset
-    res = get_xr_resolution(ds)
-    if not res:
-        raise ValueError('No resolution extracted from dataset.')
-
-    # multiply res by res factor
-    #res = res * res_factor
-
-    # loop through data var and extract values at coords
-    values = []
-    for i, row in coords.iterrows():
-        try:            
-            # get values from vars at current pixel
-            pixel = ds.sel(x=row.get('x'), 
-                           y=row.get('y'), 
-                           method='nearest', 
-                           tolerance=res * res_factor)
-            pixel = pixel.to_array().values
-            pixel = list(pixel)
-
-        except:
-            # fill with list of nan equal to data var size
-            pixel = [ds.nodatavals] * len(ds.data_vars)
-            
-        # add current point x and y columns if wanted
-        if keep_xy:
-            pixel = [row.get('x'), row.get('y')] + pixel
-
-        # append to list
-        values.append(pixel)
-
-    # get x, y dtypes
-    x_dtype, y_dtype = coords['x'].dtype, coords['y'].dtype
-    
-    # get original var dtypes as dict
-    col_dtypes_dict = {}
-    for var in ds.data_vars:
-        col_dtypes_dict[var] = np.dtype(ds[var].dtype)
-            
-    try:
-        # prepare whether to retain or discared coords x and y
-        if keep_xy:
-            col_names = ['x', 'y'] + list(ds.data_vars)
-            col_dtypes_dict.update({'x': x_dtype, 'y': y_dtype})
-        else:
-            col_names = list(ds.data_vars)
-
-        # convert values list into pandas dataframe, ensure types match dataset
-        df_samples = pd.DataFrame(values, columns=col_names)
-        df_samples = df_samples.astype(col_dtypes_dict)
-
-    except:
-        raise ValueError('Errors were encoutered when converting data to pandas dataframe.')
-
-    # notify user and return
-    print('Extracted xarray values successfully.')
-    return df_samples 
-
-
 def resample_xr(ds_from, ds_to, resampling='nearest'):
     """
     Resamples resolution of one input dataset (ds_from) to another 
@@ -1060,7 +1057,117 @@ def resample_xr(ds_from, ds_to, resampling='nearest'):
     
     # resample from one res to another
     return ds_from.interp(x=ds_to['x'], y=ds_to['y'], method=resampling)
+   
+
+def remove_nan_xr_bounds(ds):
+    """
+    Takes an xarray dataset with one or more variables and 
+    reduces the coordinate bounding box to minimum bounding
+    box of valid (non-nan) values.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset which will be clipped to first valid
+        pixel in l, r, t, b extents.
+
+    Returns
+    ----------
+    ds : xarray dataset/array.
+    """
     
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'x' not in ds and 'y' not in ds:
+        raise ValueError('No x and/or y dimensions in dataset.')
+                      
+    # generate nan mask across all variables
+    mask = xr.where(ds.to_array().isnull(), 0, 1)
+    mask = mask.min('variable')
+
+    # if no "nans" (0s), we can leave
+    if not (mask == 0).any():
+        return ds
+
+    # drop "nans" (i.e., 0s), keeps nans in mbr              
+    mask = mask.where(mask, drop=True)
+
+    # check if we have any data remaining
+    if len(mask) == 0:
+        raise ValueError('No data after removal of empty pixels.')
+
+    # apply mask to dataset
+    ds = ds.where(mask, drop=True)
+
+    # do final check
+    if len(ds['x']) == 0 or len(ds['y']) == 0:
+        raise ValueError('No coordinates after removal of empty pixels')
+
+    return ds
+   
+
+# meta
+def get_target_res_xr(ds_list, target='Lowest Resolution'):
+    """takes a list of xarray datasets, finds lowest/highest 
+    res dataset based on pixel size, if multiple finds best with
+    largest extent, then extracts and returns this optimal 
+    dataset from list"""
+
+    # set up raster sizes, shape arrays
+    sizes, shape = np.array([]), np.array([])
+
+    # iter xr datasets
+    for idx, ds in enumerate(ds_list):
+
+        # check if dataset isnt none
+        if ds is None:
+            print('No dataset. Returning None.')
+            return
+
+        # check if x and y coords exist
+        if not isinstance(ds, xr.Dataset):
+            print('Dataset is not an xarray dataset. Returning None.')
+            return
+        elif 'x' not in ds or 'y' not in ds:
+            print('No x and y coordinates in dataset. Returning None.')
+            return
+
+        try:
+            # find avg difference between coords, area, shape
+            x_res = float(ds['x'].diff('x').mean())
+            y_res = float(ds['y'].diff('y').mean())
+            xy_area = abs(x_res) * abs(y_res)
+            xy_shape = len(ds['x']) * len(ds['y'])
+        except:
+            print('No x and y coordinates in dataset. Returning None.')
+            return
+
+        # add to numpys
+        sizes = np.append(sizes, xy_area)
+        shape = np.append(shape, xy_shape)
+
+    # check if arrays are adequate returned
+    if len(sizes) == 0 or len(shape) == 0:
+        print('Could not extract pixel resolution from datasets. Returning None.')
+        return
+    elif len(sizes) != len(shape):
+        print('Sizes, shape counts dont match. Returning None.')
+        return
+
+    # extract ids, shapes of all minima or maxima idxs, depending on user 
+    if target == 'Lowest Resolution':
+        optimal_idx = np.nanargmax(np.where(sizes == sizes.max(), shape, np.nan))
+    elif target == 'Highest Resolution':
+        optimal_idx = np.nanargmax(np.where(sizes == sizes.min(), shape, np.nan))
+    else:
+        print('Resampling type not supported. Returning None.')
+        return
+
+    # return target xr
+    return ds_list[optimal_idx]
+
+
 
 # update sdm code with this instead of build_xr_attributes
 def manual_create_xr_attrs(ds):

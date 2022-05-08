@@ -441,65 +441,7 @@ def resample_datasets(ds_list, resample_to='lowest', resampling='nearest'):
     # return
     return out_list 
 
-# meta
-def get_target_res_xr(ds_list, target='Lowest Resolution'):
-    """takes a list of xarray datasets, finds lowest/highest 
-    res dataset based on pixel size, if multiple finds best with
-    largest extent, then extracts and returns this optimal 
-    dataset from list"""
 
-    # set up raster sizes, shape arrays
-    sizes, shape = np.array([]), np.array([])
-
-    # iter xr datasets
-    for idx, ds in enumerate(ds_list):
-
-        # check if dataset isnt none
-        if ds is None:
-            print('No dataset. Returning None.')
-            return
-
-        # check if x and y coords exist
-        if not isinstance(ds, xr.Dataset):
-            print('Dataset is not an xarray dataset. Returning None.')
-            return
-        elif 'x' not in ds or 'y' not in ds:
-            print('No x and y coordinates in dataset. Returning None.')
-            return
-
-        try:
-            # find avg difference between coords, area, shape
-            x_res = float(ds['x'].diff('x').mean())
-            y_res = float(ds['y'].diff('y').mean())
-            xy_area = abs(x_res) * abs(y_res)
-            xy_shape = len(ds['x']) * len(ds['y'])
-        except:
-            print('No x and y coordinates in dataset. Returning None.')
-            return
-
-        # add to numpys
-        sizes = np.append(sizes, xy_area)
-        shape = np.append(shape, xy_shape)
-
-    # check if arrays are adequate returned
-    if len(sizes) == 0 or len(shape) == 0:
-        print('Could not extract pixel resolution from datasets. Returning None.')
-        return
-    elif len(sizes) != len(shape):
-        print('Sizes, shape counts dont match. Returning None.')
-        return
-
-    # extract ids, shapes of all minima or maxima idxs, depending on user 
-    if target == 'Lowest Resolution':
-        optimal_idx = np.nanargmax(np.where(sizes == sizes.max(), shape, np.nan))
-    elif target == 'Highest Resolution':
-        optimal_idx = np.nanargmax(np.where(sizes == sizes.min(), shape, np.nan))
-    else:
-        print('Resampling type not supported. Returning None.')
-        return
-
-    # return target xr
-    return ds_list[optimal_idx]
 
 
 # meta
