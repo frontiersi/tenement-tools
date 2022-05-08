@@ -20,12 +20,8 @@
           <splitButton refID="TenementToolsApp_cogSplitButton" />
           <splitButton refID="TenementToolsApp_gdvspectraSplitButton" />
           <button refID="TenementToolsApp_phenolopyButton" size="large" />
-          <!--<splitButton refID="TenementToolsApp_phenolopySplitButton" />-->
           <splitButton refID="TenementToolsApp_nicherSplitButton" />
-          <!--<gallery refID="TenementToolsApp_nicherGallery" inline="false" size="large" />-->
           <button refID="TenementToolsApp_vegfraxButton" size="large" />
-          <!--<splitButton refID="TenementToolsApp_vegfraxSplitButton" />-->
-          <!--<splitButton refID="TenementToolsApp_canopySplitButton" />-->
           <splitButton refID="TenementToolsApp_ensembleSplitButton" />
           <splitButton refID="TenementToolsApp_nrtSplitButton" />
         </group>
@@ -33,12 +29,12 @@
       <controls>
 		  <button id="TenementToolsApp_phenolopyButton" caption="Phenolopy" className="phenolopyButton" loadOnClick="true" largeImage="Images\Phenolopy_Wizard_32.png">
 			  <tooltip heading="Phenolopy Module">
-				  Generate metrics representing various aspects of vegetation phenology (phenometrics).<disabledText />
+				  Generate various phenological metrics (phenometrics).<disabledText />
 			  </tooltip>
 		  </button>
 		  <button id="TenementToolsApp_vegfraxButton" caption="VegFrax" className="vegfraxButton" loadOnClick="true" largeImage="Images\VegFrax_Wizard_32.png">
 			  <tooltip heading="VegFrax Module">
-				  Generate fractional Cover maps by extrapolating classified rasters onto lower-resolution satellite data.<disabledText />
+				  Generate fractional cover maps using high-resolution, classified raster.<disabledText />
 			  </tooltip>
 		  </button>
       </controls>
@@ -69,29 +65,70 @@
 		  </splitButton>
       </splitButtons>
       <galleries>
-        <gallery id="TenementToolsApp_cogGallery" caption="COG" className="cogGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//cogGalleryTemplate.xaml" templateID="cogGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\COG_32.png">
-          <tooltip heading="COG Module">Fetch, sync and explore satellite data from DEA AWS public bucket.<disabledText /></tooltip>
+        <gallery id="TenementToolsApp_cogGallery" 
+				 caption="COG" 
+				 className="cogGallery" 
+				 showGroup="true" 
+				 itemsInRow="1" 
+				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//cogGalleryTemplate.xaml" 
+				 templateID="cogGalleryItemTemplate" 
+				 resizable="true" 
+				 itemWidth="350" 
+				 showItemCaption="true" 
+				 largeImage="Images\COG_32.png">
+          <tooltip heading="COG Module">Fetch and explore satellite data from DEA AWS public bucket.<disabledText /></tooltip>
         </gallery>
-        <gallery id="TenementToolsApp_gdvspectraGallery" caption="GDVSpectra" className="gdvspectraGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" templateID="gdvspectraGalleryItemTemplate" resizable="true" itemWidth="425" showItemCaption="true" largeImage="Images\GDVSpectra_Thumb_32.png">
-          <tooltip heading="GDVSpectra Module">Generate and explore GDV Likelihood models.<disabledText /></tooltip>
+		<gallery id="TenementToolsApp_gdvspectraGallery" 
+				 caption="GDVSpectra" 
+				 className="gdvspectraGallery" 
+				 showGroup="true" 
+				 itemsInRow="1" 
+				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" 
+				 templateID="gdvspectraGalleryItemTemplate" 
+				 resizable="true" 
+				 itemWidth="350" 
+				 showItemCaption="true" 
+				 largeImage="Images\GDVSpectra_Thumb_32.png">
+          <tooltip heading="GDVSpectra Module">Generate and explore GDV likelihood and trends.<disabledText /></tooltip>
         </gallery>
-        <!--<gallery id="TenementToolsApp_phenolopyGallery" caption="Phenolopy" className="phenolopyGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//phenolopyGalleryTemplate.xaml" templateID="phenolopyGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\Phenolopy_Wizard_32.png">
-          <tooltip heading="Tooltip Heading">Functions to generate vegetation phenology metrics (phenometrics).<disabledText /></tooltip>
-        </gallery>-->
-        <gallery id="TenementToolsApp_nicherGallery" caption="Nicher" className="nicherGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nicherGalleryTemplate.xaml" templateID="nicherGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\Nicher_Wizard_32.png">
-          <tooltip heading="Nicher Module">Generate species distribution (or niche) models.<disabledText /></tooltip>
+		<gallery id="TenementToolsApp_nicherGallery" 
+				 caption="Nicher" 
+				 className="nicherGallery" 
+				 showGroup="true" 
+				 itemsInRow="1" 
+				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nicherGalleryTemplate.xaml" 
+				 templateID="nicherGalleryItemTemplate" 
+				 resizable="true" 
+				 itemWidth="350" 
+				 showItemCaption="true" 
+				 largeImage="Images\Nicher_Wizard_32.png">
+          <tooltip heading="Nicher Module">Generate a target species' ecological niche.<disabledText /></tooltip>
         </gallery>
-        <!--<gallery id="TenementToolsApp_vegfraxGallery" caption="VegFrax" className="vegfraxGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//vegfraxGalleryTemplate.xaml" templateID="vegfraxGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\VegFrax_Wizard_32.png">
-          <tooltip heading="Tooltip Heading">Functions to generate vegetation fractional cover maps.<disabledText /></tooltip>
-        </gallery>-->
-        <!--<gallery id="TenementToolsApp_canopyGallery" caption="CanoPy" className="canopyGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//canopyGalleryTemplate.xaml" templateID="canopyGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\CanoPy_Wizard_32.png">
-          <tooltip heading="Tooltip Heading">Functions to prepare canopy height model rasters.<disabledText /></tooltip>
-        </gallery>-->
-        <gallery id="TenementToolsApp_ensembleGallery" caption="Ensemble" className="ensembleGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" templateID="ensembleGalleryItemTemplate" resizable="true" itemWidth="400" showItemCaption="true" largeImage="Images\Ensemble_Wizard_32.png">
-          <tooltip heading="Ensemble Module">Combine outputs to the left into ensemble models.<disabledText /></tooltip>
+		<gallery id="TenementToolsApp_ensembleGallery" 
+				 caption="Ensemble" 
+				 className="ensembleGallery" 
+				 showGroup="true" 
+				 itemsInRow="1" 
+				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" 
+				 templateID="ensembleGalleryItemTemplate" 
+				 resizable="true" 
+				 itemWidth="350" 
+				 showItemCaption="true" 
+				 largeImage="Images\Ensemble_Wizard_32.png">
+          <tooltip heading="Ensemble Module">Combine two or more evidence layers in an ensemble model.<disabledText /></tooltip>
         </gallery>
-        <gallery id="TenementToolsApp_nrtGallery" caption="Monitor" className="nrtGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" templateID="nrtGalleryItemTemplate" resizable="true" itemWidth="300" showItemCaption="true" largeImage="Images\NRT_Wizard_32.png">
-          <tooltip heading="NRT Monitoring Module">Perform near-real time monitoring of vegetation areas.<disabledText /></tooltip>
+		<gallery id="TenementToolsApp_nrtGallery" 
+				 caption="Monitor" 
+				 className="nrtGallery" 
+				 showGroup="true" 
+				 itemsInRow="1" 
+				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" 
+				 templateID="nrtGalleryItemTemplate" 
+				 resizable="true" 
+				 itemWidth="350" 
+				 showItemCaption="true" 
+				 largeImage="Images\NRT_Wizard_32.png">
+          <tooltip heading="NRT Monitoring Module">Perform continuous, near-real time monitoring of user-defined areas.<disabledText /></tooltip>
         </gallery>
       </galleries>
     </insertModule>

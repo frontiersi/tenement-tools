@@ -270,6 +270,9 @@
   <ItemGroup>
     <Resource Include="Images\Ensemble_Masker_32.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Nicher_Masker_32.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
   PackageAction can be:

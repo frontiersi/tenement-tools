@@ -42,41 +42,40 @@ namespace TenementToolsApp
                 return;
 
             // add gallery item for nrt create projects tools
-            Add(new GalleryItem(text: "Create New Project",
-                                //icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
+            Add(new GalleryItem(text: "Create Project",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Create_Project_32.png",
-                                tooltip: "Create a new monitoring project.",
-                                group: "Manage monitoring projects"));
+                                tooltip: "Create a new monitoring area project.",
+                                group: "Management Tools"));
 
             // add gallery item for nrt create areas tools
-            Add(new GalleryItem(text: "Create New Monitoring Areas",
+            Add(new GalleryItem(text: "Create Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Create_Area_32.png",
                                 tooltip: "Create new monitoring areas.",
-                                group: "Manage monitoring areas"));
+                                group: "Management Tools"));
 
             // add gallery item for nrt modify areas tools
-            Add(new GalleryItem(text: "Modify Existing Monitoring Areas",
+            Add(new GalleryItem(text: "Modify Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Modify_Area_32.png",
                                 tooltip: "Modify existing monitoring areas.",
-                                group: "Manage monitoring areas"));
+                                group: "Management Tools"));
 
             // add gallery item for nrt delete areas tools
-            Add(new GalleryItem(text: "Delete Existing Monitoring Areas",
+            Add(new GalleryItem(text: "Delete Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Delete_Area_32.png",
                                 tooltip: "Delete existing monitoring areas.",
-                                group: "Manage monitoring areas"));
+                                group: "Management Tools"));
 
             // add gallery item for nrt monitor
             Add(new GalleryItem(text: "Monitor Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Monitor_32.png",
-                                tooltip: "Start monitoring areas for a specific project.",
-                                group: "Perform monitoring"));
+                                tooltip: "Perform near-real time monitoring process.",
+                                group: "Monitoring Tools"));
 
             // add gallery item for nrt graph
-            Add(new GalleryItem(text: "Graph Monitoring Area",
+            Add(new GalleryItem(text: "Graph Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Graph_32.png",
-                                tooltip: "Graph the vegetation and change history for a selected monitoring area.",
-                                group: "Graph monitoring area"));
+                                tooltip: "Graph and explore change for a selected area.",
+                                group: "Exploration Tools"));
 
             //// initialise
             _isInitialized = true;
@@ -93,94 +92,67 @@ namespace TenementToolsApp
             // get name of clicked gallery item
             var gallery_item = base.SelectedItem.ToString();
 
-            // open tool pane
-            if (gallery_item == "Create New Project")
+            if (gallery_item == "Create Project")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Create_Project";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "NRT_Create_Project";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find NRT Create Project tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Create Project tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Create New Monitoring Areas")
+            else if (gallery_item == "Create Areas")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Create_Monitoring_Areas";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "NRT_Create_Monitoring_Areas";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find NRT Create Monitoring Area tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Create Monitoring Area tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Modify Existing Monitoring Areas")
+            else if (gallery_item == "Modify Areas")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Modify_Monitoring_Areas";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "NRT_Modify_Monitoring_Areas";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find NRT Modify Monitoring Area tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Modify Monitoring Area tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Delete Existing Monitoring Areas")
+            else if (gallery_item == "Delete Areas")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Delete_Monitoring_Areas";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "NRT_Delete_Monitoring_Areas";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find NRT Delete Monitoring Area tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Delete Monitoring Area tool. Did you add the toolbox?");
                 };
             }
             else if (gallery_item == "Monitor Areas")
             {
-                // set toolname and create empty input array
-                string toolname = "NRT_Monitor_Areas";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "NRT_Monitor_Areas";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find NRT Monitor Areas tool. Did you add the Tenement Tools toolbox?");
-                    //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Could not find NRT Monitor Areas tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find NRT Monitor Areas tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Graph Monitoring Area")
+            else if (gallery_item == "Graph Areas")
             {
                 // set up parameter and cube out path
                 string outPath = "";

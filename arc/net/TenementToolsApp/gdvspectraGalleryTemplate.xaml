@@ -41,7 +41,7 @@
                            Grid.Row="1" 
                            Text="{Binding Tooltip}" 
                            VerticalAlignment="Center" 
-                           HorizontalAlignment="Left" 
+                           HorizontalAlignment="Left"
                            TextWrapping="Wrap"/>
             </Grid>
         </StackPanel>

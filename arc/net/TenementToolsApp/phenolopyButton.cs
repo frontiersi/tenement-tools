@@ -25,21 +25,15 @@ namespace TenementToolsApp
     {
         protected override void OnClick()
         {
-            // set toolname and create empty input array
-            string toolname = "Phenolopy_Metrics";
-            var inputs = Geoprocessing.MakeValueArray();
-            inputs = null;
-
-            // open toolpane
             try
             {
-                Geoprocessing.OpenToolDialog(toolname, inputs);
+                string toolname = "Phenolopy_Metrics";
+                Geoprocessing.OpenToolDialog(toolname, null);
             }
             catch (Exception e)
             {
-                Debug.WriteLine("Could not find Phenolopy Metrics tool. Did you add the Tenement Tools toolbox?");
+                Debug.WriteLine("Could not find Phenolopy Metrics tool. Did you add the toolbox?");
             };
-
         }
     }
 }

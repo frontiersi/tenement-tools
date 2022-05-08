@@ -39,35 +39,29 @@ namespace TenementToolsApp
             if (_isInitialized)
                 return;
 
-            // add gallery item for wizard
-            //Add(new GalleryItem(text: "Run All",
-                                //icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Wizard_32.png",
-                                //tooltip: "Generate GDV likelihood, threshold and trends.", 
-                                //group: "Wizard"));
-
             // add gallery item for gdv likelihood solo function
             Add(new GalleryItem(text: "GDV Likelihood",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Wizard_32.png",
-                                tooltip: "Generate GDV Likelihood from satellite time series.", 
-                                group: "Run individual functions"));
+                                tooltip: "Calculate GDV likelihood from satellite data.", 
+                                group: "Detection Tools"));
 
             // add gallery item for likelihood threshold solo function
-            Add(new GalleryItem(text: "Threshold Likelihood", 
+            Add(new GalleryItem(text: "Threshold GDV Likelihood", 
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Threshold_32.png",
-                                tooltip: "Threshold GDV Likelihood via occurrence points or standard deviation.", 
-                                group: "Run individual functions"));
+                                tooltip: "Threshold GDV likelihood into high probability areas.", 
+                                group: "Detection Tools"));
 
             // add gallery item for trend solo function
             Add(new GalleryItem(text: "Trend Analysis",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_Trend_32.png",
-                                tooltip: "Detect vegetation change using Mann-Kendall or Theil-Sen analysis.",
-                                group: "Run individual functions"));
+                                tooltip: "Determine change over time using trend analyses.",
+                                group: "Trend Tools"));
 
             // add gallery item for trend solo function
-            Add(new GalleryItem(text: "Change Vector Analysis",
+            Add(new GalleryItem(text: "Change Vector Analysis (CVA)",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/GDVSpectra_CVA_32.png",
-                                tooltip: "Peform Change Vector Analysis (CVA).",
-                                group: "Run individual functions"));
+                                tooltip: "Determine change over time compared to a baseline.",
+                                group: "Trend Tools"));
 
             // initialise
             _isInitialized = true;
@@ -87,69 +81,49 @@ namespace TenementToolsApp
 
             // open gdvspectra likelihood tool pane
             if (gallery_item == "GDV Likelihood") {
-
-                // set toolname and create empty input array
-                string toolname = "GDVSpectra_Likelihood";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
-                try { 
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                try 
+                {
+                    string toolname = "GDVSpectra_Likelihood";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 } 
                 catch (Exception) { 
-                    Debug.WriteLine("Could not find GDVSpectra Likelihood tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find GDVSpectra Likelihood tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Threshold Likelihood")
+            else if (gallery_item == "Threshold GDV Likelihood")
             {
-                // set toolname and create empty input array
-                string toolname = "GDVSpectra_Threshold";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "GDVSpectra_Threshold";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find GDVSpectra Threshold tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find GDVSpectra Threshold tool. Did you add the toolbox?");
                 };
             }
             else if (gallery_item == "Trend Analysis")
             {
-                // set toolname and create empty input array
-                string toolname = "GDVSpectra_Trend";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "GDVSpectra_Trend";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find GDVSpectra Trend Anaysis tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find GDVSpectra Trend Anaysis tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Change Vector Analysis")
+            else if (gallery_item == "Change Vector Analysis (CVA)")
             {
-                // set toolname and create empty input array
-                string toolname = "GDVSpectra_CVA";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "GDVSpectra_CVA";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find GDVSpectra CVA tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find GDVSpectra CVA tool. Did you add the toolbox?");
                 };
             };
         }

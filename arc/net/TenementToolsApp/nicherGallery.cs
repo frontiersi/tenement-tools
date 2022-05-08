@@ -20,23 +20,17 @@ namespace TenementToolsApp
             if (_isInitialized)
                 return;
 
-            // add gallery item for wizard
-            //Add(new GalleryItem(text: "Run All",
-            //icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-            //tooltip: "Generate species distribution (niche) model.",
-            //group: "Wizard"));
-
             // add gallery item for nicher data
             Add(new GalleryItem(text: "Nicher SDM",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/Nicher_SDM_32.png",
-                                tooltip: "Generate a Species Distribution Model via species locations and topgraphic variables.",
-                                group: "Run individual functions"));
+                                tooltip: "Generate ecological niche of a target species.",
+                                group: "Niche Modelling Tools"));
 
             // add gallery item for nicher data
-            Add(new GalleryItem(text: "Nicher Masker",
-                                icon: "pack://application:,,,/TenementToolsApp;component/Images/CanoPy_Wizard_32.png",
-                                tooltip: "Mask out SDM areas using an elevation-based mask (e.g., Canopy Height).",
-                                group: "Run individual functions"));
+            Add(new GalleryItem(text: "Mask Nicher Output",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/Nicher_Masker_32.png",
+                                tooltip: "Mask out erroneous pixels from Nicher output.",
+                                group: "Post-processing Tools"));
 
             // initialise
             _isInitialized = true;
@@ -56,38 +50,26 @@ namespace TenementToolsApp
             // open gdvspectra likelihood tool pane
             if (gallery_item == "Nicher SDM")
             {
-
-                // set toolname and create empty input array
-                string toolname = "Nicher_SDM";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "Nicher_SDM";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find Nicher SDM tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find Nicher SDM tool. Did you add the toolbox?");
                 };
             }
-            else if (gallery_item == "Nicher Masker")
+            else if (gallery_item == "Mask Nicher Output")
             {
-
-                // set toolname and create empty input array
-                string toolname = "Nicher_Masker";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "Nicher_Masker";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception)
                 {
-                    Debug.WriteLine("Could not find Nicher Masker tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find Nicher Masker tool. Did you add the toolbox?");
                 };
             };
         }

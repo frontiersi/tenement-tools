@@ -41,20 +41,20 @@ namespace TenementToolsApp
             // add gallery item for wizard
             Add(new GalleryItem(text: "Prepare Evidence Layers",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_Sigmoid_32.png",
-                                tooltip: "Rescale raw layers using fuzzy membership functions.",
-                                group: "Run individual functions"));
+                                tooltip: "Prepare evidence layers using fuzzy functions.",
+                                group: "Pre-processing Tools"));
 
             // add gallery item for wizard
-            Add(new GalleryItem(text: "Perform Ensemble Modelling",
+            Add(new GalleryItem(text: "Ensemble Modelling",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_32.png",
-                                tooltip: "Combine fuzzy evidence layers via Dempster-Shafer modelling.",
-                                group: "Run individual functions"));
+                                tooltip: "Combine fuzzy evidence layers via ensemble modelling.",
+                                group: "Ensemble Modelling Tools"));
 
             // add gallery item for wizard
             Add(new GalleryItem(text: "Mask Ensemble Output",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/Ensemble_Masker_32.png",
-                                tooltip: "Mask ensemble output via a mask layer (e.g., canopy height layer).",
-                                group: "Run individual functions"));
+                                tooltip: "Mask out erroneous pixels from Ensemble output.",
+                                group: "Post-processing Tools"));
 
             // initialise
             _isInitialized = true;
@@ -71,59 +71,40 @@ namespace TenementToolsApp
             // get name of clicked gallery item
             var gallery_item = base.SelectedItem.ToString();
 
-            // open tool pane
             if (gallery_item == "Prepare Evidence Layers")
             {
-                // set toolname and create empty input array
-                string toolname = "Ensemble_Sigmoider";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "Ensemble_Sigmoider";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine("Could not find Ensemble Sigmoider tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find Ensemble Sigmoider tool. Did you add the toolbox?");
                 };
             }
-
-            // open tool pane
-            else if (gallery_item == "Perform Ensemble Modelling")
+            else if (gallery_item == "Ensemble Modelling")
             {
-                // set toolname and create empty input array
-                string toolname = "Ensemble_Model";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "Ensemble_Model";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine("Could not find Ensemble Model tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find Ensemble Model tool. Did you add the toolbox?");
                 };
             }
-            // open tool pane
-            if (gallery_item == "Mask Ensemble Output")
+            else if (gallery_item == "Mask Ensemble Output")
             {
-                // set toolname and create empty input array
-                string toolname = "Ensemble_Masker";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
                 try
                 {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
+                    string toolname = "Ensemble_Masker";
+                    Geoprocessing.OpenToolDialog(toolname, null);
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine("Could not find Ensemble Masker tool. Did you add the Tenement Tools toolbox?");
+                    Debug.WriteLine("Could not find Ensemble Masker tool. Did you add the toolbox?");
                 };
             };
         }

@@ -34,53 +34,10 @@ namespace TenementToolsApp
 
         private void Initialize()
         {
-            // check if already initialised
-            if (_isInitialized)
-                return;
-
-            // add gallery item for wizard
-            Add(new GalleryItem(text: "Run All",
-                                icon: this.LargeImage != null ? ((ImageSource)this.LargeImage).Clone() : null,
-                                tooltip: "Generate vegetation Fractional Cover maps.",
-                                group: "Wizard"));
-
-            // initialise
-            _isInitialized = true;
         }
 
         protected override void OnClick(GalleryItem item)
         {
-            //TODO - insert your code to manipulate the clicked gallery item here
-            //System.Diagnostics.Debug.WriteLine("Remove this line after adding your custom behavior.");
-
-            // obtain clicked gallery item
-            base.OnClick(item);
-
-            // get name of clicked gallery item
-            var gallery_item = base.SelectedItem.ToString();
-
-            // temp: tell dev what was called
-            //ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show(gallery_item);
-
-            // open gdvspectra likelihood tool pane
-            if (gallery_item == "Run All")
-            {
-
-                // set toolname and create empty input array
-                string toolname = "VegFrax";
-                var inputs = Geoprocessing.MakeValueArray();
-                inputs = null;
-
-                // open toolpane
-                try
-                {
-                    Geoprocessing.OpenToolDialog(toolname, inputs);
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine("Could not find VegFrax tool.");
-                };
-            };
         }
     }
 }

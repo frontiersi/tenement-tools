@@ -25,19 +25,14 @@ namespace TenementToolsApp
     {
         protected override void OnClick()
         {
-            // set toolname and create empty input array
-            string toolname = "VegFrax_Fractional_Cover";
-            var inputs = Geoprocessing.MakeValueArray();
-            inputs = null;
-
-            // open toolpane
             try
             {
-                Geoprocessing.OpenToolDialog(toolname, inputs);
+                string toolname = "VegFrax_Fractional_Cover";
+                Geoprocessing.OpenToolDialog(toolname, null);
             }
             catch (Exception)
             {
-                Debug.WriteLine("Could not find VegFrax Fractional Cover tool. Did you add the Tenement Tools toolbox?");
+                Debug.WriteLine("Could not find VegFrax Fractional Cover tool. Did you add the toolbox?");
             };
         }
     }
