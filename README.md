@@ -33,9 +33,9 @@ Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro
 Now, enter and run each of the below in order (enter 'y' if asked at end of each):
 - <code>conda install dask=2.30.0</code>
 - <code>conda install -c conda-forge rasterio=1.1.5</code>
-- <code>pip install pyproj==3.2.1</code>
+- <code>conda install -c conda-forge pyproj==2.6.1.post1</code>
 - <code>conda install -c conda-forge scikit-learn=1.0</code>
-- <code>pip install odc-stac==0.2.2</code>
+- <code>conda install -c conda-forge odc-stac==0.2.2</code>
 - <code>pip install pystac-client==0.3.0</code>
 
 Close the Python Command Prompt when finished.
