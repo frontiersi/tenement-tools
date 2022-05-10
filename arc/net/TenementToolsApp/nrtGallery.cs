@@ -231,11 +231,11 @@ namespace TenementToolsApp
                                 ins["persistence"].ToString() + ";" +
                                 ins["rule_1_min_conseqs"].ToString() + ";" +
                                 ins["rule_1_inc_plateaus"].ToString() + ";" +
-                                ins["rule_2_min_stdv"].ToString() + ";" +
-                                ins["rule_2_bidirectional"].ToString() + ";" +
+                                ins["rule_2_min_zone"].ToString() + ";" +
                                 ins["rule_3_num_zones"].ToString() + ";" +
                                 ins["ruleset"].ToString() + ";" +
                                 ins["alert"].ToString() + ";" +
+                                ins["method"].ToString() + ";" +
                                 ins["alert_direction"].ToString() + ";" +
                                 ins["email"].ToString() + ";" +
                                 ins["ignore"].ToString() + ";";
@@ -267,20 +267,24 @@ namespace TenementToolsApp
                     {
                         if (i == 0)
                         {
-                            popups.Add(new PopupContent(msg.Text, "Overview"));
+                            popups.Add(new PopupContent(msg.Text, "Area Overview"));
                         }
                         else if (i == 1) {
-                            popups.Add(new PopupContent(msg.Text, "Raw Vegetation"));
+                            popups.Add(new PopupContent(msg.Text, "Vegetation History (Full)"));
                         }
                         else if (i == 2)
                         {
-                            popups.Add(new PopupContent(msg.Text, "Change Deviation"));
+                            popups.Add(new PopupContent(msg.Text, "Vegetation History (Analysis Only)"));
                         }
                         else if (i == 3)
                         {
-                            popups.Add(new PopupContent(msg.Text, "Alert History"));
+                            popups.Add(new PopupContent(msg.Text, "Change & Alert History"));
                         }
                         else if (i == 4)
+                        {
+                            popups.Add(new PopupContent(msg.Text, "Zone & Alert History"));
+                        }
+                        else if (i == 5)
                         {
                             popups.Add(new PopupContent(msg.Text, "Zone Legend"));
                         }

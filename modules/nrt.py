@@ -100,16 +100,26 @@ def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, d
                                   bbox=bbox,
                                   bands=bands,
                                   crs=3577,
-                                  resolution=resolution,
+                                  res=resolution,
+                                  resampling='Nearest',
+                                  align=None,
                                   group_by='solar_day',
-                                  skip_broken_datasets=True,  
-                                  like=ds_existing,
-                                  chunks={})
-                                  
-        # prepare lazy ds with data type, type, time etc
-        ds = cog_odc.convert_type(ds=ds, to_type='float32')
-        ds = cog_odc.change_nodata_odc(ds=ds, orig_value=0, fill_value=-999)
-        ds = cog_odc.fix_xr_time_for_arc_cog(ds)
+                                  chunks={},
+                                  like=ds_existing)
+    
+        # convert to float 32 
+        ds = ds.astype('float32')
+        
+        # loop all vars without mask in name
+        for var in list(ds.data_vars):
+            if 'mask' not in var.lower():
+                ds[var] = ds[var].where(ds[var] != 0, -999)
+    
+        # convert datetimes (strip milliseconds)
+        dts = ds.time.dt.strftime('%Y-%m-%dT%H:%M:%S')
+        ds['time'] = dts.astype('datetime64[ns]')
+    
+    
     except Exception as e:
         raise ValueError(e)
 

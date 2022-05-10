@@ -496,7 +496,7 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     """
     Takes a pandas dataframe of occurrence records and clips them
     to a xarray dataset or array. It is recommended a binary mask is used 
-    as ds input, with nan represented by nodata_value paramter. if_nodata = if 
+    as ds input, with nan represented by nodata_value paramter. If 
     any vars in pixel are nan, ignore point, if all are, ignore.
 
     Parameters
@@ -506,6 +506,8 @@ def intersect_records_with_xr(ds, df_records, extract=False, res_factor=3, if_no
     df_records : pandas dataframe
         A pandas dataframe containing at least an x and y columns 
         with records.
+    extract : bool 
+        Whether to extract values or just clip.
     res_factor : int
         A threshold multiplier used during pixel + point intersection. For example
         if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
