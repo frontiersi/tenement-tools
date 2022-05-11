@@ -51,6 +51,12 @@ namespace TenementToolsApp
                                 tooltip: "Fetch satellite data (Legacy method).",
                                 group: "Fetching Tools"));
 
+            // add gallery item for shift data
+            Add(new GalleryItem(text: "COG Shift",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/COG_Shift_32.png",
+                                tooltip: "Spatially shift COG Fetch output.",
+                                group: "Post-processing Tools"));
+
             // add gallery item for visualise data
             Add(new GalleryItem(text: "Explore Satellite Data",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/COG_Explore_32.png",
@@ -94,6 +100,18 @@ namespace TenementToolsApp
                 catch (Exception e)
                 {
                     Debug.WriteLine("Could not find COG Fetch (Legacy) tool. Did you add the toolbox?");
+                };
+            }
+            else if (gallery_item == "COG Shift")
+            {
+                try
+                {
+                    string toolname = "COG_Shift";
+                    Geoprocessing.OpenToolDialog(toolname, null);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine("Could not find COG Shift tool. Did you add the toolbox?");
                 };
             }
             else if (gallery_item == "Explore Satellite Data")
