@@ -24,20 +24,107 @@ import random
 import xarray as xr
 import numpy as np
 import pandas as pd
+import dask.array as dask_array
 
 sys.path.append('../../shared')
 import tools
 
 from osgeo import ogr
 
-import dask.array as dask_array
-from dask_ml.wrappers import ParallelPostFit
+#from dask_ml.wrappers import ParallelPostFit
 
 from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+
+#import joblib
     
-import joblib
+
+def subset_dates(ds, start_date=None, end_date=None):
+    """
+    Takes a xarray dataset/array and start and end date in format
+    YYYY-MM-DD and subsets the input xr dataset to just those dates. 
+    Time dimension required, or error occurs. Error occurs if no
+    dates remain after slice.
+
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+    start_date : str
+        A string representation of a the starting
+        date YYYY-MM-DD.
+    end_date : str
+        A string representation of a the ending
+        date YYYY-MM-DD.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # notify
+    print('Subsetting down to specified dates.')
+    
+    # check xr type, dims
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+                
+    # check date inputs
+    if start_date is None or end_date is None:
+        raise ValueError('Must provide a start and end date.')       
+
+    try:
+        # reduce down to dates
+        ds = ds.sel(time=slice(start_date, end_date))
+    except:
+        raise ValueError('Could not subset to requested months.')
+        
+    # check if anything remains 
+    if len(ds) == 0:
+        raise ValueError('No data remaning after date subset.')
+    
+    return ds
+
+
+def reduce_to_median(ds):
+    """
+    Small helper function to reduce xr dataset 
+    to an all-time median. Converts to float32.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset with x, y and time dims.
+
+    Returns
+    ----------
+    ds : xarray dataset or array.
+    """
+    
+    # check xr dataset
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Did not provide an xarray dataset.')
+    elif 'x' not in ds or 'y' not in ds or 'time' not in ds:
+        raise ValueError('Dataset must have x, y and time dimensions.')
+    elif len(ds) == 0:
+        raise ValueError('Dataset is empty.')
+
+    try:
+        # reduce to median all-time 
+        ds = ds.median(['time'])
+    except Exception as e:
+        raise ValueError(e)
+        
+    # enforce float32
+    ds = ds.astype('float32')
+    
+    return ds
+
+
+
 
 def prepare_classified_xr(ds, dtype='int8'):
     """
@@ -95,81 +182,7 @@ def prepare_classified_xr(ds, dtype='int8'):
     return ds
 
 
-def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
-    """
-    Does basic checks and corrects on a raw
-    raster opened from a load ard. Converts to 
-    median all-time and masks nodata value.
-    
-    Parameters
-    ----------
-    ds: xarray dataset/array
-        A dataset which will be prepared.
-    dtype: string
-        Data type of output dataset.
-    conform_nodata_to : int or float
-        Convert all detected nodata values
-        to this value.
 
-    Returns
-    ----------
-    ds : xarray dataset/array with prepared info.
-    """
-    
-    # notify
-    print('Preparing raw dataset.')
-    
-    # check xr type, dims in ds a
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset.')
-                
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # convert to requested dtype
-    ds = ds.astype(dtype)
-        
-    # check if no data val attributes exist, replace with nan
-    if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
-
-        # check if nodata values a iterable, if not force it
-        nds = ds.nodatavals
-        if not isinstance(nds, (list, tuple)):
-            nds = [nds]
-
-        # mask nan for nodata values
-        for nd in nds:
-            ds = ds.where(ds != nd, conform_nodata_to)
-
-        # update xr attributes to new nodata val
-        if hasattr(ds, 'attrs'):
-            ds.attrs.update({'nodatavals': conform_nodata_to})
-
-        # convert from float64 to float32 if nan is nodata
-        if conform_nodata_to is np.nan:
-            ds = ds.astype(np.float32)
-
-    else:
-        # mask via provided nodata
-        print('No NoData values found in raster.')
-        ds.attrs.update({'nodatavals': 'unknown'})
-
-    if was_da:
-        ds = ds.to_array()
-
-    # notify
-    print('Prepared raw dataset successfully.')
-    return ds
 
 
 def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
@@ -1024,12 +1037,12 @@ def perform_prediction(ds_input, estimator):
     chunk_size = int(ds_input.chunks['x'][0]) * int(ds_input.chunks['y'][0])
 
     # predict via parallel, or if missing, regular compute
-    if is_dask == True:
-        estimator = ParallelPostFit(estimator)
-        with joblib.parallel_backend('dask'):
-            ds_out = __predict__(ds_input, estimator)
-    else:
-        ds_out = __predict__(ds_input, estimator).compute()
+    #if is_dask == True:
+        #estimator = ParallelPostFit(estimator)
+        #with joblib.parallel_backend('dask'):
+            #ds_out = __predict__(ds_input, estimator)
+    #else:
+    ds_out = __predict__(ds_input, estimator).compute()
 
     # return
     return ds_out
@@ -1200,3 +1213,81 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n
     # notify and return
     print('Fractional cover analysis (FCA) completed successfully.')
     return ds_preds
+
+
+# deprecated
+def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
+    """
+    Does basic checks and corrects on a raw
+    raster opened from a load ard. Converts to 
+    median all-time and masks nodata value.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset which will be prepared.
+    dtype: string
+        Data type of output dataset.
+    conform_nodata_to : int or float
+        Convert all detected nodata values
+        to this value.
+
+    Returns
+    ----------
+    ds : xarray dataset/array with prepared info.
+    """
+    
+    # notify
+    print('Preparing raw dataset.')
+    
+    # check xr type, dims in ds a
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset.')
+                
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
+    # convert to requested dtype
+    ds = ds.astype(dtype)
+        
+    # check if no data val attributes exist, replace with nan
+    if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
+
+        # check if nodata values a iterable, if not force it
+        nds = ds.nodatavals
+        if not isinstance(nds, (list, tuple)):
+            nds = [nds]
+
+        # mask nan for nodata values
+        for nd in nds:
+            ds = ds.where(ds != nd, conform_nodata_to)
+
+        # update xr attributes to new nodata val
+        if hasattr(ds, 'attrs'):
+            ds.attrs.update({'nodatavals': conform_nodata_to})
+
+        # convert from float64 to float32 if nan is nodata
+        if conform_nodata_to is np.nan:
+            ds = ds.astype(np.float32)
+
+    else:
+        # mask via provided nodata
+        print('No NoData values found in raster.')
+        ds.attrs.update({'nodatavals': 'unknown'})
+
+    if was_da:
+        ds = ds.to_array()
+
+    # notify
+    print('Prepared raw dataset successfully.')
+    return ds
