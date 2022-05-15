@@ -20,24 +20,17 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 # import required libraries
 import os
 import sys
-import random
 import xarray as xr
 import numpy as np
 import pandas as pd
-import dask.array as dask_array
+#import dask.array as dask_array
 
 sys.path.append('../../shared')
 import tools
 
-from osgeo import ogr
-
-#from dask_ml.wrappers import ParallelPostFit
-
-from sklearn import metrics
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor as rf
 from sklearn.model_selection import train_test_split
-
-#import joblib
+from sklearn import metrics
     
 
 def subset_dates(ds, start_date=None, end_date=None):
@@ -84,7 +77,7 @@ def subset_dates(ds, start_date=None, end_date=None):
         
     # check if anything remains 
     if len(ds) == 0:
-        raise ValueError('No data remaning after date subset.')
+        raise ValueError('No dates remaining after subset. Increase range.')
     
     return ds
 
@@ -124,8 +117,664 @@ def reduce_to_median(ds):
     return ds
 
 
+def build_random_samples(ds_low, ds_high, classes, num_samples):
+    """"
+    Generates stratified random sample coordinates
+    for a set number per provided class. These points 
+    are used to train the random forest classifier. 
+    A pandas dataframe of x and y coordinates extracted 
+    from the dataset are returned. Samples are only
+    taken from overlapping pixels.
+
+    Parameters
+    ----------
+    ds_low : xarray dataset
+        A dataset holding the low resolution, raw raster bands.
+    ds_high : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    classes : int, list
+        A integer or list of class numbers in which to generate
+        random stratified samples within.
+    num_samples: int
+        A int indicating how many points to generate per class.
+
+    Returns
+    ----------
+    df: pandas dataframe
+        A pandas dataframe containing two columns (x and y) with coordinates.
+    """
+    
+    # check low res dataset
+    if ds_low is None:
+        raise ValueError('No low resolution dataset provided.')
+    elif not isinstance(ds_low, xr.Dataset):
+        raise TypeError('Low resolution dataset not an xarry dataset.')    
+    elif 'x' not in ds_low or 'y' not in ds_low:
+        raise ValueError('No x or y dimensions in low dataset.')
+        
+    # check high res dataset
+    if ds_high is None:
+        raise ValueError('No high resolution dataset provided.')
+    elif not isinstance(ds_high, xr.Dataset):
+        raise TypeError('High resolution dataset not an xarry dataset.')    
+    elif 'x' not in ds_high or 'y' not in ds_high:
+        raise ValueError('No x or y dimensions in high dataset.')
+    
+    # check classes is valid 
+    if classes is None:
+        raise TypeError('Classes list not provided.')
+    elif len(classes) == 0:
+        raise ValueError('No classes in classes list.')
+        
+    # check number of samples
+    if num_samples is None or num_samples <= 0:
+        raise ValueError('Number of samples must be > 0.')
+
+    # get low res
+    lres = (float(ds_low['x'].diff('x')[0]), 
+            float(ds_low['y'].diff('y')[0]))
+
+    # get high res
+    hres = (float(ds_high['x'].diff('x')[0]), 
+            float(ds_high['y'].diff('y')[0]))
+
+    # check high res smaller than low res
+    if hres >= lres:
+        raise ValueError('High resolution must have smaller pixels than low resolution.')
+
+    # create template array of low res 2d grid
+    da_tmp = xr.ones_like(ds_low[list(ds_low)[0]])
+    da_tmp = da_tmp.astype('int8')
+
+    # convert template, clip to high res xr to ensure overlap, clean
+    da_tmp = da_tmp.to_dataset()
+    da_tmp = tools.clip_xr_a_to_xr_b(ds_a=da_tmp, ds_b=ds_high)
+    da_tmp = da_tmp.to_array().squeeze(drop=True)
+
+    # get x, y index at 5% of 2d grid size and trim edges
+    xs = int(len(da_tmp['x']) * 0.05)
+    ys = int(len(da_tmp['y']) * 0.05)
+    da_tmp = da_tmp.isel(x=slice(xs, -xs), y=slice(ys, -ys))
+
+    # check we didnt cut everything
+    if len(da_tmp['x']) == 0 or len(da_tmp['y']) == 0:
+        raise ValueError('Template is empty after clip.')
+
+    # check we have enough pixels for sampling
+    num_pixels = len(da_tmp['x']) * len(da_tmp['y'])
+    if num_pixels < len(classes) * num_samples:
+        raise ValueError('Not enough room for requested sample size.')
+
+    # convert low res to dataframe for class extractions
+    df = da_tmp.to_dataframe('tmp').reset_index()
+    df = df[['x', 'y']]
+    df['class'] = np.nan
+
+    # iter each low res pixel...
+    for i, row in df.iterrows():
+        try:
+            # find closet pixel
+            pixel = ds_high.sel(x=row['x'], 
+                                y=row['y'], 
+                                method='nearest', 
+                                tolerance=30)
+
+            # set closest class value
+            pixel = float(pixel['classes'])
+            df.at[i, 'class'] = pixel
+        except:
+            pass
+
+    # check if any valid vals and all class captured
+    if not df['class'].any():
+        raise ValueError('Sampling returned no class values.')
+    elif len(classes) > df['class'].nunique():
+        raise ValueError('Unable to sample all classes. Reclassify smaller classes to others or set to -999.')
+
+    # select random sample per class
+    groups = df.groupby('class', group_keys=False)
+    df = groups.apply(lambda x: x.sample(min(len(x), num_samples)))
+
+    # drop class column
+    df = df.drop(columns='class')
+
+    return df
 
 
+def extract_xr_low_values(df, ds):
+    """
+    Extracts low xarray dataset at each coordinates 
+    (x, y) in dataframe rows.
+    
+    Parameters
+    ----------
+    df : pandas dataframe
+        A pandas dataframe containing x and y columns with records.
+    ds: xarray dataset
+        A dataset with data variables.
+
+    Returns
+    ----------
+    df : pandas dataframe
+    """
+
+    # check dataframe
+    if df is None:
+        raise ValueError('No dataframe was provided.')
+    elif 'x' not in df or 'y' not in df:
+        raise ValueError('No x and/or y dimensions in dataframe.')
+    elif len(df) ==0:
+        raise ValueError('No data in dataframe.')
+
+    # checks
+    if ds is None:
+        raise ValueError('No dataset was provided.')
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not an xarray type.')
+    elif 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x and/or y dimensions in dataset.')
+
+    # append empty columns for each xr var
+    for var in ds:
+        df[var] = np.nan
+
+    # iter each coordinate...
+    for i, row in df.iterrows():
+        try:
+            # find closet pixel
+            pixel = ds.sel(x=row['x'], 
+                           y=row['y'], 
+                           method='nearest', 
+                           tolerance=30)
+
+            # set values for all vars
+            for var in pixel:
+                df.at[i, var] = float(pixel[var])
+        except:
+            pass
+
+    # drop any rows with nan (shouldnt be any)
+    df = df.dropna()
+
+    # check if anything remains
+    if len(df) == 0:
+        raise ValueError('No data remaining after dropping empties.')
+        
+    # ensure each class column at least one adequate sample 
+    for col in df:
+        if '_' in col:
+            if df[col].sum() < 1:
+                col = col.replace('_', '')
+                raise ValueError('Class {} inadequately sampled. Try reclassifing.'.format(col))
+    
+    return df
+
+
+def build_class_fractions(df, ds_low, ds_high, max_nodata=0.0):
+    """"
+    Extracts all classified values within the high resolution
+    dataset that fall within each sample in a dataframe. Then
+    converts all values within each window into a fraction value
+    based on count within window. If nodata (must to be -999) 
+    exists, user has option to either ignore these windows, or
+    rescale frequenices of all non-nodata values with nodata
+    count excluded. If the frequency of nodata in window is 
+    <= max nodata parameter, these rows will be included.
+    Output is a dataframe with all analysis data to date +
+    a sperate column for each unique class in the input high
+    resolution image, minus the nodata (-999) column.
+
+    Parameters
+    ----------
+    df: pandas dataframe
+        Holds rows of x, y point samples captured earlier. These
+        samples are of low-resolution pixel centroids and associated
+        tasselled cap bands (as columns)
+    ds_low : xarray dataset
+        A dataset holding the low resolution, raw raster bands.
+    ds_high : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    max_nodata : float
+        Maximum frequency of nodata values allowed within any one 
+        window. Recommended that no nodata values are included
+        (i.e. 0).
+
+    Returns
+    ----------
+    df: pandas dataframe
+        A pandas dataframe.
+    """
+    
+    # check dataframe
+    if df is None:
+        raise ValueError('No dataframe was provided.')
+    elif 'x' not in df or 'y' not in df:
+        raise ValueError('No x and/or y dimensions in dataframe.')
+    elif len(df) ==0:
+        raise ValueError('No data in dataframe.')
+    
+    # check low res dataset
+    if ds_low is None:
+        raise ValueError('No low resolution dataset provided.')
+    elif not isinstance(ds_low, xr.Dataset):
+        raise TypeError('Low resolution dataset not an xarry dataset.')    
+    elif 'x' not in ds_low or 'y' not in ds_low:
+        raise ValueError('No x or y dimensions in low dataset.')
+        
+    # check high res dataset
+    if ds_high is None:
+        raise ValueError('No high resolution dataset provided.')
+    elif not isinstance(ds_high, xr.Dataset):
+        raise TypeError('High resolution dataset not an xarry dataset.')    
+    elif 'x' not in ds_high or 'y' not in ds_high:
+        raise ValueError('No x or y dimensions in high dataset.')
+        
+    # check max nodata is valid
+    if max_nodata < 0 or max_nodata > 1:
+        raise ValueError('Max nodata must be >= 0 and <= 1.')
+
+    # get low res
+    lres = (float(ds_low['x'].diff('x')[0]), 
+            float(ds_low['y'].diff('y')[0]))
+
+    # get high res
+    hres = (float(ds_high['x'].diff('x')[0]), 
+            float(ds_high['y'].diff('y')[0]))
+
+    # check high res smaller than low res
+    if hres >= lres:
+        raise ValueError('High resolution must have smaller pixels than low resolution.')
+
+    # calc window size
+    win_size = (abs(lres[0]) / abs(hres[0])) ** 2
+    
+    # get all unique classes + nodata (-999) for potential image edges
+    all_classes = list(np.unique(ds_high['classes']))
+    if -999 not in all_classes:
+        all_classes = all_classes + [-999]
+    
+    # build dataframe fieldnames with default value (0)
+    for field in ['_{}'.format(c) for c in all_classes]:
+        df[field] = 0.0
+        
+    try:
+        # iter samples, for windows, capture freqs
+        for i, row in df.iterrows():
+        
+            # build window via low res pixel bounds
+            w = row['x'] - (abs(lres[0]) / 2)
+            e = row['x'] + (abs(lres[0]) / 2)
+            s = row['y'] - (abs(lres[0]) / 2)
+            n = row['y'] + (abs(lres[0]) / 2)
+        
+            # extract all high res pixels within low res bounds
+            da = ds_high.sel(x=slice(w, e), y=slice(n, s))
+            da = da.to_array().values.flatten()        
+            
+            # pad edge windows with nodata (i.e. -999)
+            if len(da) < win_size:
+                nodata = np.full(int(win_size - len(da)), -999)
+                da = np.append(da, nodata)
+                
+            # get unique class labels, counts and freqs for each
+            labels, counts = np.unique(da, return_counts=True)
+            freqs = counts / win_size
+            
+            # if nodata in win, rescale non-nodata freqs
+            if -999 in labels:
+                nd_freq = freqs[np.where(labels == -999)]
+                freqs = np.where(labels != -999, freqs / (1 - nd_freq), freqs)
+                            
+            # get existing window class labels and update freqs
+            fields = ['_{}'.format(l) for l in labels]
+            df.loc[i, fields] = freqs
+    
+    except Exception as e:
+        raise ValueError(e)
+    
+    # remove wins where nodata <= max allowed nodata freq
+    df = df[df['_-999'] <= max_nodata]
+    
+    # drop nodata column
+    df = df.drop(columns='_-999')
+        
+    return df
+
+
+def perform_fcover_analysis(df, ds, classes=None, combine=False, options=None):
+    """
+    Perform random forest regression using window class frequencies and
+    tasselled cap bands for selected classes (or all, if None). Output
+    is a xarray dataset with a variable for each class as a fractional
+    cover map. A results list of dicts is also reduced for use in ArcGIS
+    Pro UI display. Can combine output classes into one combined class
+    by setting combine to True (i.e., sums fractions of selected).
+    Helpful for visualising similar target classes. Options is for
+    random forest regressor parameter modification.
+    
+    Parameters
+    ----------
+    df : xarray dataset
+        A dataset holding all tasselled cap and class columns.
+    ds : xarray dataset
+        A dataset holding the high resolution, classified raster.
+    classes : list of integers 
+        A list of inttegers representing class labels in the
+        high resolution raster to perform fca on. Only these
+        classes are regressed and returned.
+    combine : bool
+        Combine the selected classes into a single fractional map.
+        Done via basic sum. Note: combining all classes in the 
+        input will result in an output of all pixels close to 1.
+    options: dict
+        A kwargs dict for modifying sklearn randomforestregressor 
+        object.
+
+    Returns
+    ----------
+    ds_frax : xarray dataset
+        An xarray dataset containing fractional maps.
+    result : str
+        A string containing cleaned accuracy result output.
+        Results are cleaned in this function prior to return.
+    """
+
+    # check dataframe
+    if df is None:
+        raise ValueError('No dataframe was provided.')
+    elif len(df) ==0:
+        raise ValueError('No data in dataframe.')
+
+    # check dataset
+    if ds is None:
+        raise ValueError('No dataset was provided.')
+    elif not isinstance(ds, xr.Dataset):
+        raise TypeError('Dataset is not an xarray type.')
+    elif 'x' not in ds or 'y' not in ds:
+        raise ValueError('No x and/or y dimensions in dataset.')
+
+    # if no classes, use all classes (will always have _ prefix)
+    if classes is None:
+        classes = [c for c in df.columns if '_' in c]
+
+    # check if classes isnt empty 
+    if len(classes) == 0:
+        raise ValueError('No valid classes in dataframe.')
+
+    #check options, if empty, use sklearn defaults
+    if options is None:
+        options = {}
+
+    # drop x, y columns in dataframe if exist
+    df = df.drop(columns=['x', 'y'], errors='ignore')
+        
+    # create nan mask - regressor doesnt like nans
+    da_mask = xr.where(ds.to_array().isnull(), 0, 1)
+    da_mask = da_mask.min('variable')
+    ds = ds.where(da_mask != 0, -999)
+
+    # iter each requested class...
+    ds_list, acc_list = [], []
+    for c in classes:
+    
+        # notify 
+        print('Starting work on class: {}.'.format(c))
+
+        # convert class label to string version (if raw)
+        if not isinstance(c, str):
+            c = '_{}'.format(c)
+
+        # extract indep (tcap bands) and dep (class vals) vars
+        X = df[['tcg', 'tcb', 'tcw']].to_numpy()
+        y = df[[c]].to_numpy().flatten()
+
+        # iter current class 5 replications...
+        da_list, sub_acc_list = [], []
+        for _ in range(5):
+            try:
+                # split train and test sets
+                _ = train_test_split(X, y, test_size=0.15, shuffle=True)
+                X_train, X_test, y_train, y_test = _
+
+                # create regressor, fit, predict
+                estimator = rf(**options)
+                estimator.fit(X_train, y_train)
+                y_preds = estimator.predict(X_test)
+
+                # get accuracy metrics, add to sub acc list
+                mse = metrics.mean_squared_error(y_test, y_preds)
+                mae = metrics.mean_absolute_error(y_test, y_preds)
+                rsme = metrics.mean_squared_error(y_test, y_preds, squared=False)
+                sub_acc_list.append([mse, mae, rsme])
+
+                # get dims, seperate vars into transposed array of flat arrays
+                xs, ys, = ds['x'], ds['y']
+                das = [ds[var].values.flatten() for var in ds]
+                das = np.array(das).transpose()
+
+                # predict onto 2d grid now
+                y_preds = estimator.predict(das)   
+
+                # recreate xr data array of float32 values
+                da = xr.DataArray(y_preds.reshape(len(ys), len(xs)), 
+                                  coords={'x': xs, 'y': ys}, 
+                                  dims=['y', 'x']).astype('float32')
+
+                # add array to list
+                da_list.append(da)
+
+            except Exception as e:
+                raise ValueError(e)       
+
+        # combine 5 arrays via mean, convert to named dataset
+        ds_result = xr.concat(da_list, dim='variable').mean('variable')
+        ds_list.append(ds_result.to_dataset(name='class' + c))
+
+        # add mean accuracy results to list
+        acc_list.append({
+            'class': 'class' + c,
+            'mse': np.mean(sub_acc_list[0]),
+            'mae': np.mean(sub_acc_list[1]),
+            'rsme': np.mean(sub_acc_list[2]),
+        })
+        
+    # check if dataset list has datasets 
+    if len(ds_list) == 0:
+        raise ValueError('No datasets were generated.')
+
+    # combine datasets and mask nans back in
+    ds_frax = xr.merge(ds_list)
+    ds_frax = ds_frax.where(da_mask != 0, np.nan)
+
+    # if combine requested...
+    if combine is True:
+        
+        # sum each variable per pixel
+        ds_frax = ds_frax.to_array().sum('variable')
+        
+        # cut off outliers
+        ds_frax = ds_frax.where(ds_frax >= 0, 0)
+        ds_frax = ds_frax.where(ds_frax <= 1, 1)
+        
+        # rebuild dataset
+        ds_frax = ds_frax.to_dataset(name='class_combined')
+
+    try:
+        # prepare accuracy metrics into readable format
+        result = prepare_fcover_accuracy(acc_list)
+    except:
+        result = '\nCould not generate accuracy outputs.\n'
+
+    return ds_frax, result
+
+
+def prepare_fcover_accuracy(results):
+    """
+    Prepares raw accuracy list of dicts during the
+    perform_fcover_analysis method. Takes a list of
+    dictionaries with class name, mse, mae and rsme 
+    values. Produces a string-based output for ArcGIS 
+    Pro.
+    
+    Parameters
+    ----------
+    results : list of dicts
+        A list of dicts containing class name,
+        mse, mae, rsme.
+    
+    Returns
+    ----------
+    message : str
+        A string of results for ArcGIS Pro.
+    """
+    
+    # check result input
+    if not isinstance(results, list):
+        raise TypeError('Results is not a list.')
+    elif len(results) == 0:
+        raise ValueError('Results list is empty.')
+        
+    try:
+        # set up header
+        message = '\n'
+        message += '- ' * 30
+        message += '\nClass Accuracy Metrics \n'
+        message += '- ' * 30
+
+        # iter each class result...
+        for result in results:
+
+            # unpack class name and clean
+            name = result['class']
+            name = name.capitalize()
+            name = name.replace('_', ' ')
+
+            # get mse, mae, rsme and clean 
+            mse = round(result['mse'], 2)
+            mae = round(result['mae'], 2)
+            rsme = round(result['rsme'], 2)
+
+            # set up class accuracy
+            message += '\n'
+            message += '{} MSE: {} MAE: {} RSME: {}.'.format(name, mse, mae, rsme)
+
+        # set up footer
+        message += '\n'
+        message += '- ' * 30
+        message += '\n'
+    
+    except Exception as e:
+        raise ValueError(e)
+        
+    return message
+
+
+def smooth(ds):
+    """
+    Takes an xarray dataset of fractional class outputs and 
+    applies mild smoothing via a median filter.
+    
+    Parameters
+    ----------
+    ds : xarray dataset
+        A dataset with x, y dims with class variables.
+        
+    Returns
+    ----------
+    ds : xarray dataset
+    """
+    
+    # check dataset
+    if not isinstance(ds, xr.Dataset):
+        raise TypeError('Not an xarray dataset.')
+    elif 'x' not in ds or 'y' not in ds:
+        raise TypeError('Dataset does not contain an x or y dimension.')
+        
+    # create moving 3 x 3 window, apply median filter
+    ds = ds.rolling(x=3, y=3, center=True, min_periods=1).median()
+    
+    return ds
+
+
+
+# deprecated
+def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
+    """
+    Does basic checks and corrects on a raw
+    raster opened from a load ard. Converts to 
+    median all-time and masks nodata value.
+    
+    Parameters
+    ----------
+    ds: xarray dataset/array
+        A dataset which will be prepared.
+    dtype: string
+        Data type of output dataset.
+    conform_nodata_to : int or float
+        Convert all detected nodata values
+        to this value.
+
+    Returns
+    ----------
+    ds : xarray dataset/array with prepared info.
+    """
+    
+    # notify
+    print('Preparing raw dataset.')
+    
+    # check xr type, dims in ds a
+    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
+        raise TypeError('Dataset not an xarray type.')
+    elif 'time' not in list(ds.dims):
+        raise ValueError('No time dimension in dataset.')
+    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
+        raise ValueError('No x and/or y coordinate dimension in dataset.')
+                
+    # we need a dataset, try and convert from array
+    was_da = False
+    if isinstance(ds, xr.DataArray):
+        try:
+            was_da = True
+            ds = ds.to_dataset(dim='variable')
+        except:
+            raise TypeError('Failed to convert xarray DataArray to Dataset.')
+
+    # convert to requested dtype
+    ds = ds.astype(dtype)
+        
+    # check if no data val attributes exist, replace with nan
+    if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
+
+        # check if nodata values a iterable, if not force it
+        nds = ds.nodatavals
+        if not isinstance(nds, (list, tuple)):
+            nds = [nds]
+
+        # mask nan for nodata values
+        for nd in nds:
+            ds = ds.where(ds != nd, conform_nodata_to)
+
+        # update xr attributes to new nodata val
+        if hasattr(ds, 'attrs'):
+            ds.attrs.update({'nodatavals': conform_nodata_to})
+
+        # convert from float64 to float32 if nan is nodata
+        if conform_nodata_to is np.nan:
+            ds = ds.astype(np.float32)
+
+    else:
+        # mask via provided nodata
+        print('No NoData values found in raster.')
+        ds.attrs.update({'nodatavals': 'unknown'})
+
+    if was_da:
+        ds = ds.to_array()
+
+    # notify
+    print('Prepared raw dataset successfully.')
+    return ds
+    
+# deprecated
 def prepare_classified_xr(ds, dtype='int8'):
     """
     Does basic checks and corrects on a classified
@@ -180,11 +829,8 @@ def prepare_classified_xr(ds, dtype='int8'):
     # notify
     print('Prepared classified dataset successfully.')
     return ds
-
-
-
-
-
+    
+# deprecated
 def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
     """
     Reclassify classes in dataset so requested classes are kept but
@@ -260,7 +906,7 @@ def reclassify_xr(ds, req_class, merge_classes=None, inplace=True):
     print('Reclassified dataset successfully.')
     return ds
 
-
+# deprecated
 def get_xr_classes(ds):
     """
     Takes an xarray dataset/array and extracts unique class
@@ -320,149 +966,7 @@ def get_xr_classes(ds):
     # convert to list
     return np_classes.tolist()
 
-
-def generate_random_samples(ds_raw, ds_class, num_samples=1000, snap=True, res_factor=3):
-    """
-    Generates random point locations within dataset mask. These points are used to
-    train the random forest classifier. A pandas dataframe of x and y coordinates 
-    extracted from the dataset are returned. This is a custom func specifically for 
-    the gdv fractional cover module.
-
-    Parameters
-    ----------
-    ds_raw : xarray dataset
-        A dataset holding the low resolution, raw raster bands.
-    ds_class : xarray dataset
-        A dataset holding the high resolution, classified raster.
-    num_samples: int
-        A int indicating how many points to generated.
-    snap : bool
-        If true, pixel centroids will replace our random sample point x and y values
-        to reduce chance of assigning a random sample point right on the border of 
-        multiple pixels. Default is True.
-    res_factor : int
-        A threshold multiplier used during pixel + point intersection. For example
-        if point within 3 pixels distance, get nearest (res_factor = 3). Default 3.
-
-    Returns
-    ----------
-    df_samples: pandas dataframe
-        A pandas dataframe containing two columns (x and y) with coordinates.
-    """
-    
-    # notify user
-    print('Generating {0} randomised sample points.'.format(num_samples))
-
-    # check if raw dataset is xarray dataeset type
-    if not isinstance(ds_raw, xr.Dataset):
-        raise ValueError('> Raw dataset is not an xarray dataset.')
-        
-    # check if class dataset is xarray dataeset type
-    if not isinstance(ds_class, xr.Dataset):
-        raise ValueError('> Classified dataset is not an xarray dataset.')
-    
-    # check if number of absence points is an int
-    if not isinstance(num_samples, int):
-        raise ValueError('> Num of points value is not an integer. Please check the entered value.')
-        
-    # check if number of absence points is an int
-    if not isinstance(snap, bool):
-        raise ValueError('> Snap must be a boolean (True or False.')
-        
-    # check if number of absence points is an int
-    if not isinstance(res_factor, int):
-        raise ValueError('> Resolution factor must be an integer.')
-        
-    # get cell resolution for both datasets    
-    res_raw = tools.get_xr_resolution(ds_raw)
-    res_class = tools.get_xr_resolution(ds_class)
-    
-    # check if class res greater than raw - 
-    if res_class >= res_raw:
-        raise ValueError('> Classified raster is lower resolution than raw raster(s) - must be other way around.')
-                
-    # create a dummy grid based on a single slice of raw data
-    if 'variable' in ds_raw.to_array().dims:
-        raw_dummy = xr.ones_like(ds_raw.to_array().isel(variable=0))
-        raw_dummy = raw_dummy.drop('variable', errors='ignore')
-    else:
-        raise AttributeError('> Raw dataset does not contain a variable dim.')
-        
-    # get extent of class raster
-    class_extent = tools.get_xr_extent(ds=ds_class)
-        
-    # 'clip' raw dataset to class image bounds incase it is small subsection
-    raw_dummy = raw_dummy.sel(x=slice(class_extent.get('l'), class_extent.get('r')), 
-                              y=slice(class_extent.get('t'), class_extent.get('b')))   
-
-    # get 10% of x, y size, use to trim 10% off extent bounds, subset dummy with it
-    x_slice, y_slice = round(raw_dummy['x'].size * 0.1), round(raw_dummy['y'].size * 0.1)
-    raw_dummy = raw_dummy.isel(x=slice(x_slice, -x_slice), y=slice(y_slice, -y_slice))
-    
-    # check if raw dummy has pixels still
-    if raw_dummy.size <= 0:
-        raise ValueError('> No pixels exist when raw and classified rasters clipped. Do they overlap?')
-            
-    # ensure enough pixels in final dummy to handle num of random samples
-    num_cells = raw_dummy['x'].size * raw_dummy['y'].size
-    if num_samples > num_cells:
-        print('Too many random samples requested - reducing to: {0}.'.format(num_cells))
-        num_samples = num_cells
-
-    # notify
-    print('> Randomising points within mask area.')
-
-    # get bounds of final dummy
-    dummy_extent = tools.get_xr_extent(ds=ds_class)
-        
-    # create random points and fill a list with x and y
-    counter = 0
-    coords = []
-    for i in range(num_samples):
-        while counter < num_samples:
-
-            # get random x and y coord
-            rand_x = random.uniform(dummy_extent.get('l'), dummy_extent.get('r'))
-            rand_y = random.uniform(dummy_extent.get('b'), dummy_extent.get('t'))
-
-            # create point and add x and y to it
-            pnt = ogr.Geometry(ogr.wkbPoint)
-            pnt.AddPoint(rand_x, rand_y)
-            
-            try:
-                # get pixel
-                pixel = raw_dummy.sel(x=rand_x, y=rand_y, method='nearest', tolerance=res_raw * res_factor)
-
-                # add if pixel is valid value
-                if int(pixel) == 1:
-                    
-                    # get x and y based on snap (where point was generated or nearest pixel centroid)
-                    if snap:
-                        coords.append([pixel['x'].item(), pixel['y'].item()])
-                    else:
-                        coords.append([pnt.GetX(), pnt.GetY()])
-
-                    # inc counter
-                    counter += 1
-           
-            except:
-                continue
-                
-    # check if list is populated
-    if not coords:
-        raise ValueError('> No coordinates in coordinate list.')
-
-    # convert coord array into dataframe
-    df_samples = pd.DataFrame(coords, columns=['x', 'y'])
-
-    # drop variables
-    raw_dummy, buff_geom = None, None
-
-    # notify and return
-    print('> Generated random sample points successfully.')
-    return df_samples
-
-
+# deprectaed
 def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=500, 
                                   snap=True, res_factor=3):
     """
@@ -616,7 +1120,7 @@ def generate_strat_random_samples(ds_raw, ds_class, req_class=None, num_samples=
     print('Generated stratified random sample points successfully.')
     return df_samples
 
-
+# deprecated
 def create_frequency_windows(ds_raw, ds_class, df_records):
     """
     Generates "windows" of pixels captured from the classified
@@ -726,7 +1230,7 @@ def create_frequency_windows(ds_raw, ds_class, df_records):
     # return
     return df_windows
 
-
+# deprecated
 def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
     """
     Convert a pandas dataframe of raw class counts within
@@ -820,7 +1324,7 @@ def convert_window_counts_to_freqs(df_windows, nodata_value=-9999):
     # return
     return df_freq
 
-
+# deprecated
 def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[]):
     """
     Takes a dataframe with class frequencuies obtained from
@@ -945,7 +1449,7 @@ def prepare_freqs_for_analysis(ds_raw, ds_class, df_freqs, override_classes=[]):
     print('Data successfully prepared for analysis.')
     return df_data
 
-# set up function for random forest prediction
+# deprecated
 def __predict__(ds_input, estimator):
     """
     Helper function for perform_predictions(), should not be called directly.
@@ -991,6 +1495,7 @@ def __predict__(ds_input, estimator):
 
     return ds_out
 
+# deprecated
 def perform_prediction(ds_input, estimator):  
     """
     Uses dask (if available) to run sklearn predict in parallel.
@@ -1047,7 +1552,7 @@ def perform_prediction(ds_input, estimator):
     # return
     return ds_out
 
-
+# deprecated
 def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split_ratio=0.10):
     """
     Perform model fit with a set number of estimators and validations. Model
@@ -1128,7 +1633,7 @@ def perform_optimised_validation(X, y, n_estimators=100, n_validations=10, split
     print(msg.format(oob, mae, rmse, r2, max_r2))
     return estimator
  
-    
+# deprecated
 def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n_validations=10, split_ratio=0.10):
     """
     Perform model fit with a set number of estimators and validations. Model
@@ -1214,80 +1719,3 @@ def perform_fca(ds_raw, ds_class, df_data, df_extract_clean, n_estimators=100, n
     print('Fractional cover analysis (FCA) completed successfully.')
     return ds_preds
 
-
-# deprecated
-def prepare_raw_xr(ds, dtype='float32', conform_nodata_to=-128):
-    """
-    Does basic checks and corrects on a raw
-    raster opened from a load ard. Converts to 
-    median all-time and masks nodata value.
-    
-    Parameters
-    ----------
-    ds: xarray dataset/array
-        A dataset which will be prepared.
-    dtype: string
-        Data type of output dataset.
-    conform_nodata_to : int or float
-        Convert all detected nodata values
-        to this value.
-
-    Returns
-    ----------
-    ds : xarray dataset/array with prepared info.
-    """
-    
-    # notify
-    print('Preparing raw dataset.')
-    
-    # check xr type, dims in ds a
-    if not isinstance(ds, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset not an xarray type.')
-    elif 'time' not in list(ds.dims):
-        raise ValueError('No time dimension in dataset.')
-    elif 'x' not in list(ds.dims) and 'y' not in list(ds.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset.')
-                
-    # we need a dataset, try and convert from array
-    was_da = False
-    if isinstance(ds, xr.DataArray):
-        try:
-            was_da = True
-            ds = ds.to_dataset(dim='variable')
-        except:
-            raise TypeError('Failed to convert xarray DataArray to Dataset.')
-
-    # convert to requested dtype
-    ds = ds.astype(dtype)
-        
-    # check if no data val attributes exist, replace with nan
-    if hasattr(ds, 'nodatavals') and ds.nodatavals is not None:
-
-        # check if nodata values a iterable, if not force it
-        nds = ds.nodatavals
-        if not isinstance(nds, (list, tuple)):
-            nds = [nds]
-
-        # mask nan for nodata values
-        for nd in nds:
-            ds = ds.where(ds != nd, conform_nodata_to)
-
-        # update xr attributes to new nodata val
-        if hasattr(ds, 'attrs'):
-            ds.attrs.update({'nodatavals': conform_nodata_to})
-
-        # convert from float64 to float32 if nan is nodata
-        if conform_nodata_to is np.nan:
-            ds = ds.astype(np.float32)
-
-    else:
-        # mask via provided nodata
-        print('No NoData values found in raster.')
-        ds.attrs.update({'nodatavals': 'unknown'})
-
-    if was_da:
-        ds = ds.to_array()
-
-    # notify
-    print('Prepared raw dataset successfully.')
-    return ds

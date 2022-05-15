@@ -1107,7 +1107,60 @@ def remove_nan_xr_bounds(ds):
         raise ValueError('No coordinates after removal of empty pixels')
 
     return ds
-   
+  
+
+def clip_xr_a_to_xr_b(ds_a, ds_b):
+    """
+    Takes an xarray dataset (ds_a) and clips it to 
+    match the extent of ds_b dataset.
+
+    Parameters
+    ----------
+    ds_a: xarray dataset
+        A dataset which will be clipped to match ds_b.
+    ds_b: xarray dataset
+        A dataset to which the extents of ds_a will be
+        clipped to.
+
+    Returns
+    ----------
+    ds_a : xarray dataset/array to match original ds_a.
+    """
+
+    # check dataset a
+    if ds_a is None:
+        raise ValueError('Did not provide dataset for a.')
+    elif not isinstance(ds_a, xr.Dataset):
+        raise TypeError('Did not provide xarray type for a.')
+    elif 'x' not in ds_a or 'y' not in ds_a:
+        raise TypeError('No x and/or y coordinates in dataset a.')       
+        
+    # check dataset b
+    if ds_b is None:
+        raise ValueError('Did not provide dataset for b.')
+    elif not isinstance(ds_b, xr.Dataset):
+        raise TypeError('Did not provide xarray type for b.')
+    elif 'x' not in ds_b or 'y' not in ds_b:
+        raise TypeError('No x and/or y coordinates in dataset b.')   
+    
+    # get xs and ys
+    xs, ys = ds_b['x'], ds_b['y']
+    
+    # get extents 
+    xmin, xmax = xs[0], xs[-1]
+    ymin, ymax = ys[0], ys[-1]
+    
+    # subset to extent (note y is reversed)
+    ds_a = ds_a.sel(x=slice(xmin, xmax), y=slice(ymin, ymax))
+    
+    # ensure something was returned
+    if len(ds_a['x']) == 0 or len(ds_a['y']) == 0:
+        raise ValueError('No data remains after clip.')
+    
+    # notify
+    print('Clipped dataset successfully.')
+    return ds_a
+  
 
 # meta
 def get_target_res_xr(ds_list, target='Lowest Resolution'):
@@ -1170,8 +1223,6 @@ def get_target_res_xr(ds_list, target='Lowest Resolution'):
     return ds_list[optimal_idx]
 
 
-
-# update sdm code with this instead of build_xr_attributes
 def manual_create_xr_attrs(ds):
     """
     Sometimes we have no choice but build our own

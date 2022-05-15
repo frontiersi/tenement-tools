@@ -192,13 +192,6 @@ def prepare_band_names(in_bands, in_platform):
 
     # return list of renamed band names
     return out_bands
-    
-    
- 
-
-
-
-   
 
 
 def read_shp_for_threshold(in_occurrence_feat=None, in_pa_column=None):
@@ -511,31 +504,7 @@ def get_platform_from_dea_attrs(attr_dict):
     return platform
 
 
-def prepare_vegfrax_classes(classes):
-    """
-    Unpacks a string of selected classes from ArcGIS Pro
-    interface. Will always be in format "'Class: X'; 'Class: Y'"
-    etc. We only support integer classes at this stage.
-    """
-    
-    # convert arcgis multi-value format to list of values and notify       
-    classes = classes.replace('Class: ', '').replace("'", "").split(';')
 
-    if len(classes) == 0:
-        arcpy.AddError('Not classes could be obtained from selection.')
-        raise
-
-    # convert into integers... strings not supported
-    _ = []
-    for c in classes:
-        try:
-            _.append(int(c))
-        except:
-            arcpy.AddError('Selected class not an integer. Only support integers, e.g., 1, 2, 3.')
-            raise
-
-    # return classes
-    return _
 
 # meta
 def apply_monitoring_area_symbology(layer):
@@ -957,3 +926,31 @@ def prepare_cell_align_type(in_cell_align):
         
     # prepare and return
     return in_cell_align.lower().replace('-', '')
+    
+
+# deprecated
+def prepare_vegfrax_classes(classes):
+    """
+    Unpacks a string of selected classes from ArcGIS Pro
+    interface. Will always be in format "'Class: X'; 'Class: Y'"
+    etc. We only support integer classes at this stage.
+    """
+    
+    # convert arcgis multi-value format to list of values and notify       
+    classes = classes.replace('Class: ', '').replace("'", "").split(';')
+
+    if len(classes) == 0:
+        arcpy.AddError('Not classes could be obtained from selection.')
+        raise
+
+    # convert into integers... strings not supported
+    _ = []
+    for c in classes:
+        try:
+            _.append(int(c))
+        except:
+            arcpy.AddError('Selected class not an integer. Only support integers, e.g., 1, 2, 3.')
+            raise
+
+    # return classes
+    return _

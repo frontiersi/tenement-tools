@@ -274,6 +274,31 @@ def remove_spikes(da, factor=2, win_size=3):
     return da
  
  
+def safe_savgol(arr, window_length=3, polyorder=1, a=0):
+    """
+    Small wrapper for the savgol_filter 
+    function that ensures no nan go in. 
+    'a' is axis.
+    """
+    
+    # correct nan
+    if np.isnan(arr).all():
+        return arr
+    elif np.isnan(arr).any():
+        avg = np.nanmean(arr)
+        arr = np.nan_to_num(arr, nan=avg)
+        
+    try:
+        # perform savgol
+        return savgol_filter(arr, 
+                             window_length=3, 
+                             polyorder=1,
+                             axis=0)
+    except:
+        # return empty array
+        return np.full_like(arr, np.nan)
+        
+ 
 def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0):
     """
     Performs EWMACD change detection on a 1d array of variable 

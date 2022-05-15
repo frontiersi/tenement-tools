@@ -420,7 +420,6 @@ def perform_sdm(ds, df, test_ratio=0.25, options=None):
     except Exception as e:
         raise ValueError(e)
 
-
     try:
         #check options, if empty, use sklearn defaults
         if options is None:
@@ -697,6 +696,7 @@ def generate_area_under_curve(np_test_y, np_prob_y):
         raise ValueError(e)
 
     return
+
 
 # deprecated
 def create_lek_matrices(df_records, rast_cate_list, remove_col='pres_abse', nodata_value=-999):
