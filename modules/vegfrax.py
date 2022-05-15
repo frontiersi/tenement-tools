@@ -405,7 +405,7 @@ def build_class_fractions(df, ds_low, ds_high, max_nodata=0.0):
             w = row['x'] - (abs(lres[0]) / 2)
             e = row['x'] + (abs(lres[0]) / 2)
             s = row['y'] - (abs(lres[0]) / 2)
-            n = row['y'] + (abs(lres[0]) / 2)
+            n = row['y'] + (abs(lres[0]) / 2)           
         
             # extract all high res pixels within low res bounds
             da = ds_high.sel(x=slice(w, e), y=slice(n, s))
