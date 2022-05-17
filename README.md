@@ -43,6 +43,7 @@ Close the Python Command Prompt when finished.
 ### 5. Add the Tenement Tools plug-in to ArcGIS Pro
 Now, add the actual plug-in to ArcGIS Pro:
 - Run ArcGIS Pro > Add-In Manager > Options tab > Add Folder > Select extracted tenement-tools folder (from step 2)
+
 Note: you may need to click "Load all Add-Ins without restrictions" option.
 
 ### 6. Initialise the new python environment in ArcGIS Pro
