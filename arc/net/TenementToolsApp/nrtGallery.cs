@@ -71,6 +71,12 @@ namespace TenementToolsApp
                                 tooltip: "Perform near-real time monitoring process.",
                                 group: "Monitoring Tools"));
 
+            // add gallery item for nrt monitor
+            Add(new GalleryItem(text: "Visualise Areas",
+                                icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Visualise_Area_32.png",
+                                tooltip: "Visualse vegetation and change density for an area.",
+                                group: "Exploration Tools"));
+
             // add gallery item for nrt graph
             Add(new GalleryItem(text: "Graph Areas",
                                 icon: "pack://application:,,,/TenementToolsApp;component/Images/NRT_Graph_32.png",
@@ -150,6 +156,18 @@ namespace TenementToolsApp
                 catch (Exception)
                 {
                     Debug.WriteLine("Could not find NRT Monitor Areas tool. Did you add the toolbox?");
+                };
+            }
+            else if (gallery_item == "Visualise Areas")
+            {
+                try
+                {
+                    string toolname = "NRT_Visualise_Areas";
+                    Geoprocessing.OpenToolDialog(toolname, null);
+                }
+                catch (Exception)
+                {
+                    Debug.WriteLine("Could not find NRT Visualise Areas tool. Did you add the toolbox?");
                 };
             }
             else if (gallery_item == "Graph Areas")

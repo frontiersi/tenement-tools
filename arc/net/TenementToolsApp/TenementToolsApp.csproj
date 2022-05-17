@@ -279,6 +279,9 @@
   <ItemGroup>
     <Resource Include="Images\COG_Shift_32.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\NRT_Visualise_Area_32.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--
   PackageAction can be:
