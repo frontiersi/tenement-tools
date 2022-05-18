@@ -1,40 +1,25 @@
 # nrt
 '''
-Temp.
+This script contains change detection algorithm
+and functions to detect and clean change data.
 
 Contacts: 
 Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
-# set gdal global environ
-# import os
-# os.environ['GDAL_DISABLE_READDIR_ON_OPEN'] = 'EMPTY_DIR'
-# os.environ['CPL_VSIL_CURL_ALLOWED_EXTENSIONS '] = 'tif'
-# os.environ['VSI_CACHE '] = 'TRUE'
-# os.environ['GDAL_HTTP_MULTIRANGE '] = 'YES'
-# os.environ['GDAL_HTTP_MERGE_CONSECUTIVE_RANGES '] = 'YES'
-
 # import required libraries
 import os
 import sys
-import shutil
 import time
-import datetime
-import smtplib
 import numpy as np
 import xarray as xr
 import pandas as pd
 import scipy.stats
-import rasterio
-import json
 import arcpy
 
 from scipy.signal import savgol_filter
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 sys.path.append('../../modules')
 import cog_odc, cog
@@ -42,10 +27,10 @@ import cog_odc, cog
 sys.path.append('../../shared')
 import arc, satfetcher, tools
 
+
 class MonitoringAreaStatistics:
 
-    # TESTING_END_DT REMOVE THIS WHEN DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    def __init__(self, feat, path):
+    def __init__(self, feat, path, out_nc):
         
         # feature fields
         self.area_id = feat[0]
@@ -71,33 +56,15 @@ class MonitoringAreaStatistics:
         self.raw_geom = feat[18]
         self.prj_geom = None
         
-        # path to project folder
+        # path to project folder, output file
         self.path = path
+        self.out_nc = out_nc
         
         # xr datasets
         self.ds = None
-        self.ds_density = None
-        
-        # xr edge mask
         self.mask = None
-        
-        # TESTING REMOVE THIS WHEN DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.TESTING_END_DT = None
-        
-        
-    def show_area_info(self):
-        """
-        Simple function to print field information to 
-        screen.
-        """
-        
-        # print field attributes
-        for field in list(vars(self))[:16]:
-            print('{}: {}'.format(field, vars(self).get(field)))
-            
-        return
-    
-    
+
+
     def validate_area(self):
         """
         Checks all required monitoring area parameters are 
@@ -225,8 +192,7 @@ class MonitoringAreaStatistics:
 
         return
         
-        
-    # TODO SET END DATE TO 2050 WHEN DONE
+    # just ensure the privisonal data mask band correct
     def set_xr(self):
         """
         Fetches all available digital earth australia (dea) 
@@ -314,7 +280,7 @@ class MonitoringAreaStatistics:
             self.ds = fetch_cube_data(collections=collections, 
                                       bands=bands, 
                                       start_dt=start_dt, 
-                                      end_dt=self.TESTING_END_DT,     #'2050-12-31', 
+                                      end_dt='2050-12-31', 
                                       bbox=prj_bbox, 
                                       resolution=10, 
                                       ds_existing=None)
@@ -558,7 +524,6 @@ class MonitoringAreaStatistics:
         return
     
     
-    # remove commented out code if happy with method
     def smooth_xr_index(self):
         """
         Mildly smoothes the xr clean vegetation index values 
@@ -680,7 +645,6 @@ class MonitoringAreaStatistics:
                                         dask='allowed',
                                         kwargs=kwargs)
             
-
             # update static, dynamic clean values in xr
             self.ds['static_clean'] = da_static
             self.ds['dynamic_clean'] = da_dynamic
@@ -1036,40 +1000,314 @@ class MonitoringAreaStatistics:
     
     
     def apply_xr_edge_mask(self):
+            """
+            Applies the xr edge mask generated earlier during the 
+            set_xr_edge_mask function. Any pixels within this mask 
+            will be set to nodata (nan). If an error occurs, no mask 
+            is applied.
+            """ 
+
+            # check if xr exists
+            if self.ds is None:
+                raise ValueError('No xr provided.')
+
+            # check if edge mask exists
+            if self.mask is None:
+                raise ValueError('No edge mask provided.')       
+
+            try:
+                # take a copy in case of error
+                tmp = self.ds.copy(deep=True)
+
+                # mask edge pixels to nan
+                self.ds = self.ds.where(self.mask)
+
+                # check if not all nan
+                if self.ds.to_array().isnull().all():
+                    raise ValueError('Mask set all pixels to nan, rolling back.')  
+
+            except Exception as e:
+                self.ds = tmp
+                raise ValueError(e)
+
+            return
+    
+    
+    def perform_kernel_density(self):
         """
-        Applies the xr edge mask generated earlier during the 
-        set_xr_edge_mask function. Any pixels within this mask 
-        will be set to nodata (nan). If an error occurs, no mask 
-        is applied.
-        """ 
+        Generates various summary states of vegetation
+        and change over time and displays it as
+        a kernel density raster. Error will result in
+        raised error.
+        """
+
+        # ensure x, y and time in dataset
+        if 'x' not in self.ds or 'y' not in self.ds:
+            raise ValueError('No x, y dimensions.')
+        elif 'time' not in self.ds:
+            raise ValueError('No time dimensions.')
+
+        try:
+            # smooth dataset via mean
+            self.ds = self.ds.rolling(x=3, y=3, 
+                                      center=True, 
+                                      min_periods=1).mean()
+
+            # increase resolution of grid 5-fold
+            x_min, x_max = float(self.ds['x'].min()), float(self.ds['x'].max())
+            y_min, y_max = float(self.ds['y'].min()), float(self.ds['y'].max())
+
+            # generate high resolution coordinates
+            xs = np.linspace(x_min, x_max, len(self.ds['x']) * 5)
+            ys = np.linspace(y_min, y_max, len(self.ds['y']) * 5)
+
+            # interpolate values to new grid
+            self.ds = self.ds.interp(x=xs, y=ys)
+
+        except Exception as e:
+            raise ValueError(e)
+
+        # check if method provided 
+        if self.method not in ['Static', 'Dynamic']:
+            raise ValueError('Change method not provided.')
+
+        # prepare method name
+        method = self.method.lower()
+
+        try:
+            # set up mask
+            da_mask = self.ds['veg_idx'].mean('time')
+            da_mask = xr.where(~da_mask.isnull(), True, False)
+            
+            # set up core arrays 
+            da_veg = self.ds['veg_idx']
+            da_chg = self.ds['{}_clean'.format(method)]
+            da_zne = self.ds['{}_zones'.format(method)]
+            da_alt = self.ds['{}_alerts'.format(method)]
+                        
+            # get vege avg and std all-time
+            da_veg_avg = da_veg.mean('time')
+            da_veg_std = da_veg.std('time')
+            
+            # get latest vege
+            da_veg_lts = da_veg.isel(time=-2, drop=True)
+            
+            # get change max inc, dec all-time
+            da_chg_max_inc = da_chg.where(da_chg >= 0, 0).max('time')
+            da_chg_max_dec = da_chg.where(da_chg <= 0, 0).min('time')
+            
+            # get change avg inc, dec all-time
+            da_chg_avg_inc = da_chg.where(da_chg >= 0, 0).mean('time')
+            da_chg_avg_dec = da_chg.where(da_chg <= 0, 0).mean('time')
+            
+            # get latest change inc, dec 
+            da_chg_lts_inc = da_chg.where(da_chg >= 0, 0).isel(time=-2, drop=True)
+            da_chg_lts_dec = da_chg.where(da_chg <= 0, 0).isel(time=-2, drop=True)
+            
+            # get count alerts all time all dirs
+            da_alt_cnt_inc = da_alt.where(da_chg >= 0, 0).sum('time')
+            da_alt_cnt_dec = da_alt.where(da_chg <= 0, 0).sum('time')
+            
+            # set up list of clean datasets
+            ds_list = [
+                da_veg_avg.to_dataset(name='vege_avg_all_time'),
+                da_veg_std.to_dataset(name='vege_std_all_time'),
+                da_veg_lts.to_dataset(name='vege_latest_time'),   
+                da_chg_max_inc.to_dataset(name='change_max_all_time_incline'),  
+                da_chg_max_dec.to_dataset(name='change_max_all_time_decline'),  
+                da_chg_avg_inc.to_dataset(name='change_avg_all_time_incline'),  
+                da_chg_avg_dec.to_dataset(name='change_avg_all_time_decline'),     
+                da_chg_lts_inc.to_dataset(name='change_latest_time_incline'),  
+                da_chg_lts_dec.to_dataset(name='change_latest_time_decline'),  
+                da_alt_cnt_inc.to_dataset(name='alerts_cnt_all_time_incline'),  
+                da_alt_cnt_dec.to_dataset(name='alerts_cnt_all_time_decline'),  
+            ]
+
+            # combine into one, apply mask
+            ds = xr.merge(ds_list)
+            ds = ds.where(da_mask)
+
+        except Exception as e:
+            raise ValueError(e)
+
+        # check if anything in dataset
+        if ds.to_array().isnull().all():
+            raise ValueError('No kernel densities could be generated.')
+
+        # set to class dataset
+        self.ds = ds.copy(deep=True)
+
+        return
+    
+
+    def append_attrs(self):
+        """
+        Adds expected attributes to xr
+        dataset prior to export.
+        """
 
         # check if xr exists
         if self.ds is None:
-            raise ValueError('No xr provided.')
+            raise ValueError('No xr dataset exists.')
 
-        # check if edge mask exists
-        if self.mask is None:
-            raise ValueError('No edge mask provided.')       
-
-        try:
-            # take a copy in case of error
-            tmp = self.ds.copy(deep=True)
-
-            # mask edge pixels to nan
-            self.ds = self.ds.where(self.mask)
-
-            # check if not all nan
-            if self.ds.to_array().isnull().all():
-                raise ValueError('Mask set all pixels to nan, rolling back.')  
-
-        except Exception as e:
-            self.ds = tmp
-            raise ValueError(e)
+        # manually create attrs for dataset (geotiffs lacking) 
+        self.ds = tools.manual_create_xr_attrs(self.ds)
+        self.ds.attrs.update({'nodatavals': np.nan})   
 
         return
 
 
+    def export_xr(self):
+        """
+        Exports kernel density-fied xr (which contains 
+        everything)  to netcdf named with global id. An
+        error will raise an error.
+        """
+        
+        # check if xr valid
+        if self.ds is None:
+            raise ValueError('No xr provided.')
+        elif not isinstance(self.ds, xr.Dataset):
+            raise TypeError('The xr is not an xr dataset type.')
+            
+        # check if path and global id exist
+        if self.out_nc is None:
+            raise ValueError('No output NetCDF provided.')
 
+        try:           
+            # export nc
+            self.ds.to_netcdf(self.out_nc)
+        
+        except Exception as e:
+            raise ValueError(e)
+        
+        return
+          
+    
+    def reset(self):
+        """
+        Resets all generated area parameters 
+        and xr datasets. 
+        """
+
+        # set proj geom to none
+        self.prj_geom = None
+
+        # set alert info to none
+        self.alert_zone =  None
+        self.alert_flag =  None
+        self.alert_html =  None
+        self.alert_graph = None
+
+        # iter xrs and close 
+        xrs = [self.ds, self.mask]
+        for x in xrs:
+            try:
+                if x is not None:
+                    x.close()
+            except:
+                pass
+
+        # set xrs to none
+        self.ds = None
+        self.ds_mask = None
+
+        return  
+        
+    def run_all(self):
+        """
+        """
+        
+        
+        
+        
+    
+    
+
+# meta
+def validate_monitoring_areas(in_feat):
+    """
+    Does relevant checks for information for a
+    gdb feature class of one or more monitoring areas.
+    """
+    
+    # set up flag
+    is_valid = True
+
+    # check input feature is not none and strings
+    if in_feat is None:
+        print('Monitoring area feature class not provided, flagging as invalid.')
+        is_valid = False
+    elif not isinstance(in_feat, str):
+        print('Monitoring area feature class not string, flagging as invalid.')
+        is_valid = False
+    elif not os.path.dirname(in_feat).endswith('.gdb'):
+        print('Feature class is not in a geodatabase, flagging as invalid.')
+        is_valid = False
+
+    # if valid...
+    if is_valid:
+        try:
+            # get feature
+            driver = ogr.GetDriverByName("OpenFileGDB")
+            data_source = driver.Open(os.path.dirname(in_feat), 0)
+            lyr = data_source.GetLayer('monitoring_areas')
+            
+            # get epsg
+            epsg = lyr.GetSpatialRef()
+            if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
+                print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
+                is_valid = False
+            
+            # check if any duplicate area ids
+            area_ids = []
+            for feat in lyr:
+                area_ids.append(feat['area_id'])
+                
+            # check if duplicate area ids
+            if len(set(area_ids)) != len(area_ids):
+                print('Duplicate area ids detected, flagging as invalid.')
+                is_valid = False
+                
+            # check if feature has required fields
+            fields = [field.name for field in lyr.schema]
+            required_fields = [
+                'area_id', 
+                'platform', 
+                's_year', 
+                'e_year', 
+                'index',
+                'persistence',
+                'rule_1_min_conseqs',
+                'rule_1_inc_plateaus',
+                'rule_2_min_zone', 
+                'rule_3_num_zones',
+                'ruleset',
+                'alert',
+                'method',
+                'alert_direction',
+                'email',
+                'ignore',
+                'color',
+                'global_id'
+                ] 
+            
+            # check if all fields in feat
+            if not all(f in fields for f in required_fields):
+                print('Not all required fields in monitoring shapefile.')
+                is_valid = False
+                
+            # close data source
+            data_source.Destroy()
+            
+        except:
+            print('Could not open monitoring area feature, flagging as invalid.')
+            is_valid = False
+            data_source.Destroy()
+
+    # return
+    return is_valid
+ 
 
 
 
@@ -1935,94 +2173,12 @@ def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1 and 2 or 3', direction='Decl
 
 
 
-# meta
-def validate_monitoring_areas(in_feat):
-    """
-    Does relevant checks for information for a
-    gdb feature class of one or more monitoring areas.
-    """
-    
-    # set up flag
-    is_valid = True
 
-    # check input feature is not none and strings
-    if in_feat is None:
-        print('Monitoring area feature class not provided, flagging as invalid.')
-        is_valid = False
-    elif not isinstance(in_feat, str):
-        print('Monitoring area feature class not string, flagging as invalid.')
-        is_valid = False
-    elif not os.path.dirname(in_feat).endswith('.gdb'):
-        print('Feature class is not in a geodatabase, flagging as invalid.')
-        is_valid = False
-
-    # if valid...
-    if is_valid:
-        try:
-            # get feature
-            driver = ogr.GetDriverByName("OpenFileGDB")
-            data_source = driver.Open(os.path.dirname(in_feat), 0)
-            lyr = data_source.GetLayer('monitoring_areas')
-            
-            # get epsg
-            epsg = lyr.GetSpatialRef()
-            if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
-                print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
-                is_valid = False
-            
-            # check if any duplicate area ids
-            area_ids = []
-            for feat in lyr:
-                area_ids.append(feat['area_id'])
-                
-            # check if duplicate area ids
-            if len(set(area_ids)) != len(area_ids):
-                print('Duplicate area ids detected, flagging as invalid.')
-                is_valid = False
-                
-            # check if feature has required fields
-            fields = [field.name for field in lyr.schema]
-            required_fields = [
-                'area_id', 
-                'platform', 
-                's_year', 
-                'e_year', 
-                'index',
-                'persistence',
-                'rule_1_min_conseqs',
-                'rule_1_inc_plateaus',
-                'rule_2_min_zone', 
-                'rule_3_num_zones',
-                'ruleset',
-                'alert',
-                'method',
-                'alert_direction',
-                'email',
-                'ignore',
-                'color',
-                'global_id'
-                ] 
-            
-            # check if all fields in feat
-            if not all(f in fields for f in required_fields):
-                print('Not all required fields in monitoring shapefile.')
-                is_valid = False
-                
-            # close data source
-            data_source.Destroy()
-            
-        except:
-            print('Could not open monitoring area feature, flagging as invalid.')
-            is_valid = False
-            data_source.Destroy()
-
-    # return
-    return is_valid
- 
 
 # meta
 def extract_new_xr_dates(ds_old, ds_new):
-    """"""
+    """
+    """
     
     # check if xarray is adequate 
     if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
@@ -2095,17 +2251,7 @@ def reclassify_signal_to_zones(arr):
 
 
 
-
-
-
-# EWMACD EWMACD EWMACD
-# TODO LIST
-# todo 0 : current error: historyBound is wrong.
-# todo 1: any numpy we "copy" must use .copy(), or we overwrite mem...!
-# todo 2: force type where needed... important!
-
-# note: check the pycharm project pyEWMACD for original, working code if i break this!!!
-
+# EWMACD METHOD
 def harmonic_matrix(timeSeries0to2pi, numberHarmonicsSine,  numberHarmonicsCosine):
 
     # generate harmonic matrix todo 1 or 0? check
@@ -2727,7 +2873,7 @@ def annual_summaries(Values, yearIndex, summaryMethod='date-by-date'):
         #finalOutput = (np.round(aggregate(Values, by=list(yearIndex), FUN=mean, na.rm = T)))$x
         ...
 
-# todo check use of inf... not sure its purpose yet...
+
 def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
     """main function"""
 
