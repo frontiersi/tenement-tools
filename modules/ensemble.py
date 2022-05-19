@@ -451,33 +451,26 @@ def smooth_xr_dataset(ds, win_size=3):
 
     # check xr
     if not isinstance(ds, xr.Dataset):
-        print('Dataset must have x and y dimensions.')
-        return
+        raise TypeError('Dataset must have x and y dimensions.')
     if 'x' not in ds or 'y' not in ds:
-        print('Dataset must have x and y dimensions.')
-        return
+        raise ValueError('Dataset must have x and y dimensions.')
     elif 'time' in ds:
-        print('Dataset must not have time dimension.')
-        return
+        raise ValueError('Dataset must not have time dimension.')
 
     # check window size
     if win_size is None:
-        print('Window size not provided.')
-        return
+        raise ValueError('Window size not provided.')
     if not isinstance(win_size, int):
-        print('Window size must be integer.')
-        return
+        raise ValueError('Window size must be integer.')
     elif win_size % 2 == 0:
-        print('Window size must be odd, setting to default.')
-        win_size = 3
+        raise ValueError('Window size must be odd number.')
         
     try:
         # smoothing can extrapolate, so create flattened mask of nans
         ds_mask = xr.where(~ds.isnull(), 1, 0)
         ds_mask = ds_mask.to_array().sum('variable')
-    except:
-        print('Could not create mask, returning original dataset.')
-        return ds
+    except Exception as e:
+        raise ValueError(e)
 
     try:
         # apply rolling window of user size
@@ -488,14 +481,12 @@ def smooth_xr_dataset(ds, win_size=3):
                         
         # mask nan values back in 
         ds = ds.where(ds_mask != 0)
-    except:
-        print('Could not smooth dataset. Returning original dataset.')
-        return ds
+    except Exception as e:
+        raise ValueError(e)
         
     # do one final check to see if any non-nans exist
     if ds.to_array().isnull().all() == True:
-        print('No non-nan values exist after modelling, returning None.')
-        return
+        raise ValueError('Smoothing resulted in empty dataset.')
 
     return ds
 
@@ -508,50 +499,64 @@ def perform_modelling(belief, disbelief):
     
     # check data type and size is right
     if belief is None or not isinstance(belief, list):
-        print('Belief must be a list of one or more datasets.')
-        return
+        raise TypeError('Belief must be a list of one or more datasets.')
     elif disbelief is None or not isinstance(disbelief, list):
-        print('Disbelief must be a list of one or more datasets.')
-        return
+        raise TypeError('Disbelief must be a list of one or more datasets.')
     
     # check belief, disbelief datasets are adequate
     for ds in belief + disbelief:
         if not isinstance(ds, (xr.DataArray, xr.Dataset)):
-            print('Belief/disbelief must be a xarray dataset or array.')
-            return
+            raise TypeError('Belief/disbelief must be an xarray dataset or array.')
         elif 'x' not in ds or 'y' not in ds:
-            print('Belief/disbelief must have x and y dimensions.')
-            return
+            raise ValueError('Belief/disbelief must have x and y dimensions.')
         elif 'time' in ds or 'time' in ds:
-            print('Belief/disbelief must not have time dimension.')
-            return
+            raise ValueError('Belief/disbelief must not have time dimension.')
 
     # generate site layers (one or multi), force arrays
     m_site = None
     for idx, ds in enumerate(belief):
-        ds = ds.to_array() if isinstance(ds, xr.Dataset) else ds
-        if idx == 0:
-            m_site = ds
-        else:
-            m_site = (m_site * ds) + ((1 - ds) * m_site) + ((1 - m_site) * ds)
+    
+        # force to array
+        if isinstance(ds, xr.Dataset):
+            ds = ds.to_array()
+
+        try:
+            # if first ds just use ds, else site formula
+            if idx == 0:
+                m_site = ds
+            else:
+                m_site = (m_site * ds) + ((1 - ds) * m_site) + ((1 - m_site) * ds)
+        except Exception as e:
+            raise ValueError(e)
     
     # now generate non-site layers (one or multi), force arrays
     m_nonsite = None
     for idx, ds in enumerate(disbelief):
-        ds = ds.to_array() if isinstance(ds, xr.Dataset) else ds
-        if idx == 0:
-            m_nonsite = ds
-        else:
-            m_nonsite = (m_nonsite * ds) + ((1 - ds) * m_nonsite) + ((1 - m_nonsite) * ds)
-            
-    # generate final belief (site) and disbelief (nonsite) layers
-    da_belief = (m_site * (1 - m_nonsite)) / (1 - (m_nonsite * m_site))
-    da_disbelief = (m_nonsite * (1 - m_site)) / (1 - (m_nonsite * m_site))
-
-    # generate plausability, belief interval layers
-    da_plauability = (1 - da_disbelief)
-    da_interval = (da_plauability - da_belief)
     
+        # force to array
+        if isinstance(ds, xr.Dataset):
+            ds = ds.to_array()
+            
+        try:
+            # if first ds just use ds, else non-site formula
+            if idx == 0:
+                m_nonsite = ds
+            else:
+                m_nonsite = (m_nonsite * ds) + ((1 - ds) * m_nonsite) + ((1 - m_nonsite) * ds)   
+        except Exception as e:
+            raise ValueError(e)
+            
+    try:
+        # generate final belief (site) and disbelief (nonsite) layers
+        da_belief = (m_site * (1 - m_nonsite)) / (1 - (m_nonsite * m_site))
+        da_disbelief = (m_nonsite * (1 - m_site)) / (1 - (m_nonsite * m_site))
+
+        # generate plausability, belief interval layers
+        da_plauability = (1 - da_disbelief)
+        da_interval = (da_plauability - da_belief)
+    except Exception as e:
+        raise ValueError(e)
+       
     try:
         # combine into a single dataset with four vars
         ds = xr.merge([
@@ -562,24 +567,20 @@ def perform_modelling(belief, disbelief):
             
         # remove residual variables if exist
         ds = ds.squeeze(drop=True)
-            
-    except:
-        print('Could not combine ensemble layers into dataset.')
-        return
+    except Exception as e:
+        raise ValueError(e)
     
     try:
         # create nan mask across all variables and apply
         ds_mask = xr.where(~ds.isnull(), 1, 0)
         ds_mask = ds_mask.to_array().sum('variable')
         ds = ds.where(ds_mask != 0, drop=True)
-    except:
-        print('Could not mask out edge nans from combined dataset.')
-        return
+    except Exception as e:
+        raise ValueError(e)
     
     # do one final check to see if any non-nans exist
     if ds.to_array().isnull().all() == True:
-        print('No non-nan values exist after modelling, returning None.')
-        return
+        raise ValueError('No non-nan values exist after modelling, returning None.')
     
     return ds
 

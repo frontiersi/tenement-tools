@@ -14,8 +14,9 @@ import time
 import numpy as np
 import xarray as xr
 import pandas as pd
-import scipy.stats
 import arcpy
+import scipy.stats
+import matplotlib.pyplot as plt
 
 from scipy.signal import savgol_filter
 from osgeo import gdal
@@ -26,6 +27,1953 @@ import cog_odc, cog
 
 sys.path.append('../../shared')
 import arc, satfetcher, tools
+
+
+
+# TESTING REMOVE THIS WHEN DONE!!!!!!!!!!!!
+# ensure provisional works re mask band name
+class MonitoringArea:
+
+    # TESTING_END_DT REMOVE THIS WHEN DONE!!!!!!!!!!!!!!!
+    def __init__(self, feat, path):
+        
+        # feature fields
+        self.area_id = feat[0]
+        self.platform = feat[1]
+        self.s_year = feat[2]
+        self.e_year = feat[3]
+        self.index = feat[4]
+        self.persistence = feat[5]
+        self.rule_1_min_conseqs = feat[6]
+        self.rule_1_inc_plateaus = feat[7]
+        self.rule_2_min_zone = feat[8]
+        self.rule_3_num_zones = feat[9]
+        self.ruleset = feat[10]
+        self.alert = feat[11]
+        self.method = feat[12]
+        self.alert_direction = feat[13]
+        self.email = feat[14]
+        self.ignore = feat[15]
+        self.color = feat[16]
+        self.global_id = feat[17]
+        
+        # feature geometry
+        self.raw_geom = feat[18]
+        self.prj_geom = None
+        
+        # path to project folder
+        self.path = path
+        
+        # xr datasets
+        self.ds_old = None
+        self.ds_new = None
+        self.ds_cmb = None
+        self.ds_anl = None
+        
+        # current alert info
+        self.alert_date = None
+        self.alert_zone = None
+        self.alert_flag = None
+        
+        # html and graph info
+        self.alert_html = None
+        self.alert_graph = None
+        
+        # TESTING REMOVE THIS WHEN DONE!!!!!!!!!!
+        self.TESTING_END_DT = None
+
+
+    def validate_area(self):
+        """
+        Checks all required monitoring area parameters are 
+        valid. Raises an error if invalid.
+        """
+        
+        # check area id
+        if self.area_id is None:
+            raise ValueError('No area id exists.')
+
+        # check platform
+        if self.platform not in ['Landsat', 'Sentinel']:
+            raise ValueError('Platform not Landsat or Sentinel.')
+
+        # check start, end years
+        if not isinstance(self.s_year, int):
+            raise ValueError('Start year not an integer.')
+        elif not isinstance(self.e_year, int):
+            raise ValueError('End year not an integer.')
+        elif self.s_year < 1980 or self.s_year > 2050:
+            raise ValueError('Start year not between 1980-2050.')        
+        elif self.e_year < 1980 or self.e_year > 2050:
+            raise ValueError('End year not between 1980-2050.')          
+        elif self.e_year <= self.s_year:
+            raise ValueError('End year is <= start year.')           
+        elif abs(self.e_year - self.s_year) < 2:
+            raise ValueError('Training period < 2 years in length.')  
+        elif self.platform == 'Sentinel' and self.s_year < 2016:
+            raise ValueError('Start year must be >= 2016 for Sentinel data.')  
+
+        # check index
+        if self.index not in ['NDVI', 'MAVI', 'kNDVI']:
+            raise ValueError('Index must be NDVI, MAVI or kNDVI.')
+
+        # check persistence
+        if self.persistence is None:
+            raise ValueError('No persistence exists.')
+        elif self.persistence < 0.001 or self.persistence > 9.999:
+            raise ValueError('Persistence not between 0.0001 and 9.999.')
+
+        # check rule 1 min consequtives
+        if self.rule_1_min_conseqs is None:
+            raise ValueError('No rule 1 min conseqs exists.')
+        elif self.rule_1_min_conseqs < 0 or self.rule_1_min_conseqs > 999:
+            raise ValueError('Rule 1 min conseqs not between 0 and 999.')
+
+        # check rule 1 inc plateaus
+        if self.rule_1_inc_plateaus is None:
+            raise ValueError('No rule 1 inc plateaus exists.')
+        elif self.rule_1_inc_plateaus not in ['Yes', 'No']:
+            raise ValueError('Rule 1 inc plateaus must be Yes or No.')
+
+        # check rule 2 min zone
+        if self.rule_2_min_zone is None:
+            raise ValueError('No rule 2 min zone exists.')
+        elif self.rule_2_min_zone < 1 or self.rule_2_min_zone > 11:
+            raise ValueError('Rule 2 min zone not between 1 and 11.') 
+            
+        # check rule 3 num zones
+        if self.rule_3_num_zones is None:
+            raise ValueError('No rule 3 num zones exists.')
+        elif self.rule_3_num_zones < 1 or self.rule_3_num_zones > 11:
+            raise ValueError('rule 3 num zones not between 1 and 11.')             
+
+        # set up allowed rulesets
+        rulesets = [
+            '1 only',
+            '2 only',
+            '3 only',
+            '1 and 2',
+            '1 and 3',
+            '2 and 3',
+            '1 or 2',
+            '1 or 3',
+            '2 or 3',
+            '1 and 2 and 3',
+            '1 or 2 and 3',
+            '1 and 2 or 3',
+            '1 or 2 or 3'
+        ]
+        
+        # check ruleset   
+        if self.ruleset not in rulesets:
+            raise ValueError('Rulset not supported.')
+
+        # check alert
+        if self.alert not in ['Yes', 'No']:
+            raise ValueError('Alert must be Yes or No.')
+
+        # check method
+        if self.method not in ['Static', 'Dynamic']:
+            raise ValueError('Method must be Static or Dynamic')
+
+        # set up alert directions 
+        alert_directions = [
+            'Incline only (any)', 
+            'Decline only (any)', 
+            'Incline only (+ zones only)', 
+            'Decline only (- zones only)', 
+            'Incline or Decline (any)',
+            'Incline or Decline (+/- zones only)'
+        ]
+
+        # check alert direction
+        if self.alert_direction not in alert_directions:
+            raise ValueError('Alert direction is not supported.')
+
+        # check email address
+        if self.alert == 'Yes' and self.email is None:
+            raise ValueError('No email provided.')
+        elif self.email is not None and '@' not in self.email:
+            raise ValueError('Email address invalid.')
+
+        # check ignore
+        if self.ignore not in ['Yes', 'No']:
+            raise ValueError('Ignore must be Yes or No.')
+            
+        # check global id
+        if self.global_id is None:
+            raise ValueError('No global id exists.')
+            
+        # check path provided
+        if self.path is None:
+            raise ValueError('No project path exists.')
+
+        return
+
+
+    def set_old_xr(self):
+        """
+        If a path exists for old xr, load and set it. 
+        If old xr does not exist (i.e., first time area
+        has been monitored, set None. If error during load, 
+        set old xr to None.
+        """
+        
+        try:
+            # build expected netcdf filepath
+            nc_path = os.path.join(self.path, self.global_id + '.nc')
+        
+            # check input path and store if so, else none
+            if os.path.exists(nc_path):
+                with xr.open_dataset(nc_path) as ds:
+                    ds.load()
+                
+                # set old ds
+                self.ds_old = ds
+                return
+            
+            else:
+                # set to none
+                self.ds_old = None
+                return
+        
+        except:
+            self.ds_old = None
+            return
+        
+        return
+            
+    
+    def validate_old_xr(self):
+        """
+        If old xr is loaded and set, validates it to ensure 
+        it has attributes that match current area feature. 
+        Done to ensure user has not changed area field values
+        since last run. If old xr attributes and current area 
+        do not match, set old xr dataset to None (i.e., reset
+        it).
+        """
+        
+        # if old xr doesnt exist, leave
+        if self.ds_old is None:
+            return
+            
+        # check xr is valid
+        if not isinstance(self.ds_old, xr.Dataset):
+            self.ds_old = None
+            return
+        elif not hasattr(self.ds_old, 'attrs'):
+            self.ds_old = None
+            return
+
+        try:
+            # check key attrs in dataset
+            attrs = list(vars(self))[:16]
+            for attr in attrs:
+                if not hasattr(self.ds_old, attr):
+                    self.ds_old = None
+                    return
+
+            # check all vals match match (remove tail, add method back on)
+            attrs = attrs[:11] + ['method']
+            for attr in attrs:
+                new = str(vars(self).get(attr))
+                old = str(self.ds_old.attrs.get(attr))
+
+                if new != old:
+                    self.ds_old = None
+                    return
+                    
+        except:
+            self.ds_old = None
+            return
+        
+        return
+            
+    
+    # TODO SET END DATE TO 2050 WHEN DONE
+    def set_new_xr(self):
+        """
+        Fetches all available digital earth australia (dea) 
+        landsat/sentinel data for area bounding box. The 
+        resulting data is set to the new xr. If old xr 
+        exists (is not None), new xr is then subset down to 
+        only the dates that dont exist in old xr. 
+        
+        If an error occurs, an error is raised. 
+        """
+        
+        # set endpoint
+        STAC_ENDPOINT = 'https://explorer.sandbox.dea.ga.gov.au/stac'
+        
+        # check platform is valid
+        if self.platform not in ['Landsat', 'Sentinel']:
+            raise ValueError('Platform not supported.')
+
+        # prepare dea stac search parameters
+        if self.platform == 'Landsat':
+            
+            # set dea collection names
+            collections = [
+                'ga_ls5t_ard_3',
+                'ga_ls7e_ard_3',
+                'ga_ls8c_ard_3',
+                'ga_ls8c_ard_provisional_3'
+            ]
+            
+            # set bands
+            bands = [
+                'nbart_red', 
+                'nbart_green', 
+                'nbart_blue', 
+                'nbart_nir', 
+                'nbart_swir_1', 
+                'nbart_swir_2', 
+                'oa_fmask'
+            ]
+            
+        elif self.platform == 'Sentinel':
+            
+            # set dea collection names
+            collections = [
+                's2a_ard_granule',  # todo: use ver 3 when avail
+                's2b_ard_granule',  # todo: use ver 3 when avail
+                'ga_s2am_ard_provisional_3',
+                'ga_s2bm_ard_provisional_3'
+            ]
+            
+            # set bands
+            bands = [
+                'nbart_red', 
+                'nbart_green', 
+                'nbart_blue', 
+                'nbart_nir_1', 
+                'nbart_swir_2', 
+                'nbart_swir_3', 
+                'fmask'
+            ]
+        
+        try:
+            # ensure raw geom is in wgs84 (set prj_geom)
+            srs = arcpy.SpatialReference(4326)
+            self.prj_geom = self.raw_geom.projectAs(srs)
+            
+            # convert to bounding box in wgs84
+            prj_bbox = [
+                self.prj_geom.extent.XMin,
+                self.prj_geom.extent.YMin,
+                self.prj_geom.extent.XMax,
+                self.prj_geom.extent.YMax
+            ]
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        try:
+            # get all avail dea satellite data without compute
+            self.ds_new = nrt.fetch_cube_data(collections=collections, 
+                                              bands=bands, 
+                                              start_dt='1980-01-01', 
+                                              end_dt=self.TESTING_END_DT,     #'2050-12-31', 
+                                              bbox=prj_bbox, 
+                                              resolution=10, 
+                                              ds_existing=None)
+        
+            # group duplicate times if exist
+            self.ds_new = satfetcher.group_by_solar_day(self.ds_new)
+            
+        except Exception as e:
+            raise ValueError(e)
+            
+            
+        try:
+            # subset new xr to new dates (if old exists)
+            if self.ds_old is not None:
+                
+                # get last datetime in old dataset
+                last_dt = self.ds_old['time'].isel(time=-1)
+                
+                # get all datetimes in new dataset
+                new_dts = self.ds_new['time']
+                new_dts = new_dts.where(new_dts['time'] > last_dt, drop=True)
+                
+                # select only new
+                self.ds_new = self.ds_new.sel(time=new_dts)       
+                
+            # enforce none type if no new dates
+            if len(self.ds_new['time']) == 0:
+                self.ds_new = None
+                
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+    
+    
+    def new_xr_dates_found(self):
+        """
+        Does quick check to see if any new xr dates currently 
+        exist. Returns true if times exist, false if not.
+        """
+        
+        # check if dates exist
+        if self.ds_new is None:
+            return False
+        elif 'time' not in self.ds_new:
+            return False
+        elif len(self.ds_new['time']) == 0:
+            return False
+        else:
+            return True
+        
+        return
+        
+        
+    def count_new_xr_dates(self):
+        """
+        Get number of dates in new xr.
+        """
+        
+        # count based on time dim
+        if self.ds_new is not None:
+            return len(self.ds_new['time'])
+        
+        return
+    
+    
+    def apply_new_xr_fmask(self):
+        """
+        Takes the new xr and applies the dea fmask band to 
+        remove invalid pixels and dates. If an error occurs,
+        error is raised.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+        
+        try:
+            # get mask band name (either be oa_fmask or fmask)
+            mask = [v for v in self.ds_new if 'mask' in v][0]
+            
+            # mask invalid pixels i.e., not valid, water, snow
+            self.ds_new = cog.remove_fmask_dates(ds=self.ds_new, 
+                                                 valid_class=[1, 4, 5],
+                                                 max_invalid=0,
+                                                 mask_band=mask, 
+                                                 nodata_value=np.nan,
+                                                 drop_fmask=True)
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+    
+    
+    def apply_new_xr_index(self):
+        """
+        Takes the new xr and applies user chosen vegetation
+        index. If an error occurs, error is raised. 
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+        
+        # check if platform set
+        if self.platform not in ['Landsat', 'Sentinel']:
+            raise ValueError('Platform not supported.')
+            
+        # check if index set
+        if self.index not in ['NDVI', 'MAVI', 'kNDVI']:
+            raise ValueError('Index not supported.')
+        
+        try:
+            # conform dea band names and calc vegetation index
+            platform = self.platform.lower()
+            self.ds_new = satfetcher.conform_dea_ard_band_names(ds=self.ds_new, 
+                                                                platform=platform) 
+            
+            # calculate vegetation index
+            index = self.index.lower()
+            self.ds_new = tools.calculate_indices(ds=self.ds_new, 
+                                                  index=index, 
+                                                  custom_name='veg_idx', 
+                                                  rescale=False, 
+                                                  drop=True)
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+            
+            
+    def load_new_xr(self):
+        """
+        Loads new xr values into memory using the xarray 
+        load function. This will result in downloading from 
+        dea and can take awhile.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+        
+        try:
+            # load new xr and close connection 
+            self.ds_new.load()
+            self.ds_new.close()
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+    
+    
+    def remove_new_xr_edges(self):
+        """
+        Sets any pixels in the new xr to nodata (nan) if they occur 
+        within the original bounding box but outside of the vector
+        boundary of the monitoring area. This is achieved by creating 
+        an in-memory raster of 1s and 0s (in boundary, out boundary) 
+        and applies it to the new dataset. If an error occurs,
+        no mask is applied.
+        """ 
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+            
+        # check if raw geometry exists
+        if self.raw_geom is None:
+            raise ValueError('No raw area geometry provided.')       
+        
+        try:
+            # take a copy in case of error
+            tmp = self.ds_new.copy(deep=True)
+            
+            # rasterize area polygon, set outside pixels to nan
+            mask = rasterize_polygon(ds=self.ds_new, 
+                                     geom=self.raw_geom)
+            
+            # mask edge pixels to nan
+            self.ds_new = self.ds_new.where(mask)
+            
+            # check if not all nan
+            if self.ds_new.to_array().isnull().all():
+                raise ValueError('Mask set all pixels to nan, rolling back.')  
+
+        except Exception as e:
+            self.ds_new = tmp
+            raise ValueError(e)
+            
+        return
+            
+
+    def reduce_new_xr(self):
+        """
+        Reduces new xr dataset into temporal medians. That is, one 
+        median vegetation index value for the entire monitoring area 
+        per date. If an error occurs, error is raised.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')        
+        
+        try:
+            # get temporal medians
+            self.ds_new = self.ds_new.median(['x', 'y'])
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+    
+    
+    def interp_new_xr_nans(self):
+        """
+        Interpolates any existing nan values in new xr linearly.
+        If nan values still exist after interpolation (often on
+        edge dates due to lack of extrapolation), these will be
+        dropped. If error occurs or all values are nan, error is
+        raised.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')          
+
+        try:
+            # interpolate na linearly
+            self.ds_new = self.ds_new.interpolate_na('time')
+            
+            # check if any nan
+            if self.ds_new.to_array().isnull().any():
+                self.ds_new = self.ds_new.where(~self.ds_new.isnull(), 
+                                                drop=True)
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check we have data remaining
+        if len(self.ds_new['time']) == 0:
+            raise ValueError('No data remaining after nodata dropped.')
+            
+        return
+
+
+    def append_new_xr_vars(self):
+        """
+        Appends required xr variables to new xr if do not exist.
+        These variables are required for storing outputs from 
+        change detection results, cleaned vegetation, etc. If
+        error, error is raised.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')  
+        
+        # set required variable names
+        new_vars = [
+            'veg_clean', 
+            'static_raw', 
+            'static_clean',
+            'static_rule_one',
+            'static_rule_two',
+            'static_rule_three',
+            'static_zones',
+            'static_alerts',
+            'dynamic_raw', 
+            'dynamic_clean',
+            'dynamic_rule_one',
+            'dynamic_rule_two',
+            'dynamic_rule_three',
+            'dynamic_zones',
+            'dynamic_alerts'
+        ]        
+        
+        # iter var names and append to xr
+        for var in new_vars:
+            if var not in self.ds_new:
+                da = xr.full_like(self.ds_new['veg_idx'], np.nan)
+                self.ds_new[var] = da
+        
+        return
+
+
+    def set_cmb_xr(self):
+        """
+        Takes old xr (if exists) and concatenates the new 
+        xr dates and values onto the end of the old xr (if
+        exists). A single cmb (combined) xr is created as
+        a result. This is done to ensure old xr change and
+        vegetation values persist from one monitoring
+        cycle to another. If no old xr exists, new xr is
+        set to as cmb xr. If error, error raised.
+        """
+        
+        # check if new xr exists
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+            
+        # set new xr to cmb xr if no old xr
+        if self.ds_old is None:
+            self.ds_cmb = self.ds_new.copy(deep=True)
+            return
+        
+        try:
+            # add new times onto end of old times
+            xrs = [self.ds_old, self.ds_new]
+            self.ds_cmb = xr.concat(xrs, dim='time')
+            
+            # sort by time
+            self.ds_cmb = self.ds_cmb.sortby('time')
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+
+    
+    def fix_cmb_xr_spikes(self):
+        """
+        Detects severe vegetation index outliers using the TIMESAT 
+        3.3 median spike detection method. Sets spike values to 
+        nan and then interpolates them, if they exist. If error, error raised.
+        """
+        
+        # check if cmb xr exists
+        if self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')
+        
+        try:
+            # remove outliers via median spike method
+            da = remove_spikes(da=self.ds_cmb['veg_idx'], 
+                               factor=1, 
+                               win_size=3)
+            
+            # interpolate nans linearly
+            da = da.interpolate_na('time')
+            
+            # set result to clean var
+            self.ds_cmb['veg_clean'] = da            
+            
+            # if nans still exists, drop them in cmb xr
+            if da.isnull().any():
+                self.ds_cmb = self.ds_cmb.where(~da.isnull(), drop=True)
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check we still have data remaining
+        if len(self.ds_cmb['time']) == 0:
+            raise ValueError('No data remaining after no data dropped.')
+            
+        return
+
+    
+    # check mean approach
+    def smooth_cmb_xr_index(self):
+        """
+        Mildly smoothes the cmb xr clean vegetation index values 
+        using the savitsky golay filter. If error, error raised.
+        """
+
+        # check if cmb xr exists
+        if self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')
+        
+        # reduce code with a array
+        da = self.ds_cmb['veg_clean']
+        
+        # mask if needed
+        mask = None
+        if da.isnull().any():
+            mask = da.isnull()
+            da = da.where(~mask, da.mean())
+        
+        try:
+            # get time dimension axis
+            dims = list(da)
+            for idx, dim in enumerate(dims):
+                if dim == 'time':
+                    axis = idx
+
+            # set up kwargs
+            kwargs={
+                'window_length': 3, 
+                'polyorder': 1,
+                'axis': axis
+            }
+
+            # apply savitsky filter to outlier-free index
+            da = xr.apply_ufunc(savgol_filter, 
+                                da,
+                                dask='allowed',
+                                kwargs=kwargs)
+                
+            # reset nan values if found
+            if mask is not None:
+                da = da.where(~mask, np.nan)
+            
+            # update existing values in cmb xr
+            self.ds_cmb['veg_clean'] = da
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+    
+
+    def set_anl_xr(self):
+        """
+        Takes cmb xr (if exists) and copys it in memory. The
+        copied xr dataset is then subset to the training start 
+        year (all years before are removed). The result is the anl 
+        (analysis) xr, which is exists to be used temporarily to 
+        generate new change models. If error, error raised.
+        """
+        
+        # check if start year is valid
+        if self.s_year is None:
+            raise ValueError('Not training start year provided.')
+
+        # check if cmb xr exists
+        if self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')
+            
+        try:
+            # copy cmb xr to anl xr
+            self.ds_anl = self.ds_cmb.copy(deep=True)
+            
+            # remove all dates before start year
+            dts = self.ds_anl['time.year'] >= self.s_year
+            self.ds_anl = self.ds_anl.where(dts, drop=True)
+                    
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check if dates valid
+        if len(self.ds_anl) == 0:
+            raise ValueError('No dates remaning in dataset.')
+        elif len(area.ds_cmb.groupby('time.year')) < 3:
+            raise ValueError('Not enough years remaining in dataset.')
+        
+        return
+        
+
+    # TODO play with smoothing, persistence - 
+    # ALSO TRY MIN TRAINING LENGTH COULD WORK!!! set to 1 year worth of dates, 2 years worth of dates, etc
+    # ALSO check if dims in correct order for static and dynamic raw outputs
+    # area_summary.ds['static_raw'] = area_summary.ds['static_raw'].transpose('time', 'y', 'x')
+    def detect_change_anl_xr(self):
+        """
+        Performs ewmacd change detection (static and dynamic 
+        types) on anl xr. Uses the raw vegetation index time
+        series to detect the change. If error or all nan, error 
+        raised.
+        """
+
+        # check if anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+            
+        # check start and end years valid
+        if self.s_year is None or self.e_year is None:
+            raise ValueError('No start and/or end year provided.')        
+            
+        # check if persistence is valid
+        if self.persistence is None:
+            raise ValueError('No persistence provided.')
+            
+        try:
+            # perform ewmacd change detection
+            self.ds_anl = detect_change(ds=self.ds_anl,
+                                        method='both',
+                                        var='veg_idx',
+                                        train_start=self.s_year,
+                                        train_end=self.e_year,
+                                        persistence=self.persistence)
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check if we have data
+        for var in ['static_raw', 'dynamic_raw']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Change result is empty.')            
+            
+        return
+    
+    
+    # check mean approach
+    def smooth_anl_xr_change(self):
+        """
+        Mildly smoothes the anl xr static and dynamic change 
+        signal values using the savitsky golay filter. If error, 
+        error raised.
+        """
+
+        # check if anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+            
+        # set up static and dynamic arrays
+        da_static = self.ds_anl['static_raw']
+        da_dynamic = self.ds_anl['dynamic_raw']
+
+        # create static mask if needed
+        mask_static = None
+        if da_static.isnull().any():
+            mask_static = da_static.isnull()
+            da_static = da_static.where(~mask_static, da_static.mean())
+        
+        # now create dynamic mask if needed
+        mask_dynamic = None
+        if da_dynamic.isnull().any():
+            mask_dynamic = da_dynamic.isnull()
+            da_dynamic = da_dynamic.where(~mask_dynamic, da_dynamic.mean())
+
+        try:
+            # get time dimension axis
+            dims = list(self.ds_anl.dims)
+            for idx, dim in enumerate(dims):
+                if dim == 'time':
+                    axis = idx
+
+            # set up kwargs
+            kwargs={
+                'window_length': 3, 
+                'polyorder': 1,
+                'axis': axis
+            }
+
+            # apply savitsky filter to static change values
+            da_static = xr.apply_ufunc(savgol_filter, 
+                                       da_static,
+                                       dask='allowed',
+                                       kwargs=kwargs)
+
+            # apply savitsky filter to dynamic change values
+            da_dynamic = xr.apply_ufunc(savgol_filter, 
+                                        da_dynamic,
+                                        dask='allowed',
+                                        kwargs=kwargs)
+                
+                        
+            # reset static nan values if found
+            if mask_static is not None:
+                da_static = da_static.where(~mask_static, np.nan)
+                
+            # now reset dynamic nan values if found
+            if mask_dynamic is not None:
+                da_dynamic = da_dynamic.where(~mask_dynamic, np.nan)
+            
+            # update static, dynamic clean values in anl xr
+            self.ds_anl['static_clean'] = da_static
+            self.ds_anl['dynamic_clean'] = da_dynamic
+            
+        except Exception as e:
+            raise ValueError(e)
+
+        return      
+
+    
+    def transfer_old_to_anl_xr(self):
+        """
+        Takes old xr and transfers all historical values
+        (i.e., everything except new values) to the anl xr
+        (which contains everything from training period 
+        onwards.) This is done to ensure fluctuations in 
+        prior change values persists up until the newest 
+        values. If an error occurs, error raised.
+        """
+        
+        # if no old xr, skip transfer
+        if self.ds_old is None:
+            return
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+            
+        # set up relevant vars
+        data_vars = [
+            'static_raw', 
+            'static_clean', 
+            'dynamic_raw', 
+            'dynamic_clean'
+        ]
+        
+        # ensure vars exist in both xrs
+        for var in data_vars:
+            if var not in self.ds_old or var not in self.ds_anl:
+                raise ValueError('Missing variables in old and/or new xrs.')
+        
+        try:         
+            # transfer vals from old to anl xr at matching dates
+            self.ds_anl = transfer_xr_values(ds_to=self.ds_anl,
+                                             ds_from=self.ds_old,
+                                             data_vars=data_vars)
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+
+            
+    def build_zones(self):
+        """
+        Takes cleaned static and dynamic change deviation
+        values and classifies them into 1 of 11 zones based
+        on where the change value falls. Honours direction 
+        of change by returning zone value with sign (+/-).
+        If error occurs, error raised.
+        """
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+        
+        # check if required vars in xr
+        if 'static_clean' not in self.ds_anl:
+            raise ValueError('No clean static variable.')
+        elif 'dynamic_clean' not in self.ds_anl:
+            raise ValueError('No clean dynamic variable.')
+                    
+        try:
+            # build zone values using smoothed static signal
+            da = self.ds_anl['static_clean']
+            self.ds_anl['static_zones'] = xr.apply_ufunc(build_zones, da)
+
+            # build zone values using smoothed dynamic signal
+            da = self.ds_anl['dynamic_clean']
+            self.ds_anl['dynamic_zones'] = xr.apply_ufunc(build_zones, da)
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check if we have any data
+        for var in ['static_zones', 'dynamic_zones']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Zone result is empty.')
+            
+        return
+            
+    
+    def build_rule_one(self):
+        """
+        Takes cleaned static and dynamic change deviation
+        values and applies rule one rules to them. Rule one
+        calculates consequtive runs of values across time.
+        Honours direction of change by returning value 
+        with sign (+/-). If error occurs, error raised.
+        """
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+        
+        # check if required vars in xr
+        if 'static_clean' not in self.ds_anl:
+            raise ValueError('No clean static variable.')
+        elif 'dynamic_clean' not in self.ds_anl:
+            raise ValueError('No clean dynamic variable.')
+        
+        # check if rule one parameters valid
+        if self.rule_1_min_conseqs is None:
+            raise ValueError('No minimum consequtives provided.')
+        elif self.rule_1_inc_plateaus is None:
+            raise ValueError('No include plateaus provided.')   
+            
+        # prepare plateaus
+        if self.rule_1_inc_plateaus == 'Yes':
+            plateaus = True
+        else:
+            plateaus = False
+            
+        # set kwarg options
+        kwargs = {
+            'min_conseqs': self.rule_1_min_conseqs,
+            'inc_plateaus': plateaus
+        }
+
+        try:
+            # generate all rule 1 runs (+/-) for static change
+            da = self.ds_anl['static_clean']
+            self.ds_anl['static_rule_one'] = xr.apply_ufunc(build_rule_one_runs,
+                                                            da,
+                                                            kwargs=kwargs)
+
+            # generate all rule 1 runs (+/-) for dynamic change
+            da = self.ds_anl['dynamic_clean']
+            self.ds_anl['dynamic_rule_one'] = xr.apply_ufunc(build_rule_one_runs,
+                                                             da,
+                                                             kwargs=kwargs)
+        except Exception as e:
+            raise ValueError(e)
+
+        # check if we have any data
+        for var in ['static_rule_one', 'dynamic_rule_one']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Rule one result empty.')
+            
+        return
+            
+            
+    def build_rule_two(self):
+        """
+        Takes cleaned static and dynamic change deviation
+        values and applies rule two rules to them. Rule two
+        masks out stdv values that fall within a specified
+        minimum zone threshold. Honours direction of change 
+        by returning value with sign (+/-). If error occurs, 
+        error raised.
+        """
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+        
+        # check if required vars in xr
+        if 'static_clean' not in self.ds_anl:
+            raise ValueError('No clean static variable.')
+        elif 'dynamic_clean' not in self.ds_anl:
+            raise ValueError('No clean dynamic variable.')
+        
+        # check if rule two parameters valid
+        if self.rule_2_min_zone is None:
+            raise ValueError('No minimum zone provided.')
+            
+        # convert zone to std
+        stdvs = zone_to_std(self.rule_2_min_zone)[0]
+         
+        # set kwarg options
+        kwargs = {'min_stdv': stdvs}
+
+        try:
+            # generate all rule 2 mask (+/-) for static change
+            da = self.ds_anl['static_clean']
+            self.ds_anl['static_rule_two'] = xr.apply_ufunc(build_rule_two_mask,
+                                                            da,
+                                                            kwargs=kwargs)
+
+            # generate all rule 2 mask (+/-) for dynamic change
+            da = self.ds_anl['dynamic_clean']
+            self.ds_anl['dynamic_rule_two'] = xr.apply_ufunc(build_rule_two_mask,
+                                                             da,
+                                                             kwargs=kwargs)
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check if we have any data
+        for var in ['static_rule_two', 'dynamic_rule_two']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Rule two result empty.')
+            
+        return
+            
+            
+    def build_rule_three(self):
+        """
+        Takes cleaned static and dynamic change deviation
+        values and applies rule three rules to them. Rule three
+        detects sharp zone value spikes that occurr between 
+        dates. Honours direction of change by returning value 
+        with sign (+/-). If error occurs, error raised.
+        """
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+        
+        # check if required vars in xr
+        if 'static_clean' not in self.ds_anl:
+            raise ValueError('No clean static variable.')
+        elif 'dynamic_clean' not in self.ds_anl:
+            raise ValueError('No clean dynamic variable.')
+        
+        # check if rule three parameters valid
+        if self.rule_3_num_zones is None:
+            raise ValueError('No number of zones provided.')
+            
+        # convert zone to std and multiple by 2 (2 std per zone)
+        stdvs = zone_to_std(self.rule_3_num_zones)[0] 
+        stdvs = stdvs * 2
+        
+        # set kwarg options
+        kwargs = {'min_stdv': stdvs}
+
+        try:
+            # generate all rule 3 spikes (+/-) for static change
+            da = self.ds_anl['static_clean']
+            self.ds_anl['static_rule_three'] = xr.apply_ufunc(build_rule_three_spikes,
+                                                              da,
+                                                              kwargs=kwargs)
+
+            # generate all rule 3 spikes (+/-) for dynamic change
+            da = self.ds_anl['dynamic_clean']
+            self.ds_anl['dynamic_rule_three'] = xr.apply_ufunc(build_rule_three_spikes,
+                                                               da,
+                                                               kwargs=kwargs)
+        except Exception as e:
+            raise ValueError(e)    
+            
+        # check if we have any data
+        for var in ['static_rule_three', 'dynamic_rule_three']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Rule two result empty.')
+                
+        return
+
+                
+    def build_alerts(self):
+        """
+        Takes the previously derived rule one, two, three values
+        and combines them into an alert mask (1, 0) variable for 
+        static and dynamic methods. This method considers 
+        both the user's requested ruleset and the particular
+        direction of change (incline or decline) required for
+        alert to be set as true (1). If error occurs, error raised.
+        """
+        
+        # check if old and anl xr exists
+        if self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+        
+        # set up valid rulesets
+        valid_rules = [
+            '1 only', 
+            '2 only', 
+            '3 only', 
+            '1 and 2', 
+            '1 and 3', 
+            '2 and 3', 
+            '1 or 2', 
+            '1 or 3', 
+            '2 or 3', 
+            '1 and 2 and 3', 
+            '1 or 2 and 3',
+            '1 and 2 or 3', 
+            '1 or 2 or 3'
+        ]
+        
+        # check if ruleset valid
+        if self.ruleset not in valid_rules:
+            raise ValueError('Ruleset not supported.')
+        
+        # set up valid directions 
+        valid_directions = [
+            'Incline only (any)',
+            'Decline only (any)',
+            'Incline only (+ zones only)',
+            'Decline only (- zones only)',
+            'Incline or Decline (any)',
+            'Incline or Decline (+/- zones only)'
+        ]
+        
+        # check if direction valid
+        if self.ruleset not in valid_rules:
+            raise ValueError('Direction not supported.')
+        
+        # set kwarg options
+        kwargs = {
+            'ruleset': self.ruleset,
+            'direction': self.alert_direction
+        }
+
+        try:
+            # generate and combines rules into alert for static change 
+            self.ds_anl['static_alerts'] = xr.apply_ufunc(build_alerts,
+                                                          self.ds_anl['static_rule_one'],
+                                                          self.ds_anl['static_rule_two'],
+                                                          self.ds_anl['static_rule_three'],
+                                                          kwargs=kwargs)
+
+            # generate and combines rules into alert for dynamic change 
+            self.ds_anl['dynamic_alerts'] = xr.apply_ufunc(build_alerts,
+                                                           self.ds_anl['dynamic_rule_one'],
+                                                           self.ds_anl['dynamic_rule_two'],
+                                                           self.ds_anl['dynamic_rule_three'],
+                                                           kwargs=kwargs)
+        except Exception as e:
+            raise ValueError(e)
+            
+        # check if we have any data
+        for var in ['static_alerts', 'dynamic_alerts']:
+            if self.ds_anl[var].isnull().all():
+                raise ValueError('Alert result empty.')
+                
+        return
+    
+    
+    def transfer_anl_to_cmb_xr(self):
+        """
+        Takes the anl xr values and transfers to new xr dates
+        to ensure we only have the latest analysis results. 
+        The new results are then added to the cmb xr to ensure
+        the historical values are not touched yet still 
+        associated with the newest dates and values. If an error 
+        occurs, error raised.
+        """
+        
+        # check if new, anl, cmb xrs valid
+        if self.ds_new is None:
+            raise ValueError('No new xr provided.')
+        elif self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')   
+        elif self.ds_anl is None:
+            raise ValueError('No anl xr provided.')
+
+        # get relevant change var names in anl xr
+        data_vars = []
+        for var in self.ds_anl:
+            if 'static' in var or 'dynamic' in var:
+                data_vars.append(var)
+
+        # check if vars exist
+        if len(data_vars) == 0:
+            raise ValueError('No required variables exist.')
+            
+        # check if vars in other xrs
+        for var in data_vars:
+            if var not in self.ds_new or var not in self.ds_cmb:
+                raise ValueError('Required vars not in new or cmb xrs.')
+                
+        try:
+            # transfer vals from anl to new xr at matching dates
+            self.ds_new = transfer_xr_values(ds_to=self.ds_new,
+                                             ds_from=self.ds_anl,
+                                             data_vars=data_vars)
+            
+            # transfer vals from new to cmb xr at matching dates
+            self.ds_cmb = transfer_xr_values(ds_to=self.ds_cmb,
+                                             ds_from=self.ds_new,
+                                             data_vars=data_vars)
+        except Exception as e:
+            raise ValueError(e)
+
+        return
+
+    
+    def append_cmb_xr_attrs(self):
+        """
+        Takes the current monitoring area feature's field
+        values (i.e., attributes) and updates the cmb xr's
+        internal attributes to match. This is done as the
+        process strips attributes off the xr due to various
+        numpy operations. If error, error raised.
+        """
+        
+        # check if cmb xr exists
+        if self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')
+
+        try:
+            # iter required attributes and update
+            for attr in list(vars(self))[:16]:
+                attr = {attr: str(vars(self).get(attr))}
+                self.ds_cmb.attrs.update(attr)
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+        return
+        
+        
+    # need to check zone sign for ANY DIRECTION option
+    def set_alert_data(self):
+        """
+        Takes cmb and anl xrs and sets up alert information,
+        html element (for email) and a png graph (for email).
+        If error occurs, error raised.
+        """
+
+        # check if cmb xr exists
+        if self.ds_anl is None or self.ds_cmb is None:
+            raise ValueError('No anl and/or cmb xrs provided.')
+
+        # check if method type is valid    
+        if self.method not in ['Static', 'Dynamic']:
+            raise ValueError('Alert method not supported.')
+            
+        # set up lowercase method name
+        method = self.method.lower()
+
+        try:
+            # get the second latest date as new object
+            pix = self.ds_cmb.isel(time=-2).copy(deep=True)
+            
+            # set current alert date
+            dt = pix['time'].dt.strftime('%Y-%m-%d')
+            alert_date = str(dt.values)
+            
+            # set current alert zone and type
+            self.alert_zone = float(pix[method + '_zones'].values)
+            alert_type = 'Incline' if self.alert_zone > 0 else 'Decline'
+            
+            # set current alert flag
+            self.alert_flag = False
+            if float(pix[method + '_alerts'].values) == 1.0:
+                self.alert_flag = True
+        
+        except Exception as e:
+            raise ValueError(e)
+                
+        try:
+            # setup html template for email
+            html = (
+                """
+                <div style="background-color: #dbf1e5;">
+                    <p style="color: white; font-family:arial; font-size: 28px; background-color: #3cb371; margin: 20px 0px 0px 0px;">
+                        Area: {AREA_ID}
+                    </p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>Triggered: </b>{DATE}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>Change type: </b>{TYPE}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>Current zone: </b>{ZONE}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>User Method: </b>{METHOD}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>User Persistence: </b>{PERSISTENCE}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>User Ruleset: </b>{RULESET}.</p>
+                    <p style="color: black; font-family:arial; font-size:16px; margin: 5px 0px 0px 0px;"><b>User Direction: </b>{DIRECTION}.</p>
+                    <img src="cid:{IMAGE_CID}">
+                    <!--<p>&nbsp;</p>-->
+                </div>
+                """
+            )           
+            
+            # insert into html
+            html = html.replace('{AREA_ID}',     str(self.area_id))
+            html = html.replace('{DATE}',        str(alert_date))
+            html = html.replace('{TYPE}',        str(alert_type))
+            html = html.replace('{DIRECTION}',   str(self.alert_direction))
+            html = html.replace('{ZONE}',        str(self.alert_zone))
+            html = html.replace('{METHOD}',      str(self.method))
+            html = html.replace('{PERSISTENCE}', str(self.persistence))
+            html = html.replace('{RULESET}',     str(self.ruleset))
+            html = html.replace('{IMAGE_CID}',   'CID' + '_' + str(self.area_id))
+
+            # set html
+            self.alert_html = html
+            
+        except Exception as e:
+            raise ValueError(e)
+            
+        try:
+            # remove last date (-1 for slice)
+            da = self.ds_anl.isel(time=slice(0, -1))
+            
+            # get array of date time strings
+            dts = da['time'].dt.strftime('%Y-%m-%d')
+            dts = [str(dt) for dt in dts.values]
+
+            # get veg raw and clean, change, alarm
+            veg_raw = np.array(da['veg_idx'].values, dtype='float32')
+            veg_cln = np.array(da['veg_clean'].values, dtype='float32')
+            chg_cln = np.array(da['{}_clean'.format(method)].values, dtype='float32')
+
+            # prepare alerts
+            alerts = np.array(da['{}_alerts'.format(method)].values, dtype='float32')
+            alerts = np.where(alerts == 1.0, chg_cln, np.nan)
+
+            # set up fig and axes
+            fig, axs = plt.subplots(nrows=1, 
+                                    ncols=2, 
+                                    figsize=(15, 4), 
+                                    constrained_layout=True)
+
+            # set white around graphs transparent
+            fig.patch.set_facecolor('none')
+
+            # set x axis spacing, correct if 
+            x_axis_spacing = int(len(dts) / 30)  # play with this
+
+            # set up left graph for veg data
+            axs[0].plot(dts, veg_raw, color='black', alpha=0.25)
+            axs[0].plot(dts, veg_cln, color='green')
+            axs[0].set_title('Vegetation History')
+            axs[0].set_xlabel('Date')
+            axs[0].tick_params('x', labelrotation=90)
+            axs[0].set_ylabel('Vegetation')
+            axs[0].set_xticks(np.where(dts)[0][0::x_axis_spacing])
+
+            # set up right graph for change data
+            axs[1].plot(dts, chg_cln, color='red')
+            axs[1].plot(dts, alerts, color='maroon', linestyle='none', marker='o', markersize=3, label='Alert')
+            axs[1].set_title('Change History')
+            axs[1].set_xlabel('Date')
+            axs[1].tick_params('x', labelrotation=90)
+            axs[1].set_ylabel('Change Deviation')
+            axs[1].set_xticks(np.where(dts)[0][0::x_axis_spacing])
+
+            # set zone color ranges
+            zone_colors = [
+                [19, 999,   '#FF7F7F'],
+                [17,  19,   '#FFA77F'],
+                [15,  17,   '#FFD37F'],
+                [13,  15,   '#FFFF73'], 
+                [11,  13,   '#D1FF73'],
+                [9,   11,   '#A3FF73'],
+                [7,    9,   '#73FFDF'],
+                [5,    7,   '#73DFFF'],
+                [3,    5,   '#73B2FF'], 
+                [1,    3,   '#DF73FF'],
+                [0,    1,   '#FF73DF'],
+                [-0,  -1,   '#FF73DF'],
+                [-1,  -3,   '#DF73FF'],
+                [-3,  -5,   '#73B2FF'],
+                [-5,  -7,   '#73DFFF'],
+                [-7,  -9,   '#73FFDF'],
+                [-9,  -11,  '#A3FF73'],
+                [-11, -13,  '#D1FF73'],
+                [-13, -15,  '#FFFF73'],
+                [-15, -17,  '#FFD37F'],
+                [-17, -19,  '#FFA77F'],
+                [-19, -999, '#FF7F7F'] 
+            ]
+
+            # generate zone colors
+            for c in zone_colors:
+                axs[1].axhspan(c[0], c[1], color=c[2], alpha=0.20)
+
+            # add vertical line for latest date
+            axs[1].axvline(dts[-1], linestyle='dashed', alpha=0.5, color='black', label=dts[-1])
+            axs[1].legend()
+
+            # finally, set the yaxis limits
+            y_min = np.nanmin(chg_cln) - 1
+            y_max = np.nanmax(chg_cln) + 1
+            axs[1].set_ylim([y_min, y_max])
+            
+            # create temp file path and save graph png to it
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                fn = tmp.name + '.png'
+                plt.savefig(fn, facecolor=fig.get_facecolor())
+            
+            # set graph path
+            self.alert_graph = fn
+            
+        except Exception as e:
+            raise ValueError(e)            
+        
+        return
+    
+
+    def refresh_area_symbology(self):
+        """
+        Refreshes the alert symbology on the ArcGIS Pro 
+        active map monitoring area(s) layer (if exist). If 
+        an alert zone changes, the feature color code (just 
+        zone value) is updated via arcpy and the feature 
+        symbology is refreshed. If error occurs, an error 
+        is raised.
+        """
+
+        # check if 
+        if self.area_id is None:
+            raise ValueError('Area identifier not provided.')
+        elif self.alert_flag is None:
+            raise ValueError('No current zone provided.')
+        elif np.isnan(self.alert_flag):
+            raise ValueError('No current zone provided.')
+
+        # check project folder path
+        if self.path is None:
+            raise ValueError('No monitoring area project folder provided.')
+
+        # build expected geodatabase path and check exists
+        gdb_path = os.path.join(self.path, 'monitoring_areas.gdb')
+        if not os.path.exists(gdb_path):
+            raise ValueError('No monitoring area geodatabase exists.')
+
+        # build expected feat class and fields
+        fc_path = os.path.join(gdb_path, 'monitoring_areas')
+        fields = ['area_id', 'color']
+
+        try:
+            with arcpy.da.UpdateCursor(fc_path, fields) as cursor:
+                for row in cursor:
+                    if row[0] == self.area_id:
+                        row[1] = self.alert_zone
+                        cursor.updateRow(row)
+
+        except Exception as e:
+            raise ValueError(e)
+
+        try:           
+            # for current project, open current map
+            aprx = arcpy.mp.ArcGISProject('CURRENT')
+            m = aprx.activeMap
+
+            # remove all layers associated with monitoring areas
+            for layer in m.listLayers():
+                if layer.name == 'monitoring_areas':
+                    m.removeLayer(layer)
+
+        except Exception as e:
+            raise ValueError(e)
+
+        try:           
+            # re-open current map, re-add area feature
+            aprx = arcpy.mp.ArcGISProject('CURRENT')
+            m = aprx.activeMap
+            m.addDataFromPath(fc_path)
+
+            # update all monitoring area features symbology
+            for layer in m.listLayers('monitoring_areas'):
+                arc.apply_monitoring_area_symbology(layer)
+
+        except Exception as e:
+            raise ValueError(e)
+
+        return
+    
+    
+    def export_cmb_xr(self):
+        """
+        Exports current cmb xr (which contains everything) 
+        at this point) to netcdf named with global id. An
+        error will raise an error.
+        """
+        
+        # check if cmb xr valid
+        if self.ds_cmb is None:
+            raise ValueError('No cmb xr provided.')
+        elif not isinstance(self.ds_cmb, xr.Dataset):
+            raise TypeError('The cmb xr is not an xr dataset type.')
+            
+        # check if path and global id exist
+        if self.path is None:
+            raise ValueError('No path provided.')
+        elif self.global_id is None:
+            raise ValueError('No global id provided.')
+        
+        try:
+            # build expected netcdf filepath
+            nc_path = os.path.join(self.path, self.global_id + '.nc')
+            
+            # export nc
+            self.ds_cmb.to_netcdf(nc_path)
+        
+        except Exception as e:
+            raise ValueError(e)
+        
+        return
+          
+    
+    def reset(self):
+        """
+        Resets all generated area parameters and xr 
+        datasets. 
+        """
+
+        # set proj geom to none
+        self.prj_geom = None
+
+        # set alert info to none
+        self.alert_zone =  None
+        self.alert_flag =  None
+        self.alert_html =  None
+        self.alert_graph = None
+
+        # iter xrs and close 
+        xrs = [self.ds_old, self.ds_new, self.ds_cmb, self.ds_anl]
+        for x in xrs:
+            try:
+                if x is not None:
+                    x.close()
+            except:
+                pass
+
+        # set xrs to none
+        self.ds_old = None
+        self.ds_new = None
+        self.ds_cmb = None
+        self.ds_anl = None
+
+        return  
+        
+    
+    def run_all(self, TEST_DT):
+        """
+        Put all processes in here when happy.
+        """
+                
+        # ensure area is monitor-allowed
+        if self.ignore == 'Yes':
+            return
+
+        # TESTING DATE TIMES
+        self.TESTING_END_DT = TEST_DT
+        print('\n\nENDING DATETIME: {}'.format(self.TESTING_END_DT))
+        
+        # # # # #   
+        #arcpy.AddMessage('Starting process for area {}.'.format(area.area_id))
+        #
+            
+            
+        # # # # # validate area. invalid value triggers error, skip on error
+        try:
+            # validate area. invalid value triggers error, skip on error
+            self.validate_area()
+        except Exception as e:
+            arcpy.AddWarning('Area {} is invalid, see messages.'.format(area.area_id))
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+            
+        # # # # # get old xr. if no old or error, sets old to none. pass if none or error
+        try:
+            # get old xr. if no old or error, sets old to none. pass if none or error
+            self.set_old_xr()
+        except:
+            arcpy.AddWarning('No existing xr for area, getting new xr.')
+            print('No existing xr for area, getting new xr.')
+            pass
+
+
+        # # # # # validate old xr. skips old xr if none. changed attrs sets old xr to none
+        try:
+            # validate old xr. skips old xr if none. changed attrs sets old xr to none
+            self.validate_old_xr()
+        except:
+            arcpy.AddWarning('Attributes of existing xr have changed, resetting.')
+            print('Attributes of existing xr have changed, resetting.')
+            pass
+        
+        
+        # # # # # get all sat data. subset new xr to new dates if old xr exists. on error, set new to none, skip
+        try:
+            # get all sat data. subset new xr to new dates if old xr exists. on error, set new to none, skip
+            self.set_new_xr()  
+
+            # skip if no new dates, else notify
+            if self.new_xr_dates_found() is False:
+                arcpy.AddMessage('No new satellite dates found, skipping.')
+                print('No new satellite dates found, skipping.')
+                return #continue 
+        except Exception as e:
+            arcpy.AddWarning('Could not obtain satellite data, see messages.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue        
+        
+        
+        # # # # # apply fmask on new xr. if error or no dates, skip
+        try:
+            # apply fmask on new xr. if error or no dates, skip
+            self.apply_new_xr_fmask()
+
+            # skip if no new dates, else notify
+            if self.new_xr_dates_found() is False:
+                arcpy.AddMessage('No cloud free data exists, skipping.')
+                print('No cloud free data exists, skipping.')
+                return #continue    
+        except Exception as e:
+            arcpy.AddWarning('Could not apply fmask, see messages.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue       
+        
+        
+        # # # # # apply veg index on new xr. if error or no dates, skip
+        try:
+            # apply veg index on new xr. if error or no dates, skip
+            self.apply_new_xr_index() 
+        except Exception as e:
+            arcpy.AddWarning('Could not apply vegetation index, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # load new xr. if error, skip
+        try:
+            # load new xr. if error, skip
+            self.load_new_xr() 
+        except Exception as e:
+            arcpy.AddWarning('Could not load satellite data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            raise # continue
+            
+            
+        # # # # # remove edge pixels. if error or empty, return orig new xr
+        try:
+            # remove edge pixels. if error or empty, return orig new xr
+            self.remove_new_xr_edges() 
+        except Exception as e:
+            arcpy.AddWarning('Could not mask edge pixels, proceeding with them.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            pass
+
+
+        # # # # # reduce new xr to median value per date. if error, skip
+        try:
+            # reduce new xr to median value per date. if error, skip
+            self.reduce_new_xr() 
+        except Exception as e:
+            arcpy.AddWarning('Could not reduce data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # interp nans. if any remain, drop. if empty, error and skip
+        try:
+            # interp nans. if any remain, drop. if empty, error and skip
+            self.interp_new_xr_nans() 
+        except Exception as e:
+            arcpy.AddWarning('Could not interpolate data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # append required vars to new xr. if error, skip
+        try:
+            # append required vars to new xr. if error, skip
+            self.append_new_xr_vars() 
+        except Exception as e:
+            arcpy.AddWarning('Could not add vars to data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # combine old and new xrs. if no old xr, new xr used. if error, skip
+        try:
+            # combine old and new xrs. if no old xr, new xr used. if error, skip
+            self.set_cmb_xr() 
+        except Exception as e:
+            arcpy.AddWarning('Could not combine old and new data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # replaces spikes with interp in cmb xr. set result to veg_clean var. if error or no data, skip
+        try:
+            # replaces spikes with interp in cmb xr. set result to veg_clean var. if error or no data, skip
+            self.fix_cmb_xr_spikes() 
+        except Exception as e:
+            arcpy.AddWarning('Could not remove spike outliers, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            raise # continue
+
+
+        # # # # # smooth clean veg index with savitsky filter in cmb xr. if error, skip
+        try:
+            # smooth clean veg index with savitsky filter in cmb xr. if error, skip
+            self.smooth_cmb_xr_index() 
+        except Exception as e:
+            arcpy.AddWarning('Could not smooth index, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # create analysis (anl) xr, remove pre-training years. if error, skip
+        try:
+            # create analysis (anl) xr, remove pre-training years. if error, skip
+            self.set_anl_xr()
+        except Exception as e:
+            arcpy.AddWarning('Could not create analysis data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # detect raw static, dynamic change via anl xr, if error, skip
+        try:
+            # detect raw static, dynamic change via anl xr, if error, skip
+            self.detect_change_anl_xr()
+        except Exception as e:
+            arcpy.AddWarning('Could not perform change detection, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # smooth static, dynamic change via anl xr, if error, skip
+        try:
+            # smooth static, dynamic change via anl xr, if error, skip
+            self.smooth_anl_xr_change()
+        except Exception as e:
+            arcpy.AddWarning('Could not smooth change data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # transfer old xr change values to anl xr to persist history. if error, skip
+        try:
+            # transfer old xr change values to anl xr to persist history. if error, skip
+            self.transfer_old_to_anl_xr()
+        except Exception as e:
+            arcpy.AddWarning('Could not transfer old data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # build zones. if error, skip
+        try:
+            # build zones. if error, skip
+            self.build_zones()
+        except Exception as e:
+            arcpy.AddWarning('Could not generate zones, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # build rule one, two, three. if error, skip
+        try:
+            # build rule one, two, three. if error, skip
+            self.build_rule_one()
+            self.build_rule_two()
+            self.build_rule_three()
+        except Exception as e:
+            arcpy.AddWarning('Could not generate rules, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # build alerts. if error, skip   
+        try:
+            # build alerts. if error, skip
+            self.build_alerts()
+        except Exception as e:
+            arcpy.AddWarning('Could not generate alerts, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # transfer anl xr to cmb xr to persist history. if error, skip
+        try:
+            # transfer anl xr to cmb xr to persist history. if error, skip
+            self.transfer_anl_to_cmb_xr()
+        except Exception as e:
+            arcpy.AddWarning('Could not transfer analysis data, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue
+
+
+        # # # # # append area field attrs back on to cmb xr. if error, skip
+        try:
+            # append area field attrs back on to cmb xr. if error, skip
+            self.append_cmb_xr_attrs()
+        except Exception as e:
+            arcpy.AddWarning('Could not append attributes, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue    
+
+
+            
+            
+        # # # # # set alert info, html, graph data. if error, skip
+        try:
+            # set alert info, html, graph data. if error, skip
+            self.set_alert_data()
+        except Exception as e:
+            arcpy.AddWarning('Could not extract alert information, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue    
+
+            
+        # show information about current alert
+        #area.show_alert_info()
+
+        
+        # # # # # refresh monitoring area symbology. if error, skip
+        try:
+            # refresh monitoring area symbology. if error, skip
+            self.refresh_area_symbology()
+        except Exception as e:
+            arcpy.AddWarning('Could not refresh symbology, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue    
+        
+
+        # # # # # export cmb xr. if error, skip
+        try:
+            # export cmb xr. if error, skip
+            self.export_cmb_xr()
+        except Exception as e:
+            arcpy.AddWarning('Could not export latest netcdf, see messages. Skipping.')
+            arcpy.AddMessage(str(e))
+            print(e)
+            raise # continue  
+    
+    
+        # on to next area
+        # ...
+    
+        return  
 
 
 class MonitoringAreaStatistics:
@@ -1217,12 +3165,8 @@ class MonitoringAreaStatistics:
     def run_all(self):
         """
         """
-        
-        
-        
-        
-    
-    
+
+
 
 # meta
 def validate_monitoring_areas(in_feat):
@@ -1307,8 +3251,6 @@ def validate_monitoring_areas(in_feat):
 
     # return
     return is_valid
- 
-
 
 
 def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
