@@ -11,9 +11,13 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 import os
 import sys
 import time
+import datetime
 import numpy as np
 import xarray as xr
 import pandas as pd
+import smtplib
+import mimetypes
+import tempfile
 import arcpy
 import scipy.stats
 import matplotlib.pyplot as plt
@@ -21,13 +25,14 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from osgeo import gdal
 from osgeo import ogr
+from email.message import EmailMessage
+from email.utils import make_msgid
 
 sys.path.append('../../modules')
 import cog_odc, cog
 
 sys.path.append('../../shared')
 import arc, satfetcher, tools
-
 
 
 # TESTING REMOVE THIS WHEN DONE!!!!!!!!!!!!
@@ -371,13 +376,13 @@ class MonitoringArea:
             
         try:
             # get all avail dea satellite data without compute
-            self.ds_new = nrt.fetch_cube_data(collections=collections, 
-                                              bands=bands, 
-                                              start_dt='1980-01-01', 
-                                              end_dt=self.TESTING_END_DT,     #'2050-12-31', 
-                                              bbox=prj_bbox, 
-                                              resolution=10, 
-                                              ds_existing=None)
+            self.ds_new = fetch_cube_data(collections=collections, 
+                                          bands=bands, 
+                                          start_dt='1980-01-01', 
+                                          end_dt=self.TESTING_END_DT,     #'2050-12-31', 
+                                          bbox=prj_bbox, 
+                                          resolution=10, 
+                                          ds_existing=None)
         
             # group duplicate times if exist
             self.ds_new = satfetcher.group_by_solar_day(self.ds_new)
@@ -749,11 +754,11 @@ class MonitoringArea:
         mask = None
         if da.isnull().any():
             mask = da.isnull()
-            da = da.where(~mask, da.mean())
+            da = da.where(~mask, float(da.mean()))
         
         try:
             # get time dimension axis
-            dims = list(da)
+            dims = list(da.dims)
             for idx, dim in enumerate(dims):
                 if dim == 'time':
                     axis = idx
@@ -815,7 +820,7 @@ class MonitoringArea:
         # check if dates valid
         if len(self.ds_anl) == 0:
             raise ValueError('No dates remaning in dataset.')
-        elif len(area.ds_cmb.groupby('time.year')) < 3:
+        elif len(self.ds_cmb.groupby('time.year')) < 3:
             raise ValueError('Not enough years remaining in dataset.')
         
         return
@@ -884,13 +889,15 @@ class MonitoringArea:
         mask_static = None
         if da_static.isnull().any():
             mask_static = da_static.isnull()
-            da_static = da_static.where(~mask_static, da_static.mean())
+            da_static = da_static.where(~mask_static, 
+                                        float(da_static.mean()))
         
         # now create dynamic mask if needed
         mask_dynamic = None
         if da_dynamic.isnull().any():
             mask_dynamic = da_dynamic.isnull()
-            da_dynamic = da_dynamic.where(~mask_dynamic, da_dynamic.mean())
+            da_dynamic = da_dynamic.where(~mask_dynamic, 
+                                          float(da_dynamic.mean()))
 
         try:
             # get time dimension axis
@@ -4109,91 +4116,232 @@ def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1 and 2 or 3', direction='Decl
     return arr_alerts
 
 
-
-
-
-
-
-
-
-
 # meta
-def extract_new_xr_dates(ds_old, ds_new):
+def create_zone_graph():
     """
+    Creares a static zone legend graph for
+    the footer area of the sent alert email.
     """
-    
-    # check if xarray is adequate 
-    if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
-        raise TypeError('Datasets not of Xarray type.')
-    elif 'time' not in ds_old or 'time' not in ds_new:
-        raise ValueError('Datasets do not have a time coordinate.')
-    elif len(ds_old['time']) == 0 or len(ds_new['time']) == 0:
-        raise ValueError('Datasets empty.')
     
     try:
-        # select only those times greater than latest date in old dataset 
-        new_dates = ds_new['time'].where(ds_new['time'] > ds_old['time'].isel(time=-1), drop=True)
-        ds_new = ds_new.sel(time=new_dates)
+        # generate dummy graph data
+        xs = np.arange(0, 31)
+        ys = np.arange(-11, 12)
+
+        # set up fig
+        fig, ax = plt.subplots(figsize=[15, 8])
+        ax.set_title('Zone Legend')
+        ax.get_xaxis().set_visible(False)
+        ax.set_ylabel('Zone')   
+        fig.patch.set_facecolor('none')
+
+        # set zone color ranges
+        zone_colors = [
+            [-11, '#FF7F7F'],
+            [-10, '#FFA77F'],
+            [-9,  '#FFD37F'],
+            [-8,  '#FFFF73'], 
+            [-7,  '#D1FF73'],
+            [-6,  '#A3FF73'],
+            [-5,  '#73FFDF'],
+            [-4,  '#73DFFF'],
+            [-3,  '#73B2FF'], 
+            [-2,  '#DF73FF'],
+            [-1,  '#FF73DF'],
+            [ 1,  '#FF73DF'],
+            [ 2,  '#DF73FF'],
+            [ 3,  '#73B2FF'],
+            [ 4,  '#73DFFF'],
+            [ 5,  '#73FFDF'],
+            [ 6,  '#A3FF73'],
+            [ 7,  '#D1FF73'],
+            [ 8,  '#FFFF73'],
+            [ 9,  '#FFD37F'],
+            [ 10, '#FFA77F'],
+            [ 11, '#FF7F7F'] 
+        ]
+
+        # generate hidden lines for labels
+        for c in zone_colors:
+            plt.axhline(c[0], color=c[1], alpha=0.75, linewidth=19, label='Zone: {}'.format(c[0]))
+
+        # clean up y axis zone ticks
+        ax.set_yticks(np.arange(-11, 12, step=1))
+
+        # place a zero line 
+        plt.axhline(0, linestyle='dashed', alpha=1.0, color='black')
+
+        # limit axis to zone extents
+        plt.ylim([-11.5, 11.5])
+
+        # create temp file path and save graph png to it
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            zone_fn = tmp.name + '.png'
+            plt.savefig(zone_fn, facecolor=fig.get_facecolor())
         
-        # check if new dates, else return none
-        if len(ds_new['time']) != 0:
-            return ds_new
-    except:
-        return
-
-    return 
+    except Exception as e:
+        raise ValueError(e)
+        
+    return zone_fn
 
 
-# meta, checks
-def reclassify_signal_to_zones(arr):
+# not quite done yet, replace testing stuff, do meta
+def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass):
     """
-    takes a smoothed (or raw) ewmacd change detection
-    signal and classifies into 1 of 11 zones based on the
-    stdv values. this is used to help flag and colour
-    outputs for nrt monitoring. Outputs include 
-    zone direction information in way of sign (-/+).
-    """   
+    Sends an email with all the latest alert
+    triggers, area info and vegetation and 
+    change graphs for every area that was triggered.
+    """
 
-    # set up zone ranges (stdvs)
-    zones = [
-        [0, 1],    # zone 1 - from 0 to 1 (+/-)
-        [1, 3],    # zone 2 - between 1 and 3 (+/-)
-        [3, 5],    # zone 3 - between 3 and 5 (+/-)
-        [5, 7],    # zone 4 - between 5 and 7 (+/-)
-        [7, 9],    # zone 5 - between 7 and 9 (+/-)
-        [9, 11],   # zone 6 - between 9 and 11 (+/-)
-        [11, 13],  # zone 7 - between 11 and 13 (+/-)
-        [13, 15],  # zone 8 - between 13 and 15 (+/-)
-        [15, 17],  # zone 9 - between 15 and 17 (+/-)
-        [17, 19],  # zone 10 - between 17 and 19 (+/-)
-        [19]       # zone 11- above 19 (+/-)
-    ]
+    # check if host email is valid
+    if host_email is None:
+        raise ValueError('No host email provided.')
+    elif '@' not in host_email or '.' not in host_email:
+        raise ValueError('Host email is invalid.')
 
-    # create template vector
-    vec_temp = np.full_like(arr, fill_value=np.nan)
+    # check host server is valid
+    if host_server is None:
+        raise ValueError('No host server provided.')
 
-    # iter zones
-    for i, z in enumerate(zones, start=1):
+    # check if host port valid
+    if host_port is None:
+        raise ValueError('No host port provided.')
+    elif not isinstance(host_port, int):
+        raise TypeError('Host port must be integer.')
 
-        # 
-        if i == 1:
-            vec_temp[np.where((arr >= z[0]) & (arr <= z[1]))] = i
-            vec_temp[np.where((arr < z[0]) & (arr >= z[1] * -1))] = i * -1
+    # check if host username and password is valid
+    if host_user is None:
+        raise ValueError('No host username provided.')
+    elif host_pass is None:
+        raise ValueError('No host password provided.')
 
-        elif i == 11:       
-            vec_temp[np.where(arr > z[0])] = i
-            vec_temp[np.where(arr < z[0] * -1)] = i * -1
+    # check areas is valid
+    if not isinstance(areas, list):
+        raise TypeError('Areas must be a list of area objects.')
 
-        else:
-            vec_temp[np.where((arr > z[0]) & (arr <= z[1]))] = i
-            vec_temp[np.where((arr < z[0] * -1) & (arr >= z[1] * -1))] = i * -1
+    # get a list of any areas with alert data
+    area_list = []
+    for area in areas:
+
+        # if alertable and currently flagged...
+        if area.alert == 'Yes' and area.alert_flag is True:
+            if area.email and area.alert_html and area.alert_graph:
+                area_list.append(area)
+    
+    # check if anything available, else leave
+    if len(area_list) == 0:
+        return
         
-    return vec_temp
+    # iter valid areas and build email content
+    html_body = ''
+    for area in area_list:
+        html_body += area.alert_html
+        
+
+    # build template email html 
+    html = (
+        """
+        <html>
+        <body>
+        <div style="background-color: #dbf1e5;">
+        <p style="color: white; font-family: arial; font-size: 34px; background-color: #3cb371; margin: 0px 0px 10px 0px;">
+        Monitoring Area Alert Report
+        </p>
+        <p style="color: black; font-family:arial; font-size:16px; margin: 0px 0px 0px 0px;">
+        This report lists currently active monitoring areas triggered during the monitoring cycle performed
+        on {RUN_DATE}. Monitoring area that were not triggered are not shown.
+        </p>
+        </div>
+        {BODY_DATA}
+        <div style="background-color: #dbf1e5;">
+        <p style="color: white; font-family:arial; font-size: 28px; background-color: #3cb371; margin: 20px 0px 0px 0px;">
+        Legend
+        </p>
+        <img src="cid:CID_ZONE_IMAGE">
+        </div>
+        </body>
+        </html>
+        """
+    )
+    
+    # if soemthing was triggered...
+    if html_body != '':
+
+        # set current run date
+        run_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M%S')
+        
+        # add details to html body
+        html = html.replace('{RUN_DATE}', run_date)
+        html = html.replace('{BODY_DATA}', html_body)
+
+        try:
+            # prepare general email details
+            msg = EmailMessage()
+            msg['Subject'] = 'NRT Alerts ({})'.format(run_date)
+            msg['From'] = host_email
+            msg['To'] = area.email
+
+            # set text and html content
+            msg.set_content('Text Body')
+            msg.add_alternative(html, subtype='html')
+            
+        except Exception as e:
+            raise ValueError(e)        
+        
+        # open cids and graphs and add as attachment
+        for area in area_list:
+            try:
+                with open(area.alert_graph, 'rb') as img:
+
+                    # set image cid, mime type, attach to email
+                    img_cid = 'CID' + '_' + str(area.area_id)
+                    mimetype = mimetypes.guess_type(img.name)[0]
+                    maintype, subtype = mimetype.split('/')
+                    msg.get_payload()[1].add_related(img.read(), 
+                                                     maintype=maintype, 
+                                                     subtype=subtype, 
+                                                     cid=img_cid)
+            except Exception as e:
+                raise ValueError(e)
+                
+        try:
+            # create stock zone graph filename
+            zone_fn = create_zone_graph()
+            
+            with open(zone_fn, 'rb') as img:
+                
+                # set zone graph image cid, mime type, attach to email
+                img_cid = 'CID_ZONE_IMAGE'
+                mimetype = mimetypes.guess_type(img.name)[0]
+                maintype, subtype = mimetype.split('/')
+                msg.get_payload()[1].add_related(img.read(), 
+                                                 maintype=maintype, 
+                                                 subtype=subtype, 
+                                                 cid=img_cid)
+        except Exception as e:
+            raise ValueError(e)
+        
+        
+        try:
+            # send email via smtp server
+            with smtplib.SMTP(host_server, host_port) as server:
+
+                # begin ttls, login and send
+                server.starttls()
+                server.login(host_user, host_pass)
+                server.sendmail(host_email, area.email, msg.as_string())
+        
+        except Exception as e:
+            raise ValueError(e)
+            
+    return
 
 
 
 
-# EWMACD METHOD
+
+
+# ewmacd methods based on r script
 def harmonic_matrix(timeSeries0to2pi, numberHarmonicsSine,  numberHarmonicsCosine):
 
     # generate harmonic matrix todo 1 or 0? check

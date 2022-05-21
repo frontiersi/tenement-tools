@@ -1610,3 +1610,76 @@ def get_stdv_from_zone(num_zones=1):
     return std_jumped
 
 
+# deprecated
+def extract_new_xr_dates(ds_old, ds_new):
+    """
+    """
+    
+    # check if xarray is adequate 
+    if not isinstance(ds_old, xr.Dataset) or not isinstance(ds_new, xr.Dataset):
+        raise TypeError('Datasets not of Xarray type.')
+    elif 'time' not in ds_old or 'time' not in ds_new:
+        raise ValueError('Datasets do not have a time coordinate.')
+    elif len(ds_old['time']) == 0 or len(ds_new['time']) == 0:
+        raise ValueError('Datasets empty.')
+    
+    try:
+        # select only those times greater than latest date in old dataset 
+        new_dates = ds_new['time'].where(ds_new['time'] > ds_old['time'].isel(time=-1), drop=True)
+        ds_new = ds_new.sel(time=new_dates)
+        
+        # check if new dates, else return none
+        if len(ds_new['time']) != 0:
+            return ds_new
+    except:
+        return
+
+    return 
+
+
+# deprecated
+def reclassify_signal_to_zones(arr):
+    """
+    takes a smoothed (or raw) ewmacd change detection
+    signal and classifies into 1 of 11 zones based on the
+    stdv values. this is used to help flag and colour
+    outputs for nrt monitoring. Outputs include 
+    zone direction information in way of sign (-/+).
+    """   
+
+    # set up zone ranges (stdvs)
+    zones = [
+        [0, 1],    # zone 1 - from 0 to 1 (+/-)
+        [1, 3],    # zone 2 - between 1 and 3 (+/-)
+        [3, 5],    # zone 3 - between 3 and 5 (+/-)
+        [5, 7],    # zone 4 - between 5 and 7 (+/-)
+        [7, 9],    # zone 5 - between 7 and 9 (+/-)
+        [9, 11],   # zone 6 - between 9 and 11 (+/-)
+        [11, 13],  # zone 7 - between 11 and 13 (+/-)
+        [13, 15],  # zone 8 - between 13 and 15 (+/-)
+        [15, 17],  # zone 9 - between 15 and 17 (+/-)
+        [17, 19],  # zone 10 - between 17 and 19 (+/-)
+        [19]       # zone 11- above 19 (+/-)
+    ]
+
+    # create template vector
+    vec_temp = np.full_like(arr, fill_value=np.nan)
+
+    # iter zones
+    for i, z in enumerate(zones, start=1):
+
+        # 
+        if i == 1:
+            vec_temp[np.where((arr >= z[0]) & (arr <= z[1]))] = i
+            vec_temp[np.where((arr < z[0]) & (arr >= z[1] * -1))] = i * -1
+
+        elif i == 11:       
+            vec_temp[np.where(arr > z[0])] = i
+            vec_temp[np.where(arr < z[0] * -1)] = i * -1
+
+        else:
+            vec_temp[np.where((arr > z[0]) & (arr <= z[1]))] = i
+            vec_temp[np.where((arr < z[0] * -1) & (arr >= z[1] * -1))] = i * -1
+        
+    return vec_temp
+
