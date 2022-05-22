@@ -3174,12 +3174,19 @@ class MonitoringAreaStatistics:
         """
 
 
-
-# meta
 def validate_monitoring_areas(in_feat):
     """
-    Does relevant checks for information for a
-    gdb feature class of one or more monitoring areas.
+    Does relevant checks for information for a gdb feature 
+    class containing one or more monitoring areas.
+    
+    Parameters
+    ----------
+    in_feat: list
+        A path to a geodatabase containing monitoring areas.
+
+    Returns
+    -------
+    ds : xarray Dataset
     """
     
     # set up flag
@@ -3515,7 +3522,7 @@ def safe_savgol(arr, window_length=3, polyorder=1, a=0):
     except:
         # return empty array
         return np.full_like(arr, np.nan)
-        
+
  
 def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0):
     """
@@ -4116,11 +4123,15 @@ def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1 and 2 or 3', direction='Decl
     return arr_alerts
 
 
-# meta
 def create_zone_graph():
     """
-    Creares a static zone legend graph for
-    the footer area of the sent alert email.
+    Creates a static zone legend graph for the footer 
+    area of a sent email alert. This function is not 
+    dynamic.
+
+    Returns
+    -------
+    arr : array of alert mask values.
     """
     
     try:
