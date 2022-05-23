@@ -354,7 +354,7 @@ class MonitoringArea:
                 'nbart_blue', 
                 'nbart_nir_1', 
                 'nbart_swir_2', 
-                'nbart_swir_3', 
+                'nbart_swir_3',
                 'fmask'
             ]
         
@@ -1586,6 +1586,16 @@ class MonitoringArea:
             for layer in m.listLayers('monitoring_areas'):
                 arc.apply_monitoring_area_symbology(layer)
 
+        except Exception as e:
+            raise ValueError(e)
+            
+        try:
+            # show labels
+            for layer in m.listLayers('monitoring_areas'):
+                label_class = layer.listLabelClasses()[0]
+                label_class.expression = "'Zone: ' +  Text($feature.color)"
+                layer.showLabels = True
+                
         except Exception as e:
             raise ValueError(e)
 
@@ -3188,83 +3198,210 @@ def validate_monitoring_areas(in_feat):
     -------
     ds : xarray Dataset
     """
-    
-    # set up flag
-    is_valid = True
 
     # check input feature is not none and strings
     if in_feat is None:
-        print('Monitoring area feature class not provided, flagging as invalid.')
-        is_valid = False
+        raise ValueError('Monitoring area feature class not provided.')
     elif not isinstance(in_feat, str):
-        print('Monitoring area feature class not string, flagging as invalid.')
-        is_valid = False
+        raise ValueError('Monitoring area feature class not string.')
     elif not os.path.dirname(in_feat).endswith('.gdb'):
-        print('Feature class is not in a geodatabase, flagging as invalid.')
-        is_valid = False
+        raise ValueError('Feature class is not in a geodatabase.')
 
-    # if valid...
-    if is_valid:
-        try:
-            # get feature
-            driver = ogr.GetDriverByName("OpenFileGDB")
-            data_source = driver.Open(os.path.dirname(in_feat), 0)
-            lyr = data_source.GetLayer('monitoring_areas')
+    try:
+        # get feature
+        driver = ogr.GetDriverByName("OpenFileGDB")
+        data_source = driver.Open(os.path.dirname(in_feat), 0)
+        lyr = data_source.GetLayer('monitoring_areas')
+        
+        # get epsg
+        epsg = lyr.GetSpatialRef()
+        if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
+            raise ValueError('Could not find GDA94 albers code in shapefile.')
+        
+        # check if any duplicate area ids
+        area_ids = []
+        for feat in lyr:
+            area_ids.append(feat['area_id'])
             
-            # get epsg
-            epsg = lyr.GetSpatialRef()
-            if 'GDA_1994_Australia_Albers' not in epsg.ExportToWkt():
-                print('Could not find GDA94 albers code in shapefile, flagging as invalid.')
-                is_valid = False
+        # check if duplicate area ids
+        if len(set(area_ids)) != len(area_ids):
+            raise ValueError('Duplicate area ids detected, flagging as invalid.')
             
-            # check if any duplicate area ids
-            area_ids = []
-            for feat in lyr:
-                area_ids.append(feat['area_id'])
-                
-            # check if duplicate area ids
-            if len(set(area_ids)) != len(area_ids):
-                print('Duplicate area ids detected, flagging as invalid.')
-                is_valid = False
-                
-            # check if feature has required fields
-            fields = [field.name for field in lyr.schema]
-            required_fields = [
-                'area_id', 
-                'platform', 
-                's_year', 
-                'e_year', 
-                'index',
-                'persistence',
-                'rule_1_min_conseqs',
-                'rule_1_inc_plateaus',
-                'rule_2_min_zone', 
-                'rule_3_num_zones',
-                'ruleset',
-                'alert',
-                'method',
-                'alert_direction',
-                'email',
-                'ignore',
-                'color',
-                'global_id'
-                ] 
+        # check if feature has required fields
+        fields = [field.name for field in lyr.schema]
+        required_fields = [
+            'area_id', 
+            'platform', 
+            's_year', 
+            'e_year', 
+            'index',
+            'persistence',
+            'rule_1_min_conseqs',
+            'rule_1_inc_plateaus',
+            'rule_2_min_zone', 
+            'rule_3_num_zones',
+            'ruleset',
+            'alert',
+            'method',
+            'alert_direction',
+            'email',
+            'ignore',
+            'color',
+            'global_id'
+            ] 
+        
+        # check if all fields in feat
+        if not all(f in fields for f in required_fields):
+            raise ValueError('Not all required fields in monitoring shapefile.')
             
-            # check if all fields in feat
-            if not all(f in fields for f in required_fields):
-                print('Not all required fields in monitoring shapefile.')
-                is_valid = False
-                
-            # close data source
-            data_source.Destroy()
-            
-        except:
-            print('Could not open monitoring area feature, flagging as invalid.')
-            is_valid = False
-            data_source.Destroy()
+        # close data source
+        data_source.Destroy()
+        
+    except:
+        data_source.Destroy()
+        raise ValueError('Could not open monitoring area feature.')
 
-    # return
-    return is_valid
+    return 
+
+
+def validate_monitoring_area(row):
+    """
+    Checks all required monitoring area parameters are 
+    valid. Returns False if invalid.
+    """
+    
+    # check if row is tuple
+    if not isinstance(row, tuple):
+        raise TypeError('Row must be of type tuple.')
+            
+    # parse row info
+    area_id = row[0]
+    platform = row[1]
+    s_year = row[2]
+    e_year = row[3]
+    index = row[4]
+    persistence = row[5]
+    rule_1_min_conseqs = row[6]
+    rule_1_inc_plateaus = row[7]
+    rule_2_min_zone = row[8]
+    rule_3_num_zones = row[9]
+    ruleset = row[10]
+    alert = row[11]
+    method = row[12]
+    alert_direction = row[13]
+    email = row[14]
+    ignore = row[15]
+    
+    # check area id exists
+    if area_id is None:
+        raise ValueError('No area id exists.')
+
+    # check platform is Landsat or Sentinel
+    if platform not in ['Landsat', 'Sentinel']:
+        raise ValueError('Platform must be Landsat or Sentinel.')
+
+    # check if start and end years are valid
+    if not isinstance(s_year, int) or not isinstance(e_year, int):
+        raise ValueError('Start and end year values must be integers.')
+    elif s_year < 1980 or s_year > 2050:
+        raise ValueError('Start year must be between 1980 and 2050.')
+    elif e_year < 1980 or e_year > 2050:
+        raise ValueError('End year must be between 1980 and 2050.')
+    elif e_year <= s_year:
+        raise ValueError('Start year must be less than end year.')
+    elif abs(e_year - s_year) < 2:
+        raise ValueError('Must be at least 2 years between start and end year.')
+    elif platform == 'Sentinel' and s_year < 2016:
+        raise ValueError('Start year must not be < 2016 when using Sentinel.')
+
+    # check if index is acceptable
+    if index not in ['NDVI', 'MAVI', 'kNDVI']:
+        raise ValueError('Index must be NDVI, MAVI or kNDVI.')
+    
+    # check if persistence is accepptable
+    if persistence is None:
+        raise ValueError('No persistence exists.')
+    elif persistence < 0.001 or persistence > 9.999:
+        raise ValueError('Persistence must be before 0.0001 and 9.999.')
+
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_min_conseqs is None:
+        raise ValueError('No rule 1 min_conseqs exists.')
+    elif rule_1_min_conseqs < 0 or rule_1_min_conseqs > 999:
+        raise ValueError('Rule 1 min conseqs must be between 0 and 999.')
+    
+    # check if rule_1_min_conseqs is accepptable
+    if rule_1_inc_plateaus is None:
+        raise ValueError('No rule 1 inc plateaus exists.')
+    elif rule_1_inc_plateaus not in ['Yes', 'No']:
+        raise ValueError('Rule 1 inc plateaus must be Yes or No.')
+    
+    # check if rule_2_min_stdv is accepptable
+    if rule_2_min_zone is None:
+        raise ValueError('No rule 2 min_zone exists.')
+    elif rule_2_min_zone < 0 or rule_2_min_zone > 999:
+        raise ValueError('Rule 2 min zone must be between 0 and 999.')   
+
+    # check if rule_3_num_zones is accepptable
+    if rule_3_num_zones is None:
+        raise ValueError('No rule_3_num_zones exists.')
+    elif rule_3_num_zones < 0 or rule_3_num_zones > 999:
+        raise ValueError('Rule 3 num zones must be between 0 and 999.')  
+
+    # set up allowed rulesets
+    rulesets = [
+        '1 only',
+        '2 only',
+        '3 only',
+        '1 and 2',
+        '1 and 3',
+        '2 and 3',
+        '1 or 2',
+        '1 or 3',
+        '2 or 3',
+        '1 and 2 and 3',
+        '1 or 2 and 3',
+        '1 and 2 or 3',
+        '1 or 2 or 3'
+    ]
+
+    # check if ruleset is accepptable   
+    if ruleset not in rulesets:
+        raise ValueError('Rulset not supported.')
+    
+    # check if alert is accepptable
+    if alert not in ['Yes', 'No']:
+        raise ValueError('Alert must be Yes or No.')
+    
+    # check method
+    if method not in ['Static', 'Dynamic']:
+        raise ValueError('Method must be Static or Dynamic.')
+    
+    # set up alert directions 
+    alert_directions = [
+        'Incline only (any)', 
+        'Decline only (any)', 
+        'Incline only (+ zones only)', 
+        'Decline only (- zones only)', 
+        'Incline or Decline (any)',
+        'Incline or Decline (+/- zones only)'
+        ]
+    
+    # check if alert_direction is accepptable
+    if alert_direction not in alert_directions:
+        raise ValueError('Alert_direction is not supported.')
+
+    # check if email address is accepptable
+    if alert == 'Yes' and email is None:
+        raise ValueError('Must provide an email if alert is set to Yes.')
+    elif email is not None and '@' not in email:
+        raise ValueError('No @ character in email exists.')
+
+    # check if ignore is accepptable
+    if ignore not in ['Yes', 'No']:
+        raise ValueError('Ignore must be Yes or No.')
+
+    return  
 
 
 def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, ds_existing=None):
