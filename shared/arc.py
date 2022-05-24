@@ -504,11 +504,11 @@ def get_platform_from_dea_attrs(attr_dict):
     return platform
 
 
-
-
-# meta
 def apply_monitoring_area_symbology(layer):
-    """takes a arcgis map layer type"""
+    """
+    Smaller helper function that akes an arcgis map 
+    layer type and applies monitoring area zone symbology.
+    """
 
     # check layer
     if not isinstance(layer, arcpy._mp.Layer):
@@ -516,67 +516,73 @@ def apply_monitoring_area_symbology(layer):
     elif not layer.isFeatureLayer:
         raise TypeError('Layer must be feature layer type')
 
-    # check if color field in layer
+    # get description object
     desc = arcpy.Describe(layer)
-    if 'color' not in [field.name for field in desc.fields]:
-        raise ValueError('Field called color not in layer.')
+    
+    # check if color border field in layer
+    if 'color_border' not in [field.name for field in desc.fields]:
+        raise ValueError('Field called color_border not in layer.')
+        
+    # check if color fill field in layer
+    if 'color_fill' not in [field.name for field in desc.fields]:
+        raise ValueError('Field called color_fill not in layer.')
         
     # set transparency
     alpha = 80
-        
-    # get symbology, update renderer, target color field
+
+    # get symbology, update renderer, target color border field
     sym = layer.symbology
     sym.updateRenderer('UniqueValueRenderer')
-    sym.renderer.fields = ['color']
-    
+    sym.renderer.fields = ['color_border', 'color_fill']
+
     # iter group items and colorize
     for grp in sym.renderer.groups:
         for itm in grp.items:
             try:
                 # get class value and convert to int
-                val = int(itm.values[0][0])
-
-                # apply fill color
-                if val == 0:
-                    itm.symbol.color = {'RGB': [255, 255, 255, alpha]}
-                elif abs(val) == 1:
-                    itm.symbol.color = {'RGB': [255, 115, 223, alpha]} 
-                elif abs(val) == 2:
-                    itm.symbol.color = {'RGB': [115, 178, 255, alpha]}
-                elif abs(val) == 3:
-                    itm.symbol.color = {'RGB': [115, 178, 255, alpha]}
-                elif abs(val) == 4:
-                    itm.symbol.color = {'RGB': [115, 223, 255, alpha]}
-                elif abs(val) == 5:
-                    itm.symbol.color = {'RGB': [115, 255, 223, alpha]}
-                elif abs(val) == 6:
-                    itm.symbol.color = {'RGB': [163, 255, 115, alpha]}
-                elif abs(val) == 7:
-                    itm.symbol.color = {'RGB': [209, 255, 115, alpha]}
-                elif abs(val) == 8:
-                    itm.symbol.color = {'RGB': [255, 255, 115, alpha]}
-                elif abs(val) == 9:
-                    itm.symbol.color = {'RGB': [255, 211, 127, alpha]}
-                elif abs(val) == 10:
-                    itm.symbol.color = {'RGB': [255, 167, 127, alpha]}
-                elif abs(val) == 11:
-                    itm.symbol.color = {'RGB': [255, 127, 127, alpha]}
-
-                # apply border style now for stable, incline, decline
-                if val == 0:
+                border_val = int(itm.values[0][0])
+                fill_val = int(itm.values[0][1])
+                
+                # apply border color
+                if border_val == 0:
                     itm.symbol.size = 2
-                    itm.symbol.outlineColor = {'RGB': [0, 0, 0, alpha]} 
-                elif val > 0:
+                    itm.symbol.outlineColor = {'RGB': [0, 0, 0, alpha]}
+                elif border_val > 0:
                     itm.symbol.size = 2
                     itm.symbol.outlineColor = {'RGB': [0, 112, 255, alpha]}
-                elif val < 0:
+                elif border_val < 0:
                     itm.symbol.size = 2
-                    itm.symbol.outlineColor = {'RGB': [255, 0, 0, alpha]}         
+                    itm.symbol.outlineColor = {'RGB': [255, 0, 0, alpha]}
 
+                # apply fill color
+                if fill_val == 0:
+                    itm.symbol.color = {'RGB': [255, 255, 255, alpha]} 
+                elif abs(fill_val) == 1:
+                    itm.symbol.color = {'RGB': [255, 115, 223, alpha]}
+                elif abs(fill_val) == 2:
+                    itm.symbol.color = {'RGB': [223, 115, 255, alpha]}
+                elif abs(fill_val) == 3:
+                    itm.symbol.color = {'RGB': [115, 178, 255, alpha]}
+                elif abs(fill_val) == 4:
+                    itm.symbol.color = {'RGB': [115, 223, 255, alpha]}
+                elif abs(fill_val) == 5:
+                    itm.symbol.color = {'RGB': [115, 255, 223, alpha]}
+                elif abs(fill_val) == 6:
+                    itm.symbol.color = {'RGB': [163, 255, 115, alpha]}
+                elif abs(fill_val) == 7:
+                    itm.symbol.color = {'RGB': [209, 255, 115, alpha]}
+                elif abs(fill_val) == 8:
+                    itm.symbol.color = {'RGB': [255, 255, 115, alpha]}
+                elif abs(fill_val) == 9:
+                    itm.symbol.color = {'RGB': [255, 211, 127, alpha]}
+                elif abs(fill_val) == 10:
+                    itm.symbol.color = {'RGB': [255, 167, 127, alpha]}
+                elif abs(fill_val) == 11:
+                    itm.symbol.color = {'RGB': [255, 127, 127, alpha]}
             except:
-                print('Symbology class value not supported, skipping.')
+                print('Symbology fill class value not supported, skipping.')
                 continue
-                
+
     # finally, apply the symbology
     layer.symbology = sym
    

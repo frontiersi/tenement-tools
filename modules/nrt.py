@@ -20,7 +20,6 @@ import mimetypes
 import tempfile
 import arcpy
 import scipy.stats
-import matplotlib.pyplot as plt
 
 from scipy.signal import savgol_filter
 from osgeo import gdal
@@ -33,6 +32,12 @@ import cog_odc, cog
 
 sys.path.append('../../shared')
 import arc, satfetcher, tools
+
+# setup arcpy-compatible (i.e. non-tkinter) matplotlib 
+import matplotlib
+matplotlib.use('agg')  
+import matplotlib.pyplot as plt
+
 
 
 # TESTING REMOVE THIS WHEN DONE!!!!!!!!!!!!
@@ -59,11 +64,12 @@ class MonitoringArea:
         self.alert_direction = feat[13]
         self.email = feat[14]
         self.ignore = feat[15]
-        self.color = feat[16]
-        self.global_id = feat[17]
+        self.color_border = feat[16]
+        self.color_fill = feat[17]
+        self.global_id = feat[18]
         
         # feature geometry
-        self.raw_geom = feat[18]
+        self.raw_geom = feat[19]
         self.prj_geom = None
         
         # path to project folder
@@ -736,7 +742,6 @@ class MonitoringArea:
         return
 
     
-    # check mean approach
     def smooth_cmb_xr_index(self):
         """
         Mildly smoothes the cmb xr clean vegetation index values 
@@ -985,7 +990,7 @@ class MonitoringArea:
             
         return
 
-            
+
     def build_zones(self):
         """
         Takes cleaned static and dynamic change deviation
@@ -1023,7 +1028,7 @@ class MonitoringArea:
                 raise ValueError('Zone result is empty.')
             
         return
-            
+        
     
     def build_rule_one(self):
         """
@@ -1083,8 +1088,8 @@ class MonitoringArea:
                 raise ValueError('Rule one result empty.')
             
         return
-            
-            
+
+
     def build_rule_two(self):
         """
         Takes cleaned static and dynamic change deviation
@@ -1136,8 +1141,8 @@ class MonitoringArea:
                 raise ValueError('Rule two result empty.')
             
         return
-            
-            
+
+ 
     def build_rule_three(self):
         """
         Takes cleaned static and dynamic change deviation
@@ -1190,7 +1195,7 @@ class MonitoringArea:
                 
         return
 
-                
+
     def build_alerts(self):
         """
         Takes the previously derived rule one, two, three values
@@ -1345,7 +1350,7 @@ class MonitoringArea:
         return
         
         
-    # need to check zone sign for ANY DIRECTION option
+    # need to check zone sign for ANY DIRECTION option  -ALSO, DIRECTION Not ZONE!!!
     def set_alert_data(self):
         """
         Takes cmb and anl xrs and sets up alert information,
@@ -1364,7 +1369,7 @@ class MonitoringArea:
         # set up lowercase method name
         method = self.method.lower()
 
-        try:
+        try:        
             # get the second latest date as new object
             pix = self.ds_cmb.isel(time=-2).copy(deep=True)
             
@@ -1372,15 +1377,28 @@ class MonitoringArea:
             dt = pix['time'].dt.strftime('%Y-%m-%d')
             alert_date = str(dt.values)
             
-            # set current alert zone and type
+            # set current trajectory type and border color
+            arr = self.ds_cmb[method + '_clean'].copy(deep=True)
+            dif = np.diff(arr, prepend=np.nan)[-2]
+            if dif > 0:
+                alert_type = 'Incline'
+                self.color_border = 1
+            elif dif < 0:
+                alert_type = 'Decline'
+                self.color_border = -1 
+            else:
+                alert_type = 'No change (or plateau)'
+                self.color_border = 0
+                
+            # set current alert zone and fill color
             self.alert_zone = float(pix[method + '_zones'].values)
-            alert_type = 'Incline' if self.alert_zone > 0 else 'Decline'
+            self.color_fill = self.alert_zone
             
             # set current alert flag
             self.alert_flag = False
             if float(pix[method + '_alerts'].values) == 1.0:
                 self.alert_flag = True
-        
+
         except Exception as e:
             raise ValueError(e)
                 
@@ -1422,7 +1440,7 @@ class MonitoringArea:
         except Exception as e:
             raise ValueError(e)
             
-        try:
+        try:        
             # remove last date (-1 for slice)
             da = self.ds_anl.isel(time=slice(0, -1))
             
@@ -1438,18 +1456,18 @@ class MonitoringArea:
             # prepare alerts
             alerts = np.array(da['{}_alerts'.format(method)].values, dtype='float32')
             alerts = np.where(alerts == 1.0, chg_cln, np.nan)
-
+            
             # set up fig and axes
             fig, axs = plt.subplots(nrows=1, 
                                     ncols=2, 
-                                    figsize=(15, 4), 
+                                    figsize=[15, 4], 
                                     constrained_layout=True)
 
-            # set white around graphs transparent
+            # # set white around graphs transparent
             fig.patch.set_facecolor('none')
 
             # set x axis spacing, correct if 
-            x_axis_spacing = int(len(dts) / 30)  # play with this
+            x_axis_spacing = int(len(dts) / 30)
 
             # set up left graph for veg data
             axs[0].plot(dts, veg_raw, color='black', alpha=0.25)
@@ -1532,13 +1550,15 @@ class MonitoringArea:
         is raised.
         """
 
-        # check if 
+        # check if area id is valid
         if self.area_id is None:
             raise ValueError('Area identifier not provided.')
-        elif self.alert_flag is None:
-            raise ValueError('No current zone provided.')
-        elif np.isnan(self.alert_flag):
-            raise ValueError('No current zone provided.')
+            
+        # check of colors valid 
+        if self.color_border is None:
+            raise ValueError('No border color provided.')
+        elif self.color_fill is None:
+            raise ValueError('No border fill provided.')
 
         # check project folder path
         if self.path is None:
@@ -1551,13 +1571,14 @@ class MonitoringArea:
 
         # build expected feat class and fields
         fc_path = os.path.join(gdb_path, 'monitoring_areas')
-        fields = ['area_id', 'color']
+        fields = ['area_id', 'color_border', 'color_fill']
 
         try:
             with arcpy.da.UpdateCursor(fc_path, fields) as cursor:
                 for row in cursor:
                     if row[0] == self.area_id:
-                        row[1] = self.alert_zone
+                        row[1] = self.color_border
+                        row[2] = self.color_fill
                         cursor.updateRow(row)
 
         except Exception as e:
@@ -1593,7 +1614,7 @@ class MonitoringArea:
             # show labels
             for layer in m.listLayers('monitoring_areas'):
                 label_class = layer.listLabelClasses()[0]
-                label_class.expression = "'Zone: ' +  Text($feature.color)"
+                label_class.expression = "'Zone: ' +  Text($feature.color_fill)"
                 layer.showLabels = True
                 
         except Exception as e:
@@ -2014,11 +2035,12 @@ class MonitoringAreaStatistics:
         self.alert_direction = feat[13]
         self.email = feat[14]
         self.ignore = feat[15]
-        self.color = feat[16]
-        self.global_id = feat[17]
+        self.color_border = feat[16]
+        self.color_fill = feat[17]
+        self.global_id = feat[18]
         
         # feature geometry
-        self.raw_geom = feat[18]
+        self.raw_geom = feat[19]
         self.prj_geom = None
         
         # path to project folder, output file
@@ -2157,7 +2179,7 @@ class MonitoringAreaStatistics:
 
         return
         
-    # just ensure the privisonal data mask band correct
+
     def set_xr(self):
         """
         Fetches all available digital earth australia (dea) 
@@ -3179,6 +3201,7 @@ class MonitoringAreaStatistics:
 
         return  
         
+        
     def run_all(self):
         """
         """
@@ -3246,7 +3269,8 @@ def validate_monitoring_areas(in_feat):
             'alert_direction',
             'email',
             'ignore',
-            'color',
+            'color_border',
+            'color_fill',
             'global_id'
             ] 
         
