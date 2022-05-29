@@ -16,7 +16,7 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 
 <br/>
 
-## Setup (first time)
+## Setup
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
 
 ### 1. Download Tenement Tools plug-in and tutorial material
