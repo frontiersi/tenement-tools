@@ -11,6 +11,7 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://repo.anaconda.com
   * https://conda-forge.org/
   * https://data.dea.ga.gov.au
+  * https://explorer.sandbox.dea.ga.gov.au/stac
 
 ## Setup (first time)
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
@@ -81,28 +82,13 @@ Move the latest release's tenement-tools folder into the same place as the folde
 ### 5. Start ArcGIS Pro
 If done correctly, the plug-in will continue working as before, now with fewer bugs and new features.
 
-## Install Issues
-There are a known issues when cloning the arcgispro-py3 environment in step 3. You maye see the following when activating:
-- The system cannot find the path specified
-- set "GDAL_DRIVER_PATH='
-- rem proj-data is installed because its license was copied over.
-
-The plug-in should still work, regardless. We are currently investigating this issue.
-
-## Bug report
-If you encounter a bug please email: lewis.trotter@postgrad.curtin.edu.au and please provide some context regarding the bug/error: 
-- Which tool were you using when the error occurred
-- Describe the data you were using as inputs into the tool
-- What version of ArcGIS Pro are you using (e.g., 2.8, 2.9)
-- If possible, provide a screenshot of the error message
-- Any other useful information
-
 ## Known bugs
-### Map outputs from tools do not look correct/match tutorial with Pro 2.9
-A bug has been found where the output from a tool (e.g., metric layers from Phenolopy) do not visualise properly (even though the model was successful). These layers can look all red or blue, have very subdued colours, not match tutorial data. For now, you can get around it by going to Add Data > Add Multimdemnsional Data > select the raw output NetCDF (.nc) from the tool you just ran.
+### UTF-8 encoding error when using COG Fetch or NRT Monitor Areas
+This is a very rare and seemingly random error that can occur. Re-running the tool will fix it.
 
-### Phenolopy LIOS and SIOS output layers look 'noisey' when using Landsat
-Currently investigating.
+### Running a tool results in 'Tool has failed to open' error
+Check that you have added the associated tenement tools toolbox into your current project (see step 7 above).
 
-### COG Fetch tool missing NIR band when using Sentinel 2
-Currently investigating - fixed.
+### The COG Fetch tools 'hang' forever when querying STAC metadata
+This is a firewall issue. Please see the above requirements section and discuss opening these websites with IT. 
+
