@@ -13,7 +13,7 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://data.dea.ga.gov.au
   * https://explorer.sandbox.dea.ga.gov.au/stac
 
-<br />
+<br/>
 
 ## Setup (first time)
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
@@ -65,8 +65,12 @@ Finally, add the Tenement Tools toolbox to the project:
 ### 8. Walkthrough the tutorial pdf
 A good place to start is with the Tutorial.pdf document downloaded in step 1.
 
+<br/>
+
 ## Updating to new version
 Very 1.0 has now been released! Any prior installations using any development versions must be discarded and all steps must be done again.
+
+<br/>
 
 ## Known bugs
 ### UTF-8 encoding error when using COG Fetch or NRT Monitor Areas
