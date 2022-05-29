@@ -1,11 +1,9 @@
 # Tenement Tools
-The Tenement Tools ArcGIS Pro plug-in is currently under active development and bugs should be expected. 
-If you would like to test the pre-release alpha version, please follow the below instructions.
-
+The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! Please follow the below instructions to install the plug-in.
 <br/>
 
 ## Requirements
-* ArcGIS Pro version >= 2.8
+* ArcGIS Pro version 2.8 (2.9 should also work)
 * At least 8gb of ram (>=16gb recommended)
 * Fast and stable internet connection
 * Access to the following websites (IT may need to exclude from firewall):
