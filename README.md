@@ -2,6 +2,8 @@
 The Tenement Tools ArcGIS Pro plug-in is currently under active development and bugs should be expected. 
 If you would like to test the pre-release alpha version, please follow the below instructions.
 
+<br/>
+
 ## Requirements
 * ArcGIS Pro version >= 2.8
 * At least 8gb of ram (>=16gb recommended)
