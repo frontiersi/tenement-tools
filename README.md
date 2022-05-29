@@ -73,12 +73,11 @@ Very 1.0 has now been released! Any prior installations using any development ve
 <br/>
 
 ## Known bugs
-### UTF-8 encoding error when using COG Fetch or NRT Monitor Areas
-This is a very rare and seemingly random error that can occur. Re-running the tool will fix it.
-
 ### Running a tool results in 'Tool has failed to open' error
 Check that you have added the associated tenement tools toolbox into your current project (see step 7 above).
 
+### UTF-8 encoding error when using COG Fetch or NRT Monitor Areas tools
+This is a very rare and seemingly random error that has been difficult to locate. Simply re-run the tool and it should work.
+
 ### The COG Fetch tools 'hang' forever when querying STAC metadata
 This is a firewall issue. Please see the above requirements section and discuss opening these websites with IT. 
-
