@@ -39,12 +39,8 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 
-
-# TESTING REMOVE THIS WHEN DONE!!!!!!!!!!!!
-# ensure provisional works re mask band name
 class MonitoringArea:
 
-    # TESTING_END_DT REMOVE THIS WHEN DONE!!!!!!!!!!!!!!!
     def __init__(self, feat, path):
         
         # feature fields
@@ -89,9 +85,6 @@ class MonitoringArea:
         # html and graph info
         self.alert_html = None
         self.alert_graph = None
-        
-        # TESTING REMOVE THIS WHEN DONE!!!!!!!!!!
-        self.TESTING_END_DT = None
 
 
     def validate_area(self):
@@ -107,22 +100,21 @@ class MonitoringArea:
         # check platform
         if self.platform not in ['Landsat', 'Sentinel']:
             raise ValueError('Platform not Landsat or Sentinel.')
-
-        # check start, end years
+            
+        # check start year 
         if not isinstance(self.s_year, int):
             raise ValueError('Start year not an integer.')
-        elif not isinstance(self.e_year, int):
-            raise ValueError('End year not an integer.')
         elif self.s_year < 1980 or self.s_year > 2050:
-            raise ValueError('Start year not between 1980-2050.')        
-        elif self.e_year < 1980 or self.e_year > 2050:
-            raise ValueError('End year not between 1980-2050.')          
-        elif self.e_year <= self.s_year:
-            raise ValueError('End year is <= start year.')           
-        elif abs(self.e_year - self.s_year) < 2:
-            raise ValueError('Training period < 2 years in length.')  
+            raise ValueError('Start year not between 1980-2050.')              
         elif self.platform == 'Sentinel' and self.s_year < 2016:
             raise ValueError('Start year must be >= 2016 for Sentinel data.')  
+        
+        # check end year (now training length), if provided
+        if self.e_year is not None:
+            if not isinstance(self.e_year, int):
+                raise ValueError('Training length value must be integer, if provided.')
+            elif self.e_year < 5:
+                raise ValueError('Training length must be >= 5.')
 
         # check index
         if self.index not in ['NDVI', 'MAVI', 'kNDVI']:
@@ -253,7 +245,7 @@ class MonitoringArea:
             return
         
         return
-            
+
     
     def validate_old_xr(self):
         """
@@ -285,7 +277,7 @@ class MonitoringArea:
                     self.ds_old = None
                     return
 
-            # check all vals match match (remove tail, add method back on)
+            # check all vals match (remove tail, add method back on)
             attrs = attrs[:11] + ['method']
             for attr in attrs:
                 new = str(vars(self).get(attr))
@@ -300,18 +292,16 @@ class MonitoringArea:
             return
         
         return
-            
-    
-    # TODO SET END DATE TO 2050 WHEN DONE
+
+
     def set_new_xr(self):
         """
         Fetches all available digital earth australia (dea) 
         landsat/sentinel data for area bounding box. The 
         resulting data is set to the new xr. If old xr 
         exists (is not None), new xr is then subset down to 
-        only the dates that dont exist in old xr. 
-        
-        If an error occurs, an error is raised. 
+        only the dates that dont exist in old xr. If an error 
+        occurs, an error is raised. 
         """
         
         # set endpoint
@@ -385,7 +375,7 @@ class MonitoringArea:
             self.ds_new = fetch_cube_data(collections=collections, 
                                           bands=bands, 
                                           start_dt='1980-01-01', 
-                                          end_dt=self.TESTING_END_DT,     #'2050-12-31', 
+                                          end_dt='2050-12-31',
                                           bbox=prj_bbox, 
                                           resolution=10, 
                                           ds_existing=None)
@@ -395,8 +385,7 @@ class MonitoringArea:
             
         except Exception as e:
             raise ValueError(e)
-            
-            
+
         try:
             # subset new xr to new dates (if old exists)
             if self.ds_old is not None:
@@ -462,18 +451,48 @@ class MonitoringArea:
         # check if new xr exists
         if self.ds_new is None:
             raise ValueError('No new xr provided.')
-        
+                    
+        # check if time, x, y in dataset
+        if 'x' not in self.ds_new or 'y' not in self.ds_new:
+            raise ValueError('No x, y dimensions in xr provided.')
+        elif 'time' not in self.ds_new:
+            raise ValueError('No time dimensions in xr provided.')
+
+        # check if mask band in dataset 
+        if 'oa_fmask' not in self.ds_new and 'fmask' not in self.ds_new:
+            raise ValueError('No fmask band detected in dataset.')
+
         try:
             # get mask band name (either be oa_fmask or fmask)
-            mask = [v for v in self.ds_new if 'mask' in v][0]
+            mask_band = [v for v in self.ds_new if 'mask' in v][0]
+        
+            # calc min number of valid pixels allowed
+            min_valid = 1 - (0 / 100)
+            num_pix = self.ds_new['x'].size * self.ds_new['y'].size
+
+            # subset mask band and if dask, compute it
+            mask = self.ds_new[mask_band]
             
-            # mask invalid pixels i.e., not valid, water, snow
-            self.ds_new = cog.remove_fmask_dates(ds=self.ds_new, 
-                                                 valid_class=[1, 4, 5],
-                                                 max_invalid=0,
-                                                 mask_band=mask, 
-                                                 nodata_value=np.nan,
-                                                 drop_fmask=True)
+            # compute if dask
+            if bool(mask.chunks):
+                mask = mask.compute()
+
+            # set all valid classes to 1, else 0
+            valid_classes = [1, 4, 5]
+            mask = xr.where(mask.isin(valid_classes), 1.0, 0.0)
+
+            # convert to float32 and mask invalid pixels with nan
+            self.ds_new = self.ds_new.astype('float32')   
+            self.ds_new = self.ds_new.where(mask == 1.0, np.nan)
+            
+            # calc proportion of valid pixels to get array of invalid dates, remove non-valid dates
+            mask = mask.sum(['x', 'y']) / num_pix
+            valid_dates = mask['time'].where(mask >= min_valid, drop=True)
+            self.ds_new = self.ds_new.where(self.ds_new['time'].isin(valid_dates), drop=True)
+
+            # drop mask band
+            self.ds_new = self.ds_new.drop_vars(mask_band)
+
         except Exception as e:
             raise ValueError(e)
             
@@ -515,8 +534,8 @@ class MonitoringArea:
             raise ValueError(e)
             
         return
-            
-            
+
+ 
     def load_new_xr(self):
         """
         Loads new xr values into memory using the xarray 
@@ -645,6 +664,7 @@ class MonitoringArea:
         
         # set required variable names
         new_vars = [
+            'veg_despiked',
             'veg_clean', 
             'static_raw', 
             'static_clean',
@@ -725,13 +745,13 @@ class MonitoringArea:
             # interpolate nans linearly
             da = da.interpolate_na('time')
             
-            # set result to clean var
-            self.ds_cmb['veg_clean'] = da            
+            # set result to despiked
+            self.ds_cmb['veg_despiked'] = da       
             
             # if nans still exists, drop them in cmb xr
             if da.isnull().any():
-                self.ds_cmb = self.ds_cmb.where(~da.isnull(), drop=True)
-        
+                self.ds_cmb = self.ds_cmb.where(~da.isnull(), 
+                                                drop=True)
         except Exception as e:
             raise ValueError(e)
             
@@ -744,7 +764,7 @@ class MonitoringArea:
     
     def smooth_cmb_xr_index(self):
         """
-        Mildly smoothes the cmb xr clean vegetation index values 
+        Mildly smoothes the cmb xr despiked vegetation index values 
         using the savitsky golay filter. If error, error raised.
         """
 
@@ -753,7 +773,7 @@ class MonitoringArea:
             raise ValueError('No cmb xr provided.')
         
         # reduce code with a array
-        da = self.ds_cmb['veg_clean']
+        da = self.ds_cmb['veg_despiked']
         
         # mask if needed
         mask = None
@@ -826,15 +846,11 @@ class MonitoringArea:
         if len(self.ds_anl) == 0:
             raise ValueError('No dates remaning in dataset.')
         elif len(self.ds_cmb.groupby('time.year')) < 3:
-            raise ValueError('Not enough years remaining in dataset.')
+            raise ValueError('Less than 3 full years in dataset, please adjust training period.')
         
         return
-        
 
-    # TODO play with smoothing, persistence - 
-    # ALSO TRY MIN TRAINING LENGTH COULD WORK!!! set to 1 year worth of dates, 2 years worth of dates, etc
-    # ALSO check if dims in correct order for static and dynamic raw outputs
-    # area_summary.ds['static_raw'] = area_summary.ds['static_raw'].transpose('time', 'y', 'x')
+
     def detect_change_anl_xr(self):
         """
         Performs ewmacd change detection (static and dynamic 
@@ -847,21 +863,26 @@ class MonitoringArea:
         if self.ds_anl is None:
             raise ValueError('No anl xr provided.')
             
-        # check start and end years valid
-        if self.s_year is None or self.e_year is None:
-            raise ValueError('No start and/or end year provided.')        
+        # check start year valid
+        if self.s_year is None:
+            raise ValueError('No start year provided.')
+            
+        # check end year (now training length)
+        if self.e_year is not None:
+            if self.e_year < 5:
+                raise ValueError('Minimum training length must be < 5.')
             
         # check if persistence is valid
         if self.persistence is None:
             raise ValueError('No persistence provided.')
-            
+
         try:
-            # perform ewmacd change detection
+            # perform ewmacd change detection on despiked values
             self.ds_anl = detect_change(ds=self.ds_anl,
                                         method='both',
-                                        var='veg_idx',
+                                        var='veg_despiked',
                                         train_start=self.s_year,
-                                        train_end=self.e_year,
+                                        train_length=self.e_year,
                                         persistence=self.persistence)
         except Exception as e:
             raise ValueError(e)
@@ -874,7 +895,6 @@ class MonitoringArea:
         return
     
     
-    # check mean approach
     def smooth_anl_xr_change(self):
         """
         Mildly smoothes the anl xr static and dynamic change 
@@ -1350,7 +1370,6 @@ class MonitoringArea:
         return
         
         
-    # need to check zone sign for ANY DIRECTION option  -ALSO, DIRECTION Not ZONE!!!
     def set_alert_data(self):
         """
         Takes cmb and anl xrs and sets up alert information,
@@ -1480,6 +1499,7 @@ class MonitoringArea:
 
             # set up right graph for change data
             axs[1].plot(dts, chg_cln, color='red')
+            axs[1].plot(dts, chg_cln, color='red', linestyle='none', marker='o', markersize=2, alpha=0.75)
             axs[1].plot(dts, alerts, color='maroon', linestyle='none', marker='o', markersize=3, label='Alert')
             axs[1].set_title('Change History')
             axs[1].set_xlabel('Date')
@@ -1686,334 +1706,11 @@ class MonitoringArea:
         self.ds_anl = None
 
         return  
-        
-    
-    def run_all(self, TEST_DT):
-        """
-        Put all processes in here when happy.
-        """
-                
-        # ensure area is monitor-allowed
-        if self.ignore == 'Yes':
-            return
-
-        # TESTING DATE TIMES
-        self.TESTING_END_DT = TEST_DT
-        print('\n\nENDING DATETIME: {}'.format(self.TESTING_END_DT))
-        
-        # # # # #   
-        #arcpy.AddMessage('Starting process for area {}.'.format(area.area_id))
-        #
-            
-            
-        # # # # # validate area. invalid value triggers error, skip on error
-        try:
-            # validate area. invalid value triggers error, skip on error
-            self.validate_area()
-        except Exception as e:
-            arcpy.AddWarning('Area {} is invalid, see messages.'.format(area.area_id))
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-            
-        # # # # # get old xr. if no old or error, sets old to none. pass if none or error
-        try:
-            # get old xr. if no old or error, sets old to none. pass if none or error
-            self.set_old_xr()
-        except:
-            arcpy.AddWarning('No existing xr for area, getting new xr.')
-            print('No existing xr for area, getting new xr.')
-            pass
 
 
-        # # # # # validate old xr. skips old xr if none. changed attrs sets old xr to none
-        try:
-            # validate old xr. skips old xr if none. changed attrs sets old xr to none
-            self.validate_old_xr()
-        except:
-            arcpy.AddWarning('Attributes of existing xr have changed, resetting.')
-            print('Attributes of existing xr have changed, resetting.')
-            pass
-        
-        
-        # # # # # get all sat data. subset new xr to new dates if old xr exists. on error, set new to none, skip
-        try:
-            # get all sat data. subset new xr to new dates if old xr exists. on error, set new to none, skip
-            self.set_new_xr()  
 
-            # skip if no new dates, else notify
-            if self.new_xr_dates_found() is False:
-                arcpy.AddMessage('No new satellite dates found, skipping.')
-                print('No new satellite dates found, skipping.')
-                return #continue 
-        except Exception as e:
-            arcpy.AddWarning('Could not obtain satellite data, see messages.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue        
-        
-        
-        # # # # # apply fmask on new xr. if error or no dates, skip
-        try:
-            # apply fmask on new xr. if error or no dates, skip
-            self.apply_new_xr_fmask()
-
-            # skip if no new dates, else notify
-            if self.new_xr_dates_found() is False:
-                arcpy.AddMessage('No cloud free data exists, skipping.')
-                print('No cloud free data exists, skipping.')
-                return #continue    
-        except Exception as e:
-            arcpy.AddWarning('Could not apply fmask, see messages.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue       
-        
-        
-        # # # # # apply veg index on new xr. if error or no dates, skip
-        try:
-            # apply veg index on new xr. if error or no dates, skip
-            self.apply_new_xr_index() 
-        except Exception as e:
-            arcpy.AddWarning('Could not apply vegetation index, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # load new xr. if error, skip
-        try:
-            # load new xr. if error, skip
-            self.load_new_xr() 
-        except Exception as e:
-            arcpy.AddWarning('Could not load satellite data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            raise # continue
-            
-            
-        # # # # # remove edge pixels. if error or empty, return orig new xr
-        try:
-            # remove edge pixels. if error or empty, return orig new xr
-            self.remove_new_xr_edges() 
-        except Exception as e:
-            arcpy.AddWarning('Could not mask edge pixels, proceeding with them.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            pass
-
-
-        # # # # # reduce new xr to median value per date. if error, skip
-        try:
-            # reduce new xr to median value per date. if error, skip
-            self.reduce_new_xr() 
-        except Exception as e:
-            arcpy.AddWarning('Could not reduce data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # interp nans. if any remain, drop. if empty, error and skip
-        try:
-            # interp nans. if any remain, drop. if empty, error and skip
-            self.interp_new_xr_nans() 
-        except Exception as e:
-            arcpy.AddWarning('Could not interpolate data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # append required vars to new xr. if error, skip
-        try:
-            # append required vars to new xr. if error, skip
-            self.append_new_xr_vars() 
-        except Exception as e:
-            arcpy.AddWarning('Could not add vars to data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # combine old and new xrs. if no old xr, new xr used. if error, skip
-        try:
-            # combine old and new xrs. if no old xr, new xr used. if error, skip
-            self.set_cmb_xr() 
-        except Exception as e:
-            arcpy.AddWarning('Could not combine old and new data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # replaces spikes with interp in cmb xr. set result to veg_clean var. if error or no data, skip
-        try:
-            # replaces spikes with interp in cmb xr. set result to veg_clean var. if error or no data, skip
-            self.fix_cmb_xr_spikes() 
-        except Exception as e:
-            arcpy.AddWarning('Could not remove spike outliers, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            raise # continue
-
-
-        # # # # # smooth clean veg index with savitsky filter in cmb xr. if error, skip
-        try:
-            # smooth clean veg index with savitsky filter in cmb xr. if error, skip
-            self.smooth_cmb_xr_index() 
-        except Exception as e:
-            arcpy.AddWarning('Could not smooth index, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # create analysis (anl) xr, remove pre-training years. if error, skip
-        try:
-            # create analysis (anl) xr, remove pre-training years. if error, skip
-            self.set_anl_xr()
-        except Exception as e:
-            arcpy.AddWarning('Could not create analysis data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # detect raw static, dynamic change via anl xr, if error, skip
-        try:
-            # detect raw static, dynamic change via anl xr, if error, skip
-            self.detect_change_anl_xr()
-        except Exception as e:
-            arcpy.AddWarning('Could not perform change detection, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # smooth static, dynamic change via anl xr, if error, skip
-        try:
-            # smooth static, dynamic change via anl xr, if error, skip
-            self.smooth_anl_xr_change()
-        except Exception as e:
-            arcpy.AddWarning('Could not smooth change data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # transfer old xr change values to anl xr to persist history. if error, skip
-        try:
-            # transfer old xr change values to anl xr to persist history. if error, skip
-            self.transfer_old_to_anl_xr()
-        except Exception as e:
-            arcpy.AddWarning('Could not transfer old data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # build zones. if error, skip
-        try:
-            # build zones. if error, skip
-            self.build_zones()
-        except Exception as e:
-            arcpy.AddWarning('Could not generate zones, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # build rule one, two, three. if error, skip
-        try:
-            # build rule one, two, three. if error, skip
-            self.build_rule_one()
-            self.build_rule_two()
-            self.build_rule_three()
-        except Exception as e:
-            arcpy.AddWarning('Could not generate rules, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # build alerts. if error, skip   
-        try:
-            # build alerts. if error, skip
-            self.build_alerts()
-        except Exception as e:
-            arcpy.AddWarning('Could not generate alerts, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # transfer anl xr to cmb xr to persist history. if error, skip
-        try:
-            # transfer anl xr to cmb xr to persist history. if error, skip
-            self.transfer_anl_to_cmb_xr()
-        except Exception as e:
-            arcpy.AddWarning('Could not transfer analysis data, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue
-
-
-        # # # # # append area field attrs back on to cmb xr. if error, skip
-        try:
-            # append area field attrs back on to cmb xr. if error, skip
-            self.append_cmb_xr_attrs()
-        except Exception as e:
-            arcpy.AddWarning('Could not append attributes, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue    
-
-
-            
-            
-        # # # # # set alert info, html, graph data. if error, skip
-        try:
-            # set alert info, html, graph data. if error, skip
-            self.set_alert_data()
-        except Exception as e:
-            arcpy.AddWarning('Could not extract alert information, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue    
-
-            
-        # show information about current alert
-        #area.show_alert_info()
-
-        
-        # # # # # refresh monitoring area symbology. if error, skip
-        try:
-            # refresh monitoring area symbology. if error, skip
-            self.refresh_area_symbology()
-        except Exception as e:
-            arcpy.AddWarning('Could not refresh symbology, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue    
-        
-
-        # # # # # export cmb xr. if error, skip
-        try:
-            # export cmb xr. if error, skip
-            self.export_cmb_xr()
-        except Exception as e:
-            arcpy.AddWarning('Could not export latest netcdf, see messages. Skipping.')
-            arcpy.AddMessage(str(e))
-            print(e)
-            raise # continue  
-    
-    
-        # on to next area
-        # ...
-    
-        return  
-
-
+# update validate area for none e year
+# updaye change for none or e year
 class MonitoringAreaStatistics:
 
     def __init__(self, feat, path, out_nc):
@@ -2066,21 +1763,20 @@ class MonitoringAreaStatistics:
         if self.platform not in ['Landsat', 'Sentinel']:
             raise ValueError('Platform not Landsat or Sentinel.')
 
-        # check start, end years
+        # check start year 
         if not isinstance(self.s_year, int):
             raise ValueError('Start year not an integer.')
-        elif not isinstance(self.e_year, int):
-            raise ValueError('End year not an integer.')
         elif self.s_year < 1980 or self.s_year > 2050:
-            raise ValueError('Start year not between 1980-2050.')        
-        elif self.e_year < 1980 or self.e_year > 2050:
-            raise ValueError('End year not between 1980-2050.')          
-        elif self.e_year <= self.s_year:
-            raise ValueError('End year is <= start year.')           
-        elif abs(self.e_year - self.s_year) < 2:
-            raise ValueError('Training period < 2 years in length.')  
+            raise ValueError('Start year not between 1980-2050.')              
         elif self.platform == 'Sentinel' and self.s_year < 2016:
             raise ValueError('Start year must be >= 2016 for Sentinel data.')  
+            
+        # check end year (now training length), if provided
+        if self.e_year is not None:
+            if not isinstance(self.e_year, int):
+                raise ValueError('Training length value must be integer, if provided.')
+            elif self.e_year < 5:
+                raise ValueError('Training length must be >= 5.')
 
         # check index
         if self.index not in ['NDVI', 'MAVI', 'kNDVI']:
@@ -2254,11 +1950,6 @@ class MonitoringAreaStatistics:
         except Exception as e:
             raise ValueError(e)
             
-            
-        # check if start date provided 
-        if self.s_year is None:
-            raise ValueError('No start year provided.')
-            
         try:
             # prepare start date 
             start_dt = '{}-01-01'.format(self.s_year)
@@ -2288,34 +1979,62 @@ class MonitoringAreaStatistics:
             
         return
         
-        
-    def apply_xr_fmask(self):
-        """
-        Takes the xr and applies the dea fmask band to remove 
-        invalid pixels and dates. If an error occurs, error is 
-        raised.
-        """
 
-        # check if xr exists
+    def apply_xr_fmask(self):       
+        """
+        Takes the new xr and applies the dea fmask band to 
+        remove invalid pixels and dates. If an error occurs,
+        error is raised.
+        """
+        
+        # check if new xr exists
         if self.ds is None:
-            raise ValueError('No xr provided.')
+            raise ValueError('No new xr provided.')
+                    
+        # check if time, x, y in dataset
+        if 'x' not in self.ds or 'y' not in self.ds:
+            raise ValueError('No x, y dimensions in xr provided.')
+        elif 'time' not in self.ds:
+            raise ValueError('No time dimensions in xr provided.')
+
+        # check if mask band in dataset 
+        if 'oa_fmask' not in self.ds and 'fmask' not in self.ds:
+            raise ValueError('No fmask band detected in dataset.')
 
         try:
             # get mask band name (either be oa_fmask or fmask)
-            mask = [v for v in self.ds if 'mask' in v][0]
+            mask_band = [v for v in self.ds if 'mask' in v][0]
+        
+            # calc min number of valid pixels allowed
+            min_valid = 1 - (0 / 100)
+            num_pix = self.ds['x'].size * self.ds['y'].size
+            
+            # subset mask band and if dask, compute it
+            mask = self.ds[mask_band]
+            if bool(mask.chunks):
+                mask = mask.compute()
 
-            # mask invalid pixels i.e., not valid, water, snow
-            self.ds = cog.remove_fmask_dates(ds=self.ds, 
-                                             valid_class=[1, 4, 5],
-                                             max_invalid=0,
-                                             mask_band=mask, 
-                                             nodata_value=np.nan,
-                                             drop_fmask=True)
+            # set all valid classes to 1, else 0
+            valid_classes = [1, 4, 5]
+            mask = xr.where(mask.isin(valid_classes), 1.0, 0.0)
+
+            # convert to float32 and mask invalid pixels with nan
+            self.ds = self.ds.astype('float32')   
+            self.ds = self.ds.where(mask == 1.0, np.nan)
+            
+            # calc proportion of valid pixels to get array of invalid dates, remove non-valid dates
+            mask = mask.sum(['x', 'y']) / num_pix
+            valid_dates = mask['time'].where(mask >= min_valid, drop=True)
+            self.ds = self.ds.where(self.ds['time'].isin(valid_dates), drop=True)
+
+            # drop mask band
+            self.ds = self.ds.drop_vars(mask_band)
+
         except Exception as e:
             raise ValueError(e)
-
+            
         return
-    
+
     
     def apply_xr_index(self):
         """
@@ -2449,6 +2168,7 @@ class MonitoringAreaStatistics:
         
         # set required variable names
         new_vars = [
+            'veg_despiked',
             'veg_clean', 
             'static_raw', 
             'static_clean',
@@ -2479,7 +2199,8 @@ class MonitoringAreaStatistics:
         """
         Detects severe vegetation index outliers using the TIMESAT 
         3.3 median spike detection method. Sets spike values to 
-        nan and then interpolates them, if they exist. If error, error raised.
+        nan and then interpolates them, if they exist. If error, 
+        error raised.
         """
         
         # check if xr exists
@@ -2499,7 +2220,7 @@ class MonitoringAreaStatistics:
             da = da.fillna(0)
             
             # set result to clean var
-            self.ds['veg_clean'] = da   
+            self.ds['veg_despiked'] = da   
         
         except Exception as e:
             raise ValueError(e)
@@ -2537,7 +2258,7 @@ class MonitoringAreaStatistics:
 
             # apply savitsky filter and handle nans
             da = xr.apply_ufunc(safe_savgol, 
-                                self.ds['veg_clean'],
+                                self.ds['veg_despiked'],
                                 dask='allowed',
                                 kwargs=kwargs)
                         
@@ -2549,8 +2270,7 @@ class MonitoringAreaStatistics:
             
         return
 
-    # TODO play with smoothing, persistence 
-    # ALSO TRY MIN TRAINING LENGTH COULD WORK!!! set to 1 year worth of dates, 2 years worth of dates, etc
+
     def detect_change_xr(self):
         """
         Performs ewmacd change detection (static and dynamic 
@@ -2562,10 +2282,15 @@ class MonitoringAreaStatistics:
         if self.ds is None:
             raise ValueError('No xr provided.')
 
-        # check start and end years valid
-        if self.s_year is None or self.e_year is None:
-            raise ValueError('No start and/or end year provided.')        
-
+        # check start year valid
+        if self.s_year is None:
+            raise ValueError('No start year provided.')
+            
+        # check end year (now training length)
+        if self.e_year is not None:
+            if self.e_year < 5:
+                raise ValueError('Minimum training length must be < 5.')
+            
         # check if persistence is valid
         if self.persistence is None:
             raise ValueError('No persistence provided.')
@@ -2574,9 +2299,9 @@ class MonitoringAreaStatistics:
             # perform ewmacd change detection
             self.ds = detect_change(ds=self.ds,
                                     method='both',
-                                    var='veg_idx',
+                                    var='veg_despiked',
                                     train_start=self.s_year,
-                                    train_end=self.e_year,
+                                    train_length=self.e_year,
                                     persistence=self.persistence)
             
             # ensure static, dynamic dimension order correct
@@ -2594,7 +2319,6 @@ class MonitoringAreaStatistics:
         return
 
     
-    # remove commented out code if happy with method
     def smooth_xr_change(self):
         """
         Mildly smoothes the xr static and dynamic change 
@@ -2987,37 +2711,37 @@ class MonitoringAreaStatistics:
     
     
     def apply_xr_edge_mask(self):
-            """
-            Applies the xr edge mask generated earlier during the 
-            set_xr_edge_mask function. Any pixels within this mask 
-            will be set to nodata (nan). If an error occurs, no mask 
-            is applied.
-            """ 
+        """
+        Applies the xr edge mask generated earlier during the 
+        set_xr_edge_mask function. Any pixels within this mask 
+        will be set to nodata (nan). If an error occurs, no mask 
+        is applied.
+        """ 
 
-            # check if xr exists
-            if self.ds is None:
-                raise ValueError('No xr provided.')
+        # check if xr exists
+        if self.ds is None:
+            raise ValueError('No xr provided.')
 
-            # check if edge mask exists
-            if self.mask is None:
-                raise ValueError('No edge mask provided.')       
+        # check if edge mask exists
+        if self.mask is None:
+            raise ValueError('No edge mask provided.')       
 
-            try:
-                # take a copy in case of error
-                tmp = self.ds.copy(deep=True)
+        try:
+            # take a copy in case of error
+            tmp = self.ds.copy(deep=True)
 
-                # mask edge pixels to nan
-                self.ds = self.ds.where(self.mask)
+            # mask edge pixels to nan
+            self.ds = self.ds.where(self.mask)
 
-                # check if not all nan
-                if self.ds.to_array().isnull().all():
-                    raise ValueError('Mask set all pixels to nan, rolling back.')  
+            # check if not all nan
+            if self.ds.to_array().isnull().all():
+                raise ValueError('Mask set all pixels to nan, rolling back.')  
 
-            except Exception as e:
-                self.ds = tmp
-                raise ValueError(e)
+        except Exception as e:
+            self.ds = tmp
+            raise ValueError(e)
 
-            return
+        return
     
     
     def perform_kernel_density(self):
@@ -3200,11 +2924,6 @@ class MonitoringAreaStatistics:
         self.ds_mask = None
 
         return  
-        
-        
-    def run_all(self):
-        """
-        """
 
 
 def validate_monitoring_areas(in_feat):
@@ -3323,20 +3042,21 @@ def validate_monitoring_area(row):
     # check platform is Landsat or Sentinel
     if platform not in ['Landsat', 'Sentinel']:
         raise ValueError('Platform must be Landsat or Sentinel.')
-
-    # check if start and end years are valid
-    if not isinstance(s_year, int) or not isinstance(e_year, int):
-        raise ValueError('Start and end year values must be integers.')
+        
+    # check start year 
+    if not isinstance(s_year, int):
+        raise ValueError('Start value must be integers.')
     elif s_year < 1980 or s_year > 2050:
         raise ValueError('Start year must be between 1980 and 2050.')
-    elif e_year < 1980 or e_year > 2050:
-        raise ValueError('End year must be between 1980 and 2050.')
-    elif e_year <= s_year:
-        raise ValueError('Start year must be less than end year.')
-    elif abs(e_year - s_year) < 2:
-        raise ValueError('Must be at least 2 years between start and end year.')
     elif platform == 'Sentinel' and s_year < 2016:
         raise ValueError('Start year must not be < 2016 when using Sentinel.')
+        
+    # check end year (now training length), if provided
+    if e_year is not None:
+        if not isinstance(e_year, int):
+            raise ValueError('Training length value must be integer, if provided.')
+        elif e_year < 5:
+            raise ValueError('Training length must be >= 5.')
 
     # check if index is acceptable
     if index not in ['NDVI', 'MAVI', 'kNDVI']:
@@ -3504,7 +3224,6 @@ def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, d
         # convert datetimes (strip milliseconds)
         dts = ds.time.dt.strftime('%Y-%m-%dT%H:%M:%S')
         ds['time'] = dts.astype('datetime64[ns]')
-    
     
     except Exception as e:
         raise ValueError(e)
@@ -3685,7 +3404,7 @@ def safe_savgol(arr, window_length=3, polyorder=1, a=0):
         return np.full_like(arr, np.nan)
 
  
-def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=None, persistence=1.0):
+def detect_change(ds, method='both', var='veg_idx', train_start=None, train_length=None, persistence=1.0):
     """
     Performs EWMACD change detection on a 1d array of variable 
     values. 
@@ -3703,8 +3422,8 @@ def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=
         change detection on.
     train_start : int 
         Start year of training period.
-    end_start : int 
-        End year of training period.
+    train_length : int 
+        Number of samples to use as a minimum training period.
     persistence : float 
         Vegetation persistence value.
         
@@ -3735,6 +3454,11 @@ def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=
     elif train_start >= ds['time.year'].max():
         raise ValueError('Training start must be lower within dataset range.')
         
+    # check train length 
+    if train_length is not None:
+        if train_length < 5:
+            raise ValueError('Minimum training length must be >= 5.')
+        
     # notify
     print('Beginning change detection.')
     
@@ -3747,7 +3471,7 @@ def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=
         ds_stc = EWMACD(ds=ds[var].to_dataset(),
                         trainingPeriod='static',
                         trainingStart=train_start,
-                        trainingEnd=train_end,
+                        minTrainingLength=train_length,
                         persistence_per_year=persistence)
     except Exception as e:
         raise ValueError(e)
@@ -3757,7 +3481,7 @@ def detect_change(ds, method='both', var='veg_idx', train_start=None, train_end=
         ds_dyn = EWMACD(ds=ds[var].to_dataset(),
                         trainingPeriod='dynamic',
                         trainingStart=train_start,
-                        trainingEnd=train_end,
+                        minTrainingLength=train_length,
                         persistence_per_year=persistence)
     except Exception as e:
         raise ValueError(e)
@@ -4241,11 +3965,11 @@ def build_alerts(arr_r1, arr_r2, arr_r3, ruleset='1 and 2 or 3', direction='Decl
 
     try:
         # create alert arrays based on singular rule
-        if ruleset == '1':
+        if ruleset == '1 only':
             arr_alerts = arr_r1
-        elif ruleset == '2':
+        elif ruleset == '2 only':
             arr_alerts = arr_r2
-        elif ruleset == '3':
+        elif ruleset == '3 only':
             arr_alerts = arr_r3    
         
         # create alert arrays based on dual "and" rule
@@ -4357,7 +4081,6 @@ def create_zone_graph():
     return zone_fn
 
 
-# not quite done yet, replace testing stuff, do meta
 def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass):
     """
     Sends an email with all the latest alert
@@ -4408,7 +4131,6 @@ def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass
     html_body = ''
     for area in area_list:
         html_body += area.alert_html
-        
 
     # build template email html 
     html = (
@@ -4475,7 +4197,7 @@ def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass
                                                      cid=img_cid)
             except Exception as e:
                 raise ValueError(e)
-                
+            
         try:
             # create stock zone graph filename
             zone_fn = create_zone_graph()
@@ -4493,7 +4215,6 @@ def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass
         except Exception as e:
             raise ValueError(e)
         
-        
         try:
             # send email via smtp server
             with smtplib.SMTP(host_server, host_port) as server:
@@ -4505,11 +4226,8 @@ def email_alerts(areas, host_email, host_server, host_port, host_user, host_pass
         
         except Exception as e:
             raise ValueError(e)
-            
+
     return
-
-
-
 
 
 
@@ -4935,7 +4653,7 @@ def EWMACD_pixel_date_by_date(myPixel, DOYs, Years, _lambda, numberHarmonicsSine
                                                  inputDOYs=DOYsCleaned,
                                                  inputYears=YearsCleaned,
                                                  trainingStart=trainingStart,  # todo added this
-                                                 trainingEnd=trainingEnd,  # todo added this
+                                                 trainingEnd=trainingEnd,      # todo added this
                                                  _lambda=_lambda,
                                                  lambdaSigs=lambdaSigs,
                                                  historyBound=historyBound,
@@ -5138,9 +4856,6 @@ def annual_summaries(Values, yearIndex, summaryMethod='date-by-date'):
 
 def EWMACD(ds, trainingPeriod='dynamic', trainingStart=None, testingEnd=None, trainingEnd=None, minTrainingLength=None, maxTrainingLength=np.inf, trainingFitMinimumQuality=0.8, numberHarmonicsSine=2, numberHarmonicsCosine='same as Sine', xBarLimit1=1.5, xBarLimit2= 20, lowthresh=0, _lambda=0.3, lambdaSigs=3, rounding=True, persistence_per_year=1, reverseOrder=False, summaryMethod='date-by-date', outputType='chart.values'):
     """main function"""
-
-    # notify
-    #
 
     # get day of years and associated year as int 16
     DOYs = ds['time.dayofyear'].data.astype('int16')
