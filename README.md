@@ -69,7 +69,7 @@ A good place to start is with the Tutorial.pdf document downloaded in step 1.
 <br/>
 
 ## Updating to new version
-Very 1.0 has now been released! Any prior installations using any development versions must be discarded and all steps must be done again.
+Very 1.0 has now been released! Any prior installations versions must be discarded and all steps above must be done again.
 
 <br/>
 
