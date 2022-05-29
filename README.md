@@ -13,6 +13,8 @@ If you would like to test the pre-release alpha version, please follow the below
   * https://data.dea.ga.gov.au
   * https://explorer.sandbox.dea.ga.gov.au/stac
 
+<br />
+
 ## Setup (first time)
 The Tenement Tools setup process can take up to 30 minutes. Please follow the below steps to install.
 
