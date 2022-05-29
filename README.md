@@ -64,23 +64,7 @@ Finally, add the Tenement Tools toolbox to the project:
 A good place to start is with the Tutorial.pdf document downloaded in step 1.
 
 ## Updating to new version
-If you are updating to a newer release, please follow the below steps.
-
-### 1. Shut down ArcGIS Pro
-Updates must be done when Pro is not running.
-
-### 2. Download latest Tenement Tools plug-in release and extract contents
-Download the <i>tenement-tools.zip</i> files from the latest release located here: 
-- https://github.com/frontiersi/tenement-tools/releases. Extract the tenement-tools folder somewhere temporarily.
-
-### 3. Delete the existing Tenement Tools plugin folder
-Find the existing tenement-tools plugin-folder created from the first time install and delete it (or back it up). Note: the recommended folder during first time install was: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
-
-### 4. Replace with new tenement-tools folder
-Move the latest release's tenement-tools folder into the same place as the folder deleted above in step 3. Note: ensure the folder structure is indentical to the previous version that was installed.
-
-### 5. Start ArcGIS Pro
-If done correctly, the plug-in will continue working as before, now with fewer bugs and new features.
+Very 1.0 has now been released! Any prior installations using any development versions must be discarded and all steps must be done again.
 
 ## Known bugs
 ### UTF-8 encoding error when using COG Fetch or NRT Monitor Areas
