@@ -4,7 +4,7 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 <br/>
 
 ## Requirements
-* ArcGIS Pro version 2.8 (2.9 should also work)
+* ArcGIS Pro version 2.8 or 2.9
 * At least 8gb of ram (>=16gb recommended)
 * Fast and stable internet connection
 * Access to the following websites (IT may need to exclude from firewall):
@@ -13,6 +13,7 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
   * https://conda-forge.org/
   * https://data.dea.ga.gov.au
   * https://explorer.sandbox.dea.ga.gov.au/stac
+  * https://explorer.sandbox.dea.ga.gov.au/stac/search
 
 <br/>
 
