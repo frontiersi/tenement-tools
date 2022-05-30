@@ -83,3 +83,6 @@ This is a very rare and seemingly random error that has been difficult to locate
 
 ### The COG Fetch tools 'hang' forever when querying STAC metadata
 This is a firewall issue. Please see the above requirements section and discuss opening these websites with IT. 
+
+### The COG Fetch and NRT Monitor Areas 'hang' forever when removing clouds from satellite data
+This is a very rare and seemingly random error that has been difficult to locate. Restarting ArcGIS Pro fixes it.
