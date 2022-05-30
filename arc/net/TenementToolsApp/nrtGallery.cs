@@ -215,12 +215,10 @@ namespace TenementToolsApp
                     }
 
                     // construct expected path to current layers cube data folder
-                    var featurePath = firstFeature.Key.GetPath().AbsolutePath;
+                    var featurePath = firstFeature.Key.GetPath().OriginalString;
                     var gdbPath = Path.GetDirectoryName(featurePath);
                     var folderPath = System.IO.Path.ChangeExtension(gdbPath, null);
                     folderPath = System.IO.Directory.GetParent(folderPath).ToString();
-
-                    //folderPath = folderPath + "_" + "cubes";
 
                     // get attributes from current feature selection
                     var ins = new ArcGIS.Desktop.Editing.Attributes.Inspector();
