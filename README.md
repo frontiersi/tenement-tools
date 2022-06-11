@@ -41,6 +41,7 @@ Now, enter and run each of the below in order (enter 'y' if asked at end of each
 - <code>conda install -c conda-forge pyproj==2.6.1.post1</code>
 - <code>conda install -c conda-forge scikit-learn==1.0</code>
 - <code>conda install -c conda-forge odc-stac==0.2.2</code>
+- <code>conda install -c conda-forge datacube==1.8.6</code>
 - <code>pip install pystac-client==0.3.0</code>
 
 Close the Python Command Prompt when finished.
