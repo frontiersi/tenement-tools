@@ -123,6 +123,7 @@
     <AddInContent Include="DarkImages\AddInDesktop32.png" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="aboutButton.cs" />
     <Compile Include="canopyGallery.cs" />
     <Compile Include="canopySplitButton.cs" />
     <Compile Include="cogGallery.cs" />
@@ -281,6 +282,9 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\NRT_Visualise_Area_32.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <AddInContent Include="Images\About_32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!--

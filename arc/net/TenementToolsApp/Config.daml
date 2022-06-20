@@ -24,110 +24,62 @@
           <button refID="TenementToolsApp_vegfraxButton" size="large" />
           <splitButton refID="TenementToolsApp_ensembleSplitButton" />
           <splitButton refID="TenementToolsApp_nrtSplitButton" />
+          <button refID="TenementToolsApp_aboutButton" size="large" />
         </group>
       </groups>
       <controls>
-		  <button id="TenementToolsApp_phenolopyButton" caption="Phenolopy" className="phenolopyButton" loadOnClick="true" largeImage="Images\Phenolopy_Wizard_32.png">
-			  <tooltip heading="Phenolopy Module">
-				  Generate various phenological metrics (phenometrics).<disabledText />
-			  </tooltip>
-		  </button>
-		  <button id="TenementToolsApp_vegfraxButton" caption="VegFrax" className="vegfraxButton" loadOnClick="true" largeImage="Images\VegFrax_Wizard_32.png">
-			  <tooltip heading="VegFrax Module">
-				  Generate fractional cover maps using high-resolution, classified raster.<disabledText />
-			  </tooltip>
-		  </button>
+        <button id="TenementToolsApp_phenolopyButton" caption="Phenolopy" className="phenolopyButton" loadOnClick="true" largeImage="Images\Phenolopy_Wizard_32.png">
+          <tooltip heading="Phenolopy Module">
+				  Generate various phenological metrics (phenometrics).<disabledText /></tooltip>
+        </button>
+        <button id="TenementToolsApp_vegfraxButton" caption="VegFrax" className="vegfraxButton" loadOnClick="true" largeImage="Images\VegFrax_Wizard_32.png">
+          <tooltip heading="VegFrax Module">
+				  Generate fractional cover maps using high-resolution, classified raster.<disabledText /></tooltip>
+        </button>
+        <button id="TenementToolsApp_aboutButton" caption="About" className="aboutButton" loadOnClick="true" largeImage="Images\About_32.png">
+          <tooltip heading="About">About Tenement Tools.<disabledText /></tooltip>
+        </button>
       </controls>
       <splitButtons>
-		  <splitButton id="TenementToolsApp_cogSplitButton">
-			  <gallery refID="TenementToolsApp_cogGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_gdvspectraSplitButton">
-			  <gallery refID="TenementToolsApp_gdvspectraGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_phenolopySplitButton">
-			  <gallery refID="TenementToolsApp_phenolopyGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_nicherSplitButton">
-			  <gallery refID="TenementToolsApp_nicherGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_vegfraxSplitButton">
-			  <gallery refID="TenementToolsApp_vegfraxGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_canopySplitButton">
-			  <gallery refID="TenementToolsApp_canopyGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_ensembleSplitButton">
-			  <gallery refID="TenementToolsApp_ensembleGallery" />
-		  </splitButton>
-		  <splitButton id="TenementToolsApp_nrtSplitButton">
-			  <gallery refID="TenementToolsApp_nrtGallery" />
-		  </splitButton>
+        <splitButton id="TenementToolsApp_cogSplitButton">
+          <gallery refID="TenementToolsApp_cogGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_gdvspectraSplitButton">
+          <gallery refID="TenementToolsApp_gdvspectraGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_phenolopySplitButton">
+          <gallery refID="TenementToolsApp_phenolopyGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_nicherSplitButton">
+          <gallery refID="TenementToolsApp_nicherGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_vegfraxSplitButton">
+          <gallery refID="TenementToolsApp_vegfraxGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_canopySplitButton">
+          <gallery refID="TenementToolsApp_canopyGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_ensembleSplitButton">
+          <gallery refID="TenementToolsApp_ensembleGallery" />
+        </splitButton>
+        <splitButton id="TenementToolsApp_nrtSplitButton">
+          <gallery refID="TenementToolsApp_nrtGallery" />
+        </splitButton>
       </splitButtons>
       <galleries>
-        <gallery id="TenementToolsApp_cogGallery" 
-				 caption="COG" 
-				 className="cogGallery" 
-				 showGroup="true" 
-				 itemsInRow="1" 
-				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//cogGalleryTemplate.xaml" 
-				 templateID="cogGalleryItemTemplate" 
-				 resizable="true" 
-				 itemWidth="350" 
-				 showItemCaption="true" 
-				 largeImage="Images\COG_32.png">
+        <gallery id="TenementToolsApp_cogGallery" caption="COG" className="cogGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//cogGalleryTemplate.xaml" templateID="cogGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\COG_32.png">
           <tooltip heading="COG Module">Fetch and explore satellite data from DEA AWS public bucket.<disabledText /></tooltip>
         </gallery>
-		<gallery id="TenementToolsApp_gdvspectraGallery" 
-				 caption="GDVSpectra" 
-				 className="gdvspectraGallery" 
-				 showGroup="true" 
-				 itemsInRow="1" 
-				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" 
-				 templateID="gdvspectraGalleryItemTemplate" 
-				 resizable="true" 
-				 itemWidth="350" 
-				 showItemCaption="true" 
-				 largeImage="Images\GDVSpectra_Thumb_32.png">
+        <gallery id="TenementToolsApp_gdvspectraGallery" caption="GDVSpectra" className="gdvspectraGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//gdvspectraGalleryTemplate.xaml" templateID="gdvspectraGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\GDVSpectra_Thumb_32.png">
           <tooltip heading="GDVSpectra Module">Generate and explore GDV likelihood and trends.<disabledText /></tooltip>
         </gallery>
-		<gallery id="TenementToolsApp_nicherGallery" 
-				 caption="Nicher" 
-				 className="nicherGallery" 
-				 showGroup="true" 
-				 itemsInRow="1" 
-				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nicherGalleryTemplate.xaml" 
-				 templateID="nicherGalleryItemTemplate" 
-				 resizable="true" 
-				 itemWidth="350" 
-				 showItemCaption="true" 
-				 largeImage="Images\Nicher_Wizard_32.png">
+        <gallery id="TenementToolsApp_nicherGallery" caption="Nicher" className="nicherGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nicherGalleryTemplate.xaml" templateID="nicherGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\Nicher_Wizard_32.png">
           <tooltip heading="Nicher Module">Generate a target species' ecological niche.<disabledText /></tooltip>
         </gallery>
-		<gallery id="TenementToolsApp_ensembleGallery" 
-				 caption="Ensemble" 
-				 className="ensembleGallery" 
-				 showGroup="true" 
-				 itemsInRow="1" 
-				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" 
-				 templateID="ensembleGalleryItemTemplate" 
-				 resizable="true" 
-				 itemWidth="350" 
-				 showItemCaption="true" 
-				 largeImage="Images\Ensemble_Wizard_32.png">
+        <gallery id="TenementToolsApp_ensembleGallery" caption="Ensemble" className="ensembleGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//ensembleGalleryTemplate.xaml" templateID="ensembleGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\Ensemble_Wizard_32.png">
           <tooltip heading="Ensemble Module">Combine two or more evidence layers in an ensemble model.<disabledText /></tooltip>
         </gallery>
-		<gallery id="TenementToolsApp_nrtGallery" 
-				 caption="Monitor" 
-				 className="nrtGallery" 
-				 showGroup="true" 
-				 itemsInRow="1" 
-				 dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" 
-				 templateID="nrtGalleryItemTemplate" 
-				 resizable="true" 
-				 itemWidth="350" 
-				 showItemCaption="true" 
-				 largeImage="Images\NRT_Wizard_32.png">
+        <gallery id="TenementToolsApp_nrtGallery" caption="Monitor" className="nrtGallery" showGroup="true" itemsInRow="1" dataTemplateFile="pack://application:,,,/TenementToolsApp;component//nrtGalleryTemplate.xaml" templateID="nrtGalleryItemTemplate" resizable="true" itemWidth="350" showItemCaption="true" largeImage="Images\NRT_Wizard_32.png">
           <tooltip heading="NRT Monitoring Module">Perform continuous, near-real time monitoring of user-defined areas.<disabledText /></tooltip>
         </gallery>
       </galleries>
