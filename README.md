@@ -89,4 +89,4 @@ This is a firewall issue. Please see the above requirements section and discuss 
 This is a very rare and seemingly random error that has been difficult to locate. Restarting ArcGIS Pro fixes it.
 
 ### The COG Fetch or NRT Monitor Areas tool takes forever to download satellite imagery
-This can be caused by many issues, including your internet connection speed or stability or the DEA database connection status. DEA may also be under going maintenance. Please check your internet connection and try again. Also, try restarting ArcGIS Pro and downloading again.
+This can be caused by many issues, including your internet connection speed or stability or the DEA database connection status (i.e., internal issues, maintenance). Please check your internet connection and try again. Also, try restarting ArcGIS Pro and downloading again.
