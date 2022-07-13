@@ -6,7 +6,7 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 ## Requirements
 * ArcGIS Pro version 2.8 or 2.9
 * At least 8gb of ram (>=16gb recommended)
-* Fast and stable internet connection
+* Fast and stable internet connection with unlimited download capacity (imagery downloads are large!)
 * Access to the following websites (IT may need to exclude from firewall):
   * https://conda.anaconda.org
   * https://repo.anaconda.com
