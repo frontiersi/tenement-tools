@@ -83,7 +83,7 @@ Check that you have added the associated tenement tools toolbox into your curren
 This is a very rare and seemingly random error that has been difficult to locate. Simply re-run the tool and it should work.
 
 ### The COG Fetch or NRT Monitor Areas tool 'hang' forever when querying STAC metadata
-This is a firewall issue. Please see the above requirements section and discuss opening these websites with IT. 
+This is either a firewall issue or DEA is undergoing maintenance. Please see the above requirements section and discuss opening these websites with IT. 
 
 ### The COG Fetch or NRT Monitor Areas tool 'hang' forever when removing clouds from satellite data
 This is a very rare and seemingly random error that has been difficult to locate. Restarting ArcGIS Pro fixes it.
