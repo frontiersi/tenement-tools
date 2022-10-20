@@ -188,19 +188,19 @@ namespace TenementToolsApp
 
                     // get the currently selected features on map, abort if multi-select or no select
                     var selectedFeatures = mapView.Map.GetSelection();
-                    if (selectedFeatures.Count() == 0)
+                    if (selectedFeatures.Count == 0)
                     {
                         ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select a monitoring area.");
                         return;
                     }
-                    else if (selectedFeatures.Count() > 1)
+                    else if (selectedFeatures.Count > 1)
                     {
                         ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select only one area at a time.");
                         return;
                     }
 
                     // get first feature in selection, abort if multi-select
-                    var firstFeature = selectedFeatures.First();
+                    var firstFeature = selectedFeatures.ToDictionary().First();
                     if (firstFeature.Value.Count() != 1)
                     {
                         ArcGIS.Desktop.Framework.Dialogs.MessageBox.Show("Please select only one area at a time.");
