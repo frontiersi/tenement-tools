@@ -37,7 +37,7 @@ Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro
 ### 4. Install addtional Python libraries
 Now, enter and run each of the below in order (enter 'y' if asked at end of each):
 - <code>conda install dask=2.30.0</code>
-- <code>conda install -c conda-forge rasterio==1.1.5</code>
+- <code>conda install -c conda-forge rasterio==1.2.10</code>
 - <code>conda install -c conda-forge pyproj==2.6.1.post1</code>
 - <code>conda install -c conda-forge scikit-learn==1.0</code>
 - <code>conda install -c conda-forge odc-stac==0.2.2</code>
@@ -54,7 +54,7 @@ Note: you may need to click "Load all Add-Ins without restrictions" option.
 
 ### 6. Initialise the new python environment in ArcGIS Pro
 Change ArcGIS Pro software to use the custom Python environment (from step 4):
-- Run ArcGIS Pro > Settings > Python > Manage Environments > Select <i>arcgispro-py3-dev-tool</i> > OK
+- Run ArcGIS Pro > Package Manager > cog icon next to 'Active Environment' (Environment Manager) > Add folder icon (open existing environment) > Select folder arcgispro-py3-dev-tool env was created in > OK
 
 Restart ArcGIS Pro.
 
