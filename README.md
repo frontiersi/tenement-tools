@@ -3,6 +3,10 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 
 <br/>
 
+
+> **Warning**  
+> The following requirements and setup instructions apply to **ArcGIS Pro 2.8 and 2.9** (information for ArcGIS Pro 3.0 can be found [here](https://github.com/frontiersi/tenement-tools/blob/argispro30-migration/README.md))
+
 ## Requirements
 * ArcGIS Pro version 2.8 or 2.9
 * At least 8gb of ram (>=16gb recommended)
