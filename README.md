@@ -3,8 +3,11 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 
 <br/>
 
+> **Warning**  
+> The following requirements and setup instructions apply only to **ArcGIS Pro 3.0** (information for ArcGIS Pro 2.8 and 2.9 can be found [here](https://github.com/frontiersi/tenement-tools/blob/main/README.md))
+
 ## Requirements
-* ArcGIS Pro version 2.8 or 2.9
+* ArcGIS Pro version 3.0
 * At least 8gb of ram (>=16gb recommended)
 * Fast and stable internet connection with unlimited download capacity (imagery downloads are large!)
 * Access to the following websites (IT may need to exclude from firewall):
@@ -23,6 +26,9 @@ The Tenement Tools setup process can take up to 30 minutes. Please follow the be
 ### 1. Download Tenement Tools plug-in and tutorial material
 Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files from the latest release located here: 
 - https://github.com/frontiersi/tenement-tools/releases.
+
+> **Note** 
+> Please download a release that is stated as being compatible with ArcGIS Pro 3.0
 
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
