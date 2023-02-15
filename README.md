@@ -43,7 +43,7 @@ Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro
 ### 4. Install additional Python libraries
 Additional Python libraries are defined within a conda environment file. This file can be downloaded
 from the following link.
-[https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/arcgispro-py3-dev-tool.yml](https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/arcgispro-py3-dev-tool.yml)
+[https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/acrgispro3-py3.yml](https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/acrgispro3-py3.yml)
 
 To download this file, first open the link, then right-click and save the file to a suitable location.
 
