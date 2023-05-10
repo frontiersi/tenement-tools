@@ -116,7 +116,7 @@ def prepare_collections_list(in_platform):
         return ['ga_ls5t_ard_3', 'ga_ls7e_ard_3', 'ga_ls8c_ard_3']
     
     elif in_platform == 'Sentinel':
-        return ['s2a_ard_granule', 's2b_ard_granule']
+        return ['ga_s2am_ard_3', 'ga_s2bm_ard_3']
     
     elif in_platform == 'Sentinel 2A':
         return ['s2a_ard_granule']
@@ -185,7 +185,7 @@ def prepare_band_names(in_bands, in_platform):
             elif band in ['swir2', 'swir3']:
                 out_bands.append('nbart' + '_' + band[:-1] + '_' + band[-1])
             elif band == 'oa_mask':
-                out_bands.append('fmask')
+                out_bands.append('oa_fmask')
 
         else:
             raise ValeuError('Reuqested band {} does not exist.'.format(band))
@@ -495,7 +495,10 @@ def get_platform_from_dea_attrs(attr_dict):
     # parse dea aws platform code from collections attirbute
     if platform[:5] == 'ga_ls':
         platform = 'Landsat'
-    elif platform[:2] == 's2':
+    elif platform[:2] == 's2' or platform[:5] == 'ga_s2':
+        # the new collection naming begins with `ga_s2`, but we'll support
+        # the older `s2` prefix in case users have already created
+        # NetCDF files from the old collection on DEA
         platform = 'Sentinel'
     else:
         arcpy.AddError('Platform in NetCDF is not supported.')
