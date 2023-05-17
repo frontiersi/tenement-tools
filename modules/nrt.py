@@ -1611,7 +1611,7 @@ class MonitoringArea:
 
             # remove all layers associated with monitoring areas
             for layer in m.listLayers():
-                if layer.name == 'monitoring_areas':
+                if layer.supports('NAME') and layer.name == 'monitoring_areas':
                     m.removeLayer(layer)
 
         except Exception as e:
