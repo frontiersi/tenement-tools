@@ -105,7 +105,7 @@ def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None,
                 raise ValueError('Band: {0} not supported for landsat.'.format(band))
                 
         # set products, resolution
-        products = ['s2a_ard_granule', 's2b_ard_granule']
+        products = ['ga_s2am_ard_3', 'ga_s2bm_ard_3']
         resolution = (-10, 10)
     
     else:

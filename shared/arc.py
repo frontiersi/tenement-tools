@@ -119,10 +119,10 @@ def prepare_collections_list(in_platform):
         return ['ga_s2am_ard_3', 'ga_s2bm_ard_3']
     
     elif in_platform == 'Sentinel 2A':
-        return ['s2a_ard_granule']
+        return ['ga_s2am_ard_3']
         
     elif in_platform == 'Sentinel 2B':
-        return ['s2b_ard_granule']
+        return ['ga_s2bm_ard_3']
 
 
 def prepare_band_names(in_bands, in_platform):

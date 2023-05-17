@@ -337,8 +337,8 @@ class MonitoringArea:
             
             # set dea collection names
             collections = [
-                's2a_ard_granule',  # todo: use ver 3 when avail
-                's2b_ard_granule',  # todo: use ver 3 when avail
+                'ga_s2am_ard_3',
+                'ga_s2bm_ard_3',
                 'ga_s2am_ard_provisional_3',
                 'ga_s2bm_ard_provisional_3'
             ]
@@ -351,7 +351,7 @@ class MonitoringArea:
                 'nbart_nir_1', 
                 'nbart_swir_2', 
                 'nbart_swir_3',
-                'fmask'
+                'oa_fmask'
             ]
         
         try:
@@ -1917,8 +1917,8 @@ class MonitoringAreaStatistics:
             
             # set dea collection names
             collections = [
-                's2a_ard_granule',  # todo: use ver 3 when avail
-                's2b_ard_granule',  # todo: use ver 3 when avail
+                'ga_s2am_ard_3',
+                'ga_s2bm_ard_3',
                 'ga_s2am_ard_provisional_3',
                 'ga_s2bm_ard_provisional_3'
             ]
@@ -1931,7 +1931,7 @@ class MonitoringAreaStatistics:
                 'nbart_nir_1', 
                 'nbart_swir_2', 
                 'nbart_swir_3', 
-                'fmask'
+                'oa_fmask'
             ]
         
         try:
