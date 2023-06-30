@@ -1,13 +1,9 @@
-channels:
-  - conda-forge
-  - defaults
 dependencies:
   - pip
-  - dask==2023.1.1
-  - rasterio==1.2.10
-  - pyproj==3.4.1
-  - scikit-learn==1.2.0
-  - odc-stac==0.2.2
-  - datacube==1.8.6
-  - pip:
-    - pystac-client==0.3.0
+  - esri::rasterio==1.2.10
+  - conda-forge::pyproj==3.3.0
+  - scikit-learn==1.2.2
+  - conda-forge::odc-stac==0.2.2
+  - conda-forge::datacube==1.8.6
+  - conda-forge::pystac==1.1.0
+  - conda-forge::pystac-client==0.3.0
