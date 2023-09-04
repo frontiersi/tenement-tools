@@ -766,9 +766,11 @@ def get_xr_crs(ds):
     """
 
     # raw arcgis albers proj info
-    albers_proj = ('+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +' +
-                   'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 ' +
-                   '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True')
+    albers_proj = set((
+        '+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +'
+        'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 '
+        '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True'
+    ).split())
 
     # when crs attribute is a string
     if isinstance(ds.crs, str):
@@ -782,9 +784,13 @@ def get_xr_crs(ds):
             return int(ds.geobox.crs.epsg)
 
         # approach 3
-        if ds.crs == albers_proj:
+        # use set logic to check if all the tokens in theh ds.crs are within what we
+        # defined above for the albers_proj. Here we support the albers_proj definition
+        # gaving some redundant info (eg; +towgs84=0,0,0,0,0,0,0) by using `issubset`
+        ds_crs = set(ds.crs.split())
+        if ds_crs.issubset(albers_proj):
             return 3577
-            
+
         # approach 4
         if '+init=epsg:' in ds.crs:
             return int(ds.crs.split(':')[-1])
