@@ -15,8 +15,8 @@ Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store i
 ### 3. Clone default ArcGIS Pro python environment
 Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro makes this easy:
 1. Open Windows Start Menu > ArcGIS folder > Python Command Prompt
-2. Enter and run <code>conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool</code>
-3. When finished, enter and run: <code>activate arcgispro-py3-dev-tool</code>
+2. Enter and run <code>conda create --clone arcgispro-py3 --name arcgispro31-py3-dev-tool</code>
+3. When finished, enter and run: <code>activate arcgispro31-py3-dev-tool</code>
 
 ### 4. Install additional Python libraries
 Additional Python libraries are defined within a conda environment file. This file can be downloaded
@@ -39,7 +39,7 @@ Note: you may need to click "Load all Add-Ins without restrictions" option.
 
 ### 6. Initialise the new python environment in ArcGIS Pro
 Change ArcGIS Pro software to use the custom Python environment (from step 4):
-- Run ArcGIS Pro > Package Manager > cog icon next to 'Active Environment' (Environment Manager) > Add folder icon (open existing environment) > Select folder arcgispro-py3-dev-tool env was created in > OK
+- Run ArcGIS Pro > Package Manager > cog icon next to 'Active Environment' (Environment Manager) > Add folder icon (open existing environment) > Select folder arcgispro31-py3-dev-tool env was created in > OK
 
 Restart ArcGIS Pro.
 
