@@ -1,0 +1,9 @@
+dependencies:
+  - pip
+  - esri::rasterio==1.2.10
+  - conda-forge::pyproj==3.3.0
+  - scikit-learn==1.2.2
+  - conda-forge::odc-stac==0.2.2
+  - conda-forge::datacube==1.8.6
+  - conda-forge::pystac==1.1.0
+  - conda-forge::pystac-client==0.3.0

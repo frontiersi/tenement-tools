@@ -3,12 +3,11 @@ The Tenement Tools ArcGIS Pro plug-in is now version 1.0 and has been released! 
 
 <br/>
 
-
 > **Warning**  
-> The following requirements and setup instructions apply to **ArcGIS Pro 2.8 and 2.9** (information for ArcGIS Pro 3.0 can be found [here](https://github.com/frontiersi/tenement-tools/blob/argispro30-migration/README.md))
+> The following requirements and setup instructions apply only to **ArcGIS Pro 3.0** (information for ArcGIS Pro 2.8 and 2.9 can be found [here](https://github.com/frontiersi/tenement-tools/blob/main/README.md))
 
 ## Requirements
-* ArcGIS Pro version 2.8 or 2.9
+* ArcGIS Pro version 3.0
 * At least 8gb of ram (>=16gb recommended)
 * Fast and stable internet connection with unlimited download capacity (imagery downloads are large!)
 * Access to the following websites (IT may need to exclude from firewall):
@@ -28,6 +27,9 @@ The Tenement Tools setup process can take up to 30 minutes. Please follow the be
 Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf</i> files from the latest release located here: 
 - https://github.com/frontiersi/tenement-tools/releases.
 
+> **Note** 
+> Please download a release that is stated as being compatible with ArcGIS Pro 3.0
+
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
 - Recommended location: <code>C:/Users/%USERNAME%/Documents/ArcGIS/tenement-tools</code>
@@ -38,15 +40,16 @@ Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro
 2. Enter and run <code>conda create --clone arcgispro-py3 --name arcgispro-py3-dev-tool</code>
 3. When finished, enter and run: <code>activate arcgispro-py3-dev-tool</code>
 
-### 4. Install addtional Python libraries
-Now, enter and run each of the below in order (enter 'y' if asked at end of each):
-- <code>conda install dask=2.30.0</code>
-- <code>conda install -c conda-forge rasterio==1.1.5</code>
-- <code>conda install -c conda-forge pyproj==2.6.1.post1</code>
-- <code>conda install -c conda-forge scikit-learn==1.0</code>
-- <code>conda install -c conda-forge odc-stac==0.2.2</code>
-- <code>conda install -c conda-forge datacube==1.8.6</code>
-- <code>pip install pystac-client==0.3.0</code>
+### 4. Install additional Python libraries
+Additional Python libraries are defined within a conda environment file. This file can be downloaded
+from the following link.
+[https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/acrgispro3-py3.yml](https://raw.githubusercontent.com/frontiersi/tenement-tools/argispro30-migration/arc/envs/acrgispro3-py3.yml)
+
+To download this file, first open the link, then right-click and save the file to a suitable location.
+
+Now, enter and run the following command. This assumes the environment file downloaded above was saved
+to the active directory. Note: this command may take some time to complete.
+- <code>conda env update --file acrgispro3-py3.yml</code>
 
 Close the Python Command Prompt when finished.
 
@@ -58,7 +61,7 @@ Note: you may need to click "Load all Add-Ins without restrictions" option.
 
 ### 6. Initialise the new python environment in ArcGIS Pro
 Change ArcGIS Pro software to use the custom Python environment (from step 4):
-- Run ArcGIS Pro > Settings > Python > Manage Environments > Select <i>arcgispro-py3-dev-tool</i> > OK
+- Run ArcGIS Pro > Package Manager > cog icon next to 'Active Environment' (Environment Manager) > Add folder icon (open existing environment) > Select folder arcgispro-py3-dev-tool env was created in > OK
 
 Restart ArcGIS Pro.
 
