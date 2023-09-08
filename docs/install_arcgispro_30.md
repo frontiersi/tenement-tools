@@ -6,7 +6,7 @@ Download the <i>tenement-tools.zip</i>, <i>tutorial.zip</i> and <i>tutorial.pdf<
 - https://github.com/frontiersi/tenement-tools/releases.
 
 > **Note** 
-> Please download a release that is stated as being compatible with ArcGIS Pro 3.0
+> Please download a release that is stated as being compatible with ArcGIS Pro 3.0 (zip package will be labeled `tenement-tools-X-X-X-arcgispro30.zip`)
 
 ### 2. Extract tenement-tools folder
 Extract the tenement-tools folder from the <i>tenement-tools.zip</i> and store it somewhere permanent.
