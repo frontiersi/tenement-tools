@@ -31,7 +31,7 @@ folder = os.path.dirname(tbx_folder)
 # globals (dev)
 STAC_ENDPOINT_ODC = 'https://explorer.sandbox.dea.ga.gov.au/stac'
 STAC_ENDPOINT_LEG = 'https://explorer.sandbox.dea.ga.gov.au/stac/search'
-RESULT_LIMIT = 250
+RESULT_LIMIT = 20
 FOLDER_MODULES = r'C:\Users\Lewis\Documents\GitHub\tenement-tools\modules'  
 FOLDER_SHARED = r'C:\Users\Lewis\Documents\GitHub\tenement-tools\shared'
 GRP_LYR_FILE = r'C:\Users\Lewis\Documents\GitHub\tenement-tools\arc\lyr\group_template.lyrx'
