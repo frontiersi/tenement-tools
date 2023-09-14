@@ -16,14 +16,15 @@ Tenement Tools requires a custom Python virtual environment. Luckily, ArcGIS Pro
 3. When finished, enter and run: <code>activate arcgispro29-py3-dev-tool</code>
 
 ### 4. Install addtional Python libraries
-Now, enter and run each of the below in order (enter 'y' if asked at end of each):
-- <code>conda install dask=2.30.0</code>
-- <code>conda install -c conda-forge rasterio==1.1.5</code>
-- <code>conda install -c conda-forge pyproj==2.6.1.post1</code>
-- <code>conda install -c conda-forge scikit-learn==1.0</code>
-- <code>conda install -c conda-forge odc-stac==0.2.2</code>
-- <code>conda install -c conda-forge datacube==1.8.6</code>
-- <code>pip install pystac-client==0.3.0</code>
+Additional Python libraries are defined within a conda environment file. This file can be downloaded
+from the following link.
+[https://raw.githubusercontent.com/frontiersi/tenement-tools/arcgispro29/arc/envs/arcgispro.yml](https://raw.githubusercontent.com/frontiersi/tenement-tools/arcgispro29/arc/envs/arcgispro.yml)
+
+To download this file, first open the link, then right-click and save the file to a suitable location.
+
+Now, enter and run the following command. This assumes the environment file downloaded above was saved
+to the active directory. Note: this command may take some time to complete.
+- <code>conda env update --file arcgispro.yml</code>
 
 Close the Python Command Prompt when finished.
 
