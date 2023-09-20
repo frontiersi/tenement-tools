@@ -19,7 +19,7 @@ from datetime import datetime
    
    
 def fetch_stac_items_odc(stac_endpoint, collections, start_dt, end_dt, bbox, 
-                         slc_off=False, limit=250):
+                         slc_off=False, limit=20):
     """
     Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac'),
     a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of

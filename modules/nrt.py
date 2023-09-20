@@ -3191,7 +3191,7 @@ def fetch_cube_data(collections, bands, start_dt, end_dt, bbox, resolution=30, d
                                              end_dt=end_dt, 
                                              bbox=bbox,
                                              slc_off=False,
-                                             limit=250)
+                                             limit=20)
                
         # replace s3 prefix with https for each band - arcgis doesnt like s3
         items = cog_odc.replace_items_s3_to_https(items=items, 
