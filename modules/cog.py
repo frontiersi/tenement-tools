@@ -366,7 +366,7 @@ class ThreadLocalData:
 
 
 # # # constructor functions
-def fetch_stac_data(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, sort_time=True, limit=250):
+def fetch_stac_data(stac_endpoint=None, collections=None, start_dt=None, end_dt=None, bbox=None, slc_off=False, sort_time=True, limit=20):
     """
     Takes a stac endoint url (e.g., 'https://explorer.sandbox.dea.ga.gov.au/stac/search'),
     a list of stac assets (e.g., ga_ls5t_ard_3 for Landsat 5 collection 3), a range of

@@ -293,7 +293,7 @@ def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=35
                                          end_dt=end_dt, 
                                          bbox=bbox,
                                          slc_off=slc_off,
-                                         limit=250)
+                                         limit=20)
 
     # replace s3 prefix with https for each band - arcgis doesnt like s3
     items = cog_odc.replace_items_s3_to_https(items=items, 
@@ -1488,7 +1488,7 @@ def sync_nrt_cube(out_nc, collections, bands, start_dt, end_dt, bbox, in_epsg=35
                                          end_dt=end_dt, 
                                          bbox=bbox,
                                          slc_off=slc_off,
-                                         limit=250)
+                                         limit=20)
 
     # replace s3 prefix with https for each band - arcgis doesnt like s3
     items = cog_odc.replace_items_s3_to_https(items=items, 
