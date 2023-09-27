@@ -8567,7 +8567,7 @@ class VegFrax_Fractional_Cover(object):
         elif not hasattr(ds_high, 'crs'):
             arcpy.AddError('GeoTiff CRS attribute not found. CRS required.')
             return
-        elif '3577' not in ds_high.crs:
+        elif tools.get_xr_crs(ds_high) != 3577:
             arcpy.AddError('GeoTiff CRS is not EPSG:3577. EPSG:3577 required.')            
             return
         elif not hasattr(ds_high, 'nodatavals'):
