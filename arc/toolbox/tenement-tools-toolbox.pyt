@@ -8300,7 +8300,7 @@ class VegFrax_Fractional_Cover(object):
         elif not hasattr(ds_low, 'crs'):
             arcpy.AddError('Satellite NetCDF CRS attribute not found. CRS required.')
             return
-        elif ds_low.crs != 'EPSG:3577':
+        elif tools.get_xr_crs(ds_low) != 3577:
             arcpy.AddError('Satellite NetCDF CRS is not in GDA94 Albers (EPSG:3577).')            
             return 
         elif not hasattr(ds_low, 'nodatavals'):
