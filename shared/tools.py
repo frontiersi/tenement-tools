@@ -779,10 +779,6 @@ def get_xr_crs(ds):
         if ds.crs.startswith('EPSG:'):
             return int(ds.crs.split(':')[1])
 
-        # approach 2
-        if hasattr(ds, 'geobox'):
-            return int(ds.geobox.crs.epsg)
-
         # approach 3
         # use set logic to check if all the tokens in theh ds.crs are within what we
         # defined above for the albers_proj. Here we support the albers_proj definition
@@ -794,7 +790,14 @@ def get_xr_crs(ds):
         # approach 4
         if '+init=epsg:' in ds.crs:
             return int(ds.crs.split(':')[-1])
-        
+
+        # approach 2
+        # approach 2 has been deprioritised as it was founf that the geobox crs
+        # does not match that of the dataset crs. After some investigation the
+        # cause of this could not be established
+        if hasattr(ds, 'geobox'):
+            return int(ds.geobox.crs.epsg)
+
     # when a iterable...
     if isinstance(ds.crs, (tuple, list)):
         
