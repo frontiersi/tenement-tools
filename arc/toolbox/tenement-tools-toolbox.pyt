@@ -6600,7 +6600,7 @@ class Nicher_SDM(object):
             elif not hasattr(ds, 'crs'):
                 arcpy.AddError('GeoTiff CRS attribute not found. CRS required.')
                 return
-            elif tools.get_xr_crs(ds) != 3577:
+            elif '3577' not in ds.crs:
                 arcpy.AddError('GeoTiff CRS is not EPSG:3577. EPSG:3577 required.')            
                 return
             elif not hasattr(ds, 'nodatavals'):
