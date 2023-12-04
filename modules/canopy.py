@@ -17,7 +17,6 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 '''
 
 # import required libraries
-import os, sys
 import numpy as np
 import xarray as xr
 

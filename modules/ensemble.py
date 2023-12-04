@@ -24,11 +24,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-sys.path.append('../../modules')
-import canopy
+from modules import canopy
 
-sys.path.append('../../shared')
-import satfetcher, tools
+from shared import satfetcher, tools
 
 def smooth_xr_dataset(ds, win_size=3):
     """

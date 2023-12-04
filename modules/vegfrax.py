@@ -25,8 +25,7 @@ import numpy as np
 import pandas as pd
 #import dask.array as dask_array
 
-sys.path.append('../../shared')
-import tools
+from shared import tools
 
 from sklearn.ensemble import RandomForestRegressor as rf
 from sklearn.model_selection import train_test_split

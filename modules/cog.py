@@ -1165,7 +1165,8 @@ def build_attributes(ds, meta, collections, bands, slc_off, bbox, dtype,
     return ds
 
 
-def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask', nodata_value=np.nan, drop_fmask=False):
+def remove_fmask_dates(ds, valid_class=[1, 4, 5], max_invalid=5, mask_band='oa_fmask',
+                       nodata_value=np.nan, drop_fmask=False):
     """
     Takes an xr dataset and computes fmask band, if it exists. From mask band,
     calculates percentage of valid vs invalid pixels per image date. Returns a xr

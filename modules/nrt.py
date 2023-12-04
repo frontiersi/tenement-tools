@@ -27,11 +27,9 @@ from osgeo import ogr
 from email.message import EmailMessage
 from email.utils import make_msgid
 
-sys.path.append('../../modules')
-import cog_odc, cog
+from modules import cog_odc, cog
 
-sys.path.append('../../shared')
-import arc, satfetcher, tools
+from shared import arc, satfetcher, tools
 
 # setup arcpy-compatible (i.e. non-tkinter) matplotlib 
 import matplotlib

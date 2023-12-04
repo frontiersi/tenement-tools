@@ -26,8 +26,7 @@ import pandas as pd
 import xarray as xr
 from scipy.stats import kendalltau, theilslopes
 
-sys.path.append('../../shared')
-import tools
+from shared import tools
 
 def subset_months(ds, month=None, inplace=True):
     """

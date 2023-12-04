@@ -20,8 +20,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-sys.path.append('../../shared')
-import tools
+from shared import tools
 
 #from scipy.stats import zscore
 from scipy import interpolate as sci_interp

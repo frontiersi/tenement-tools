@@ -49,8 +49,8 @@ from sklearn.metrics import normalized_mutual_info_score
 from sklearn.metrics import cohen_kappa_score
 from scipy.stats import pointbiserialr
 
-sys.path.append('../../shared')
-import tools
+
+from shared import tools
 
 # increase number of pandas rows displayed
 pd.set_option('display.max_rows', 1000)
