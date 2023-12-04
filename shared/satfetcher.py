@@ -11,12 +11,9 @@ Lewis Trotter: lewis.trotter@postgrad.curtin.edu.au
 
 # import required libraries
 import os, sys
-import pandas as pd
 import numpy as np
 import xarray as xr
-
-sys.path.append('../../shared')
-import satfetcher, tools
+from shared import tools
 
 
 def load_dea_ard(platform=None, bands=None, x_extent=None, y_extent=None, 

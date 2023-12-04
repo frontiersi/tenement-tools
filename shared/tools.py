@@ -17,8 +17,7 @@ except:
     from osgeo import osr
 
 # import required libraries
-import os, sys
-import dask
+import os
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -766,11 +765,9 @@ def get_xr_crs(ds):
     """
 
     # raw arcgis albers proj info
-    albers_proj = set((
-        '+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +'
-        'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 '
-        '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True'
-    ).split())
+    albers_proj = ('+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +' +
+                   'lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 ' +
+                   '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs=True')
 
     # when crs attribute is a string
     if isinstance(ds.crs, str):
@@ -779,25 +776,18 @@ def get_xr_crs(ds):
         if ds.crs.startswith('EPSG:'):
             return int(ds.crs.split(':')[1])
 
-        # approach 3
-        # use set logic to check if all the tokens in theh ds.crs are within what we
-        # defined above for the albers_proj. Here we support the albers_proj definition
-        # gaving some redundant info (eg; +towgs84=0,0,0,0,0,0,0) by using `issubset`
-        ds_crs = set(ds.crs.split())
-        if ds_crs.issubset(albers_proj):
-            return 3577
-
-        # approach 4
-        if '+init=epsg:' in ds.crs:
-            return int(ds.crs.split(':')[-1])
-
         # approach 2
-        # approach 2 has been deprioritised as it was founf that the geobox crs
-        # does not match that of the dataset crs. After some investigation the
-        # cause of this could not be established
         if hasattr(ds, 'geobox'):
             return int(ds.geobox.crs.epsg)
 
+        # approach 3
+        if ds.crs == albers_proj:
+            return 3577
+            
+        # approach 4
+        if '+init=epsg:' in ds.crs:
+            return int(ds.crs.split(':')[-1])
+        
     # when a iterable...
     if isinstance(ds.crs, (tuple, list)):
         
@@ -1296,59 +1286,6 @@ def manual_create_xr_attrs(ds):
     })
     
     return ds
-    
-
-# deprecated
-def clip_xr_to_xr(ds_a, ds_b, inplace=True):
-    """
-    Takes an xarray dataset (ds_a) and clips it to match
-    the extent of ds_b.
-
-    Parameters
-    ----------
-    ds_a: xarray dataset/array
-        A dataset which will be clipped to match ds_b.
-    ds_b: xarray dataset/array
-        A dataset to which the extents of ds_a will be
-        clipped to.
-    inplace : bool
-        Create a copy of the dataset in memory to preserve original
-        outside of function. Default is True.
-
-    Returns
-    ----------
-    ds_a : xarray dataset/array to match original ds_a.
-    """
-    
-    # notify
-    print('Clipping dataset to another.')
-
-    # check xr type, dims in ds a
-    if not isinstance(ds_a, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset a not an xarray type.')
-    elif 'x' not in list(ds_a.dims) and 'y' not in list(ds_a.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset a.')
-        
-    # check xr type, dims in ds b
-    if not isinstance(ds_b, (xr.Dataset, xr.DataArray)):
-        raise TypeError('Dataset b not an xarray type.')
-    elif 'x' not in list(ds_b.dims) and 'y' not in list(ds_b.dims):
-        raise ValueError('No x and/or y coordinate dimension in dataset b.')   
-    
-    # create copy ds if not inplace
-    if not inplace:
-        ds_a = ds.copy(deep=True)
-        
-    # get extent of ds b
-    extent = get_xr_extent(ds_b)
-    
-    # subset ds high to ds low
-    ds_a = ds_a.sel(x=slice(extent.get('l'), extent.get('r')), 
-                    y=slice(extent.get('t'), extent.get('v')))
-    
-    # notify
-    print('Clipped dataset successfully.')
-    return ds_a
 
 
 # Deprecated

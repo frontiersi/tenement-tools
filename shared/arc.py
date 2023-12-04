@@ -188,7 +188,7 @@ def prepare_band_names(in_bands, in_platform):
                 out_bands.append('oa_fmask')
 
         else:
-            raise ValeuError('Reuqested band {} does not exist.'.format(band))
+            raise ValueError('Reuqested band {} does not exist.'.format(band))
 
     # return list of renamed band names
     return out_bands
@@ -432,28 +432,19 @@ def generate_absences_for_nicher(df_pres, ds, buff_m):
         raise ValueError('No pseudoabsence points generated.')
         
     return df_pabse  
-   
-   
+
+
 def convert_fmask_codes(flags):
     """Takes a list of arcgis dea aws satellite data
     fmask flags (e.g., Water, Valid) and converts them
     into their DEA AWS numeric code equivalent."""
-    
-    out_flags = []
+    lookup = {'NoData': 0, 'Valid': 1, 'Cloud': 2, 'Shadow': 3, 'Snow': 4, 'Water': 5}
+    out_flags = set()
+
     for flag in flags:
-        if flag == 'NoData':
-            out_flags.append(0)
-        elif flag == 'Valid':
-            out_flags.append(1)
-        elif flag == 'Cloud':
-            out_flags.append(2)
-        elif flag == 'Shadow':
-            out_flags.append(3)
-        elif flag == 'Snow':
-            out_flags.append(4)
-        elif flag == 'Water':
-            out_flags.append(5)
-            
+        i = lookup.get(flag)
+        if i is not None:
+            out_flags.add(i)
     return out_flags
 
 
