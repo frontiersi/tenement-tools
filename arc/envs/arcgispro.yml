@@ -94,7 +94,6 @@ dependencies:
   - jupyter_client=6.1.7=py_1
   - jupyter_console=6.4.0=py_1
   - jupyter_contrib_core=0.3.3=py_4
-  - jupyter_contrib_nbextensions=0.5.1=py_23
   - jupyter_core=4.6.3=py37_2
   - jupyter_highlight_selected_word=0.2.0=py_4
   - jupyter_latex_envs=1.4.6=py_3
